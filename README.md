@@ -1,127 +1,161 @@
 # MathPad
 
-A calculator application with a different take - inspired by CalcPad. Built with Next.js, TypeScript, CodeMirror 6, and Tailwind CSS.
+A modern calculator application with live results and variables. Built with Next.js, TypeScript, CodeMirror 6, and Tailwind CSS.
+
+Inspired by:
+- [NoteCalc3](https://github.com/bbodi/notecalc3)
+- [CalcPad](https://github.com/filipesabella/CalcPad)
+- [Numbr](https://github.com/antonmedv/numbr)
 
 ## Getting Started
 
-First, run the development server:
-
 ```bash
+npm install
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) with your browser.
 
-## Features Implemented ✅
+## Features
 
-- **CodeMirror 6 Editor** with custom right gutter for displaying results
-- **Dark/Light Theme** switching with persistent preferences
-- **LocalStorage** persistence for editor content and preferences
-- **URL Hash Sharing** - share calculations via URL (content encoded in hash)
-- **Preferences Dialog** with settings for:
-  - Font size
-  - Decimal places
-  - Decimal separator
-  - Thousands separator
-  - Theme (dark/light)
-- **Auto-completion** for Math functions and user-defined variables
-- **JetBrains Mono** font for the editor
-- **Keyboard shortcuts**:
-  - `ESC` - Close dialogs
-  - `Tab` - Accept autocomplete
-  - `Ctrl+Space` - Trigger autocomplete
-  - `Ctrl+F` - Find & replace
-  - `Ctrl+Z` / `Ctrl+Shift+Z` - Undo/Redo
+### Editor
+- **CodeMirror 6** with custom right gutter for live results
+- **Syntax highlighting** for mathematical expressions
+- **Auto-completion** for functions and variables
+- **JetBrains Mono** font
+
+### Calculations
+- **Basic arithmetic**: `+`, `-`, `*`, `/`, `^`, `%`
+- **Math functions**: `round()`, `ceil()`, `floor()`, `abs()`, `sqrt()`
+- **Aggregate functions**: `sum`, `avg`, `min`, `max`, `count`
+- **Variables**: `salary = 100000`
+- **Percentages**: `100 + 20%`, `20% of 100`
+- **Number formats**: `10k`, `1M`, `1,000,000`
+
+### Preferences
+- **Dark/Light theme** with system detection
+- **Decimal places** (0-20)
+- **Number formatting** (decimal/thousands separators)
+- **Font size** adjustment
+- **LocalStorage** persistence
+- **URL sharing** via hash
+
+### Keyboard Shortcuts
+- `ESC` - Close dialogs
+- `Tab` - Accept autocomplete
+- `Ctrl+Space` - Trigger autocomplete
+- `Ctrl+F` - Find & replace
+- `Ctrl+Z` / `Ctrl+Shift+Z` - Undo/Redo
 
 ## Project Structure
 
 ```
 app/
-  layout.tsx          # Root layout with JetBrains Mono font
-  page.tsx            # Main page (renders App component)
-  globals.css         # Global styles and CSS variables
+  layout.tsx              # Root layout
+  page.tsx                # Main page
+  globals.css             # Global styles
 
 components/
-  App.tsx             # Main application container
-  Editor.tsx          # CodeMirror editor wrapper
-  Help.tsx            # Help/documentation component (placeholder)
-  PreferencesDialog.tsx  # Settings modal
-  
-  codemirror/
-    CodeMirror.tsx       # Low-level CM6 wrapper
-    Completions.ts       # Autocomplete logic
-    DarkTheme.ts         # Dark theme configuration
-    LightTheme.ts        # Light theme configuration
-    MathpadLang.ts       # Syntax highlighter
-    ResultsGutter.ts     # Custom right gutter for results
+  App.tsx                 # Main app container
+  Editor.tsx              # Editor wrapper
+  PreferencesDialog.tsx   # Settings modal
+  codemirror/             # CodeMirror extensions
+    CodeMirror.tsx
+    Completions.ts
+    DarkTheme.ts
+    LightTheme.ts
+    MathpadLang.ts
+    ResultsGutter.ts
 
 lib/
-  types.ts            # TypeScript interfaces
-  use-local-storage.ts  # Custom hook for persistence & URL sharing
+  engine/                 # Calculation engine
+    adapters/             # Adapter pattern for extensibility
+      functions/          # Math functions (round, ceil, etc.)
+      operators/          # Binary & unary operators
+      aggregates/         # Aggregate functions (sum, avg, etc.)
+      base.ts             # Adapter interfaces
+      registry.ts         # Central registry
+    evaluator.ts          # AST evaluator
+    parser.ts             # Expression parser
+    tokenizer.ts          # Tokenizer
+    formatter.ts          # Number formatter
+    types.ts              # Type definitions
+    index.ts              # Public API
+  types.ts                # App types
+  use-local-storage.ts    # Persistence hook
 ```
 
-## What's Next - TODO 📝
+## Engine Architecture
 
-### 1. Parser/Evaluator Implementation
+The calculation engine uses an **adapter pattern** for easy extensibility:
 
-The calculation engine is not yet implemented. You need to create a parser/evaluator that:
+### Adding a New Math Function
 
-**Location**: Update the `textToResults()` function in `components/Editor.tsx`
-
-**Requirements**:
-- Parse mathematical expressions from text
-- Support variables and assignments
-- Return an array of result strings (one per line)
-- Handle errors gracefully (return '-' or empty string for invalid lines)
-
-**Example Input/Output**:
-```
-Input:
-1 + 2
-salary = 100000
-tax = 20% of salary
-
-Output:
-['3', '100000', '20000']
-```
-
-### 2. Build Configuration
-
-The production build currently has issues with SSR. To fix:
-
-Add to `app/page.tsx`:
+1. Create `lib/engine/adapters/functions/myfunction.ts`:
 ```typescript
-export const dynamic = 'force-dynamic';
+import Big from 'big.js';
+import { FunctionAdapter } from '../base';
+
+export class MyFunction implements FunctionAdapter {
+  name = 'myfunction';
+  description = 'Description for autocomplete';
+  
+  execute(value: Big): Big {
+    return value.times(2); // Your logic here
+  }
+  
+  validate?(value: Big): string | null {
+    // Optional validation
+    return null;
+  }
+}
 ```
 
-Or configure Next.js to skip prerendering for this route.
+2. Register in `lib/engine/adapters/registry.ts`:
+```typescript
+import { MyFunction } from './functions/myfunction';
+functionRegistry.register(new MyFunction());
+```
 
-### 3. Help Documentation
+3. Create test file `myfunction.test.ts` as a sibling
 
-The Help component (`components/Help.tsx`) is currently a placeholder. Add your documentation content there, or create a separate help page route.
+### Adapter Types
 
-### 4. Features to Consider
+- **FunctionAdapter** - Single-argument functions (e.g., `sqrt(x)`)
+- **BinaryOperatorAdapter** - Binary operators (e.g., `+`, `-`)
+- **UnaryOperatorAdapter** - Unary operators (e.g., `-x`)
+- **AggregateFunctionAdapter** - Multi-value functions (e.g., `sum`, `avg`)
 
-- **Cloud Storage Integration** - Replace localStorage with cloud provider
-- **Share Dialog** - UI for copying shareable URLs
-- **Export/Import** - Download/upload calculations
-- **Keyboard Shortcuts Panel** - Show available shortcuts
-- **History/Versions** - Track changes over time
-- **Mobile Optimization** - Better UX for touch devices
+See `lib/engine/adapters/base.ts` for full interface documentation.
 
-## Dependencies
+## Testing
 
-Key packages used:
-- `next` - React framework
-- `react` - UI library
-- `@codemirror/state`, `@codemirror/view`, etc. - Editor
-- `convert-units` - Unit conversion library (if you implement unit support)
-- `tailwindcss` - Styling
+```bash
+npm test              # Run all tests
+npm run test:watch    # Watch mode
+```
 
-## Known Issues
+Tests are co-located with source files:
+- `round.ts` + `round.test.ts`
+- `add.ts` + `add.test.ts`
+- Integration tests in `lib/engine/__tests__/`
 
-- Build process fails on prerendering (fixed by making page client-side only)
-- Some React key warnings in console (cosmetic, from Next.js internals)
+## Technologies
+
+- **Next.js 16** - React framework
+- **TypeScript** - Type safety
+- **CodeMirror 6** - Editor
+- **Big.js** - Arbitrary precision arithmetic (prevents floating-point errors)
+- **Tailwind CSS 4** - Styling
+- **Vitest** - Testing
+
+## Why Big.js?
+
+JavaScript's native numbers use IEEE 754 floating-point, which causes precision issues:
+- `0.1 + 0.2 = 0.30000000000004` ❌
+- With Big.js: `0.1 + 0.2 = 0.3` ✅
+
+This is critical for financial calculations where precision matters.
 
 ## License
 

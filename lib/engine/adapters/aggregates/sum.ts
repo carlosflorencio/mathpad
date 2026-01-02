@@ -1,0 +1,23 @@
+/**
+ * Sum aggregate function
+ */
+
+import Big from 'big.js';
+import { AggregateFunctionAdapter } from '../base';
+
+export class SumAggregate implements AggregateFunctionAdapter {
+  name = 'sum';
+  aliases = ['total'];
+  description = 'Sum all previous numbers';
+  
+  validate(values: Big[]): string | null {
+    if (values.length === 0) {
+      return 'No numbers to sum';
+    }
+    return null;
+  }
+  
+  execute(values: Big[]): Big {
+    return values.reduce((acc, n) => acc.plus(n), new Big(0));
+  }
+}

@@ -1,5 +1,5 @@
 /**
- * Function adapter pattern for math functions
+ * Function adapter pattern for math functions and aggregate functions
  * Each function knows how to transform values
  */
 
@@ -30,6 +30,35 @@ export interface FunctionAdapter {
    * @returns error message if invalid, null if valid
    */
   validate?(value: Big): string | null;
+}
+
+/**
+ * Aggregate function adapter interface
+ * Operates on a collection of values (e.g., sum, avg, min, max)
+ */
+export interface AggregateFunctionAdapter {
+  /** Primary function name */
+  name: string;
+  
+  /** Alternative names/aliases */
+  aliases?: string[];
+  
+  /** Description for autocomplete */
+  description: string;
+  
+  /**
+   * Execute the aggregate function on a collection of values
+   * @param values Array of Big numbers to aggregate
+   * @returns Aggregated result
+   * @throws Error if execution fails
+   */
+  execute(values: Big[]): Big;
+  
+  /**
+   * Validate if the values are acceptable for this function
+   * @returns error message if invalid, null if valid
+   */
+  validate?(values: Big[]): string | null;
 }
 
 /**
