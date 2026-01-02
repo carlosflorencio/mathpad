@@ -1,26 +1,36 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-mono: var(--font-jetbrains-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+:root {
+  --font-size: 18px;
+  --line-height: 34px;
+  --dialog-bg-color: rgb(33, 34, 38);
+  --text-color: rgb(227, 230, 232);
 }
 
+html,
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  margin: 0;
+  padding: 0;
+}
+
+#root {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.cm-editor {
+  height: 100%;
+}
+
+.cm-content,
+.cm-scroller {
+  padding: 0.1em 0 0 0.2em;
+  font-family: var(--font-jetbrains-mono), 'JetBrains Mono', monospace;
+  font-size: var(--font-size);
+  line-height: calc(var(--font-size) + 10px);
 }

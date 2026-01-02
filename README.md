@@ -1,4 +1,6 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# MathPad
+
+A calculator application with a different take - inspired by CalcPad. Built with Next.js, TypeScript, CodeMirror 6, and Tailwind CSS.
 
 ## Getting Started
 
@@ -6,31 +8,121 @@ First, run the development server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Features Implemented ✅
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- **CodeMirror 6 Editor** with custom right gutter for displaying results
+- **Dark/Light Theme** switching with persistent preferences
+- **LocalStorage** persistence for editor content and preferences
+- **URL Hash Sharing** - share calculations via URL (content encoded in hash)
+- **Preferences Dialog** with settings for:
+  - Font size
+  - Decimal places
+  - Decimal separator
+  - Thousands separator
+  - Theme (dark/light)
+- **Auto-completion** for Math functions and user-defined variables
+- **JetBrains Mono** font for the editor
+- **Keyboard shortcuts**:
+  - `ESC` - Close dialogs
+  - `Tab` - Accept autocomplete
+  - `Ctrl+Space` - Trigger autocomplete
+  - `Ctrl+F` - Find & replace
+  - `Ctrl+Z` / `Ctrl+Shift+Z` - Undo/Redo
 
-## Learn More
+## Project Structure
 
-To learn more about Next.js, take a look at the following resources:
+```
+app/
+  layout.tsx          # Root layout with JetBrains Mono font
+  page.tsx            # Main page (renders App component)
+  globals.css         # Global styles and CSS variables
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+components/
+  App.tsx             # Main application container
+  Editor.tsx          # CodeMirror editor wrapper
+  Help.tsx            # Help/documentation component (placeholder)
+  PreferencesDialog.tsx  # Settings modal
+  
+  codemirror/
+    CodeMirror.tsx       # Low-level CM6 wrapper
+    Completions.ts       # Autocomplete logic
+    DarkTheme.ts         # Dark theme configuration
+    LightTheme.ts        # Light theme configuration
+    MathpadLang.ts       # Syntax highlighter
+    ResultsGutter.ts     # Custom right gutter for results
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+lib/
+  types.ts            # TypeScript interfaces
+  use-local-storage.ts  # Custom hook for persistence & URL sharing
+```
 
-## Deploy on Vercel
+## What's Next - TODO 📝
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### 1. Parser/Evaluator Implementation
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+The calculation engine is not yet implemented. You need to create a parser/evaluator that:
+
+**Location**: Update the `textToResults()` function in `components/Editor.tsx`
+
+**Requirements**:
+- Parse mathematical expressions from text
+- Support variables and assignments
+- Return an array of result strings (one per line)
+- Handle errors gracefully (return '-' or empty string for invalid lines)
+
+**Example Input/Output**:
+```
+Input:
+1 + 2
+salary = 100000
+tax = 20% of salary
+
+Output:
+['3', '100000', '20000']
+```
+
+### 2. Build Configuration
+
+The production build currently has issues with SSR. To fix:
+
+Add to `app/page.tsx`:
+```typescript
+export const dynamic = 'force-dynamic';
+```
+
+Or configure Next.js to skip prerendering for this route.
+
+### 3. Help Documentation
+
+The Help component (`components/Help.tsx`) is currently a placeholder. Add your documentation content there, or create a separate help page route.
+
+### 4. Features to Consider
+
+- **Cloud Storage Integration** - Replace localStorage with cloud provider
+- **Share Dialog** - UI for copying shareable URLs
+- **Export/Import** - Download/upload calculations
+- **Keyboard Shortcuts Panel** - Show available shortcuts
+- **History/Versions** - Track changes over time
+- **Mobile Optimization** - Better UX for touch devices
+
+## Dependencies
+
+Key packages used:
+- `next` - React framework
+- `react` - UI library
+- `@codemirror/state`, `@codemirror/view`, etc. - Editor
+- `convert-units` - Unit conversion library (if you implement unit support)
+- `tailwindcss` - Styling
+
+## Known Issues
+
+- Build process fails on prerendering (fixed by making page client-side only)
+- Some React key warnings in console (cosmetic, from Next.js internals)
+
+## License
+
+MIT
