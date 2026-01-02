@@ -2,13 +2,13 @@
  * Power operator (^)
  */
 
-import Big from 'big.js';
-import { BinaryOperatorAdapter } from '../base';
+import Big from "big.js"
+import { BinaryOperatorAdapter } from "../base"
 
 export class PowerOperator implements BinaryOperatorAdapter {
-  symbol = '^';
-  
+  symbol = "^"
+
   executeNumbers(left: Big, right: Big): Big {
-    return left.pow(right.toNumber());
+    return left.pow(right.toNumber())
   }
 }

@@ -2,20 +2,20 @@
  * Modulo operator (%)
  */
 
-import Big from 'big.js';
-import { BinaryOperatorAdapter } from '../base';
+import Big from "big.js"
+import { BinaryOperatorAdapter } from "../base"
 
 export class ModuloOperator implements BinaryOperatorAdapter {
-  symbol = '%';
-  
+  symbol = "%"
+
   validate(left: Big, right: Big): string | null {
     if (right.eq(0)) {
-      return 'Modulo by zero';
+      return "Modulo by zero"
     }
-    return null;
+    return null
   }
-  
+
   executeNumbers(left: Big, right: Big): Big {
-    return left.mod(right);
+    return left.mod(right)
   }
 }

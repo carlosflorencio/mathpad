@@ -1,78 +1,78 @@
-'use client';
+"use client"
 
-import { useState, useEffect } from 'react';
-import { Preferences, defaultPreferences } from './types';
+import { useState, useEffect } from "react"
+import { Preferences, defaultPreferences } from "./types"
 
-const CONTENT_KEY = 'mathpad-content';
-const PREFERENCES_KEY = 'mathpad-preferences';
+const CONTENT_KEY = "mathpad-content"
+const PREFERENCES_KEY = "mathpad-preferences"
 
 export function useLocalStorage() {
-  const [content, setContent] = useState<string>('');
-  const [preferences, setPreferences] = useState<Preferences>(defaultPreferences);
-  const [isLoaded, setIsLoaded] = useState(false);
+  const [content, setContent] = useState<string>("")
+  const [preferences, setPreferences] = useState<Preferences>(defaultPreferences)
+  const [isLoaded, setIsLoaded] = useState(false)
 
   // Load from localStorage and URL hash on mount
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (typeof window === "undefined") return
 
     // Check URL hash first (takes precedence)
-    const hash = window.location.hash.slice(1);
+    const hash = window.location.hash.slice(1)
     if (hash) {
       try {
-        const decoded = decodeURIComponent(hash);
-        setContent(decoded);
-        setIsLoaded(true);
-        return;
+        const decoded = decodeURIComponent(hash)
+        setContent(decoded)
+        setIsLoaded(true)
+        return
       } catch (e) {
-        console.error('Failed to decode URL hash:', e);
+        console.error("Failed to decode URL hash:", e)
       }
     }
 
     // Load from localStorage
-    const storedContent = localStorage.getItem(CONTENT_KEY);
+    const storedContent = localStorage.getItem(CONTENT_KEY)
     if (storedContent) {
-      setContent(storedContent);
+      setContent(storedContent)
     }
 
-    const storedPreferences = localStorage.getItem(PREFERENCES_KEY);
+    const storedPreferences = localStorage.getItem(PREFERENCES_KEY)
     if (storedPreferences) {
       try {
-        setPreferences(JSON.parse(storedPreferences));
+        setPreferences(JSON.parse(storedPreferences))
       } catch (e) {
-        console.error('Failed to parse preferences:', e);
+        console.error("Failed to parse preferences:", e)
       }
     }
 
-    setIsLoaded(true);
-  }, []);
+    setIsLoaded(true)
+  }, [])
 
   // Save content to localStorage
   const saveContent = (value: string) => {
-    setContent(value);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem(CONTENT_KEY, value);
+    setContent(value)
+    if (typeof window !== "undefined") {
+      localStorage.setItem(CONTENT_KEY, value)
     }
-  };
+  }
 
   // Save preferences to localStorage
   const savePreferences = (prefs: Preferences) => {
-    setPreferences(prefs);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem(PREFERENCES_KEY, JSON.stringify(prefs));
+    setPreferences(prefs)
+    if (typeof window !== "undefined") {
+      localStorage.setItem(PREFERENCES_KEY, JSON.stringify(prefs))
     }
-  };
+  }
 
   // Update URL hash with current content
   const shareContent = () => {
-    if (typeof window !== 'undefined' && content) {
-      const encoded = encodeURIComponent(content);
-      window.location.hash = encoded;
+    if (typeof window !== "undefined" && content) {
+      const encoded = encodeURIComponent(content)
+      window.location.hash = encoded
       // Copy URL to clipboard
-      navigator.clipboard.writeText(window.location.href);
-      return window.location.href;
+      navigator.clipboard.writeText(window.location.href)
+      return window.location.href
     }
-    return '';
-  };
+    return ""
+  }
 
   return {
     content,
@@ -81,5 +81,5 @@ export function useLocalStorage() {
     saveContent,
     savePreferences,
     shareContent,
-  };
+  }
 }

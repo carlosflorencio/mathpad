@@ -1,20 +1,20 @@
-'use client';
+"use client"
 
-import { useEffect, useState } from 'react';
-import { Preferences, Theme } from '@/lib/types';
+import { useEffect, useState } from "react"
+import { Preferences, Theme } from "@/lib/types"
 
 interface PreferencesDialogProps {
-  preferences: Preferences;
-  close: () => void;
-  save: (preferences: Preferences) => void;
+  preferences: Preferences
+  close: () => void
+  save: (preferences: Preferences) => void
 }
 
 export function PreferencesDialog({ preferences, save, close }: PreferencesDialogProps) {
-  const [fontSize, setFontSize] = useState(preferences.fontSize);
-  const [decimalPlaces, setDecimalPlaces] = useState(preferences.decimalPlaces);
-  const [theme, setTheme] = useState(preferences.theme);
-  const [decimalSeparator, setDecimalSeparator] = useState(preferences.decimalSeparator);
-  const [thousandsSeparator, setThousandsSeparator] = useState(preferences.thousandsSeparator);
+  const [fontSize, setFontSize] = useState(preferences.fontSize)
+  const [decimalPlaces, setDecimalPlaces] = useState(preferences.decimalPlaces)
+  const [theme, setTheme] = useState(preferences.theme)
+  const [decimalSeparator, setDecimalSeparator] = useState(preferences.decimalSeparator)
+  const [thousandsSeparator, setThousandsSeparator] = useState(preferences.thousandsSeparator)
 
   useEffect(() => {
     save({
@@ -23,17 +23,19 @@ export function PreferencesDialog({ preferences, save, close }: PreferencesDialo
       theme,
       decimalSeparator,
       thousandsSeparator,
-    });
+    })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fontSize, decimalPlaces, theme, thousandsSeparator, decimalSeparator]);
+  }, [fontSize, decimalPlaces, theme, thousandsSeparator, decimalSeparator])
 
-  const isDark = theme === 'dark';
-  const bgColor = isDark ? 'bg-[hsl(220,13%,18%)]' : 'bg-[hsl(0,0%,95%)]';
-  const textColor = isDark ? 'text-[rgba(214,221,209)]' : 'text-[hsl(0,0%,50%)]';
-  const borderColor = 'border-black';
+  const isDark = theme === "dark"
+  const bgColor = isDark ? "bg-[hsl(220,13%,18%)]" : "bg-[hsl(0,0%,95%)]"
+  const textColor = isDark ? "text-[rgba(214,221,209)]" : "text-[hsl(0,0%,50%)]"
+  const borderColor = "border-black"
 
   return (
-    <div className={`fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 p-6 border ${borderColor} ${bgColor} ${textColor}`}>
+    <div
+      className={`fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 p-6 border ${borderColor} ${bgColor} ${textColor}`}
+    >
       <div className="mb-4">
         <label className="inline-block w-48">Theme</label>
         <select
@@ -65,9 +67,9 @@ export function PreferencesDialog({ preferences, save, close }: PreferencesDialo
           maxLength={1}
           value={decimalSeparator}
           onChange={(e) => {
-            const val = e.target.value;
-            if (val === ',' || val === '.') {
-              setDecimalSeparator(val);
+            const val = e.target.value
+            if (val === "," || val === ".") {
+              setDecimalSeparator(val)
             }
           }}
           className="w-12 border border-black px-2 py-1 mr-4 bg-white text-black"
@@ -81,9 +83,9 @@ export function PreferencesDialog({ preferences, save, close }: PreferencesDialo
           maxLength={1}
           value={thousandsSeparator}
           onChange={(e) => {
-            const val = e.target.value;
-            if (val === '' || val === ',' || val === '.' || val === ' ') {
-              setThousandsSeparator(val as '' | ',' | '.' | ' ');
+            const val = e.target.value
+            if (val === "" || val === "," || val === "." || val === " ") {
+              setThousandsSeparator(val as "" | "," | "." | " ")
             }
           }}
           className="w-12 border border-black px-2 py-1 mr-4 bg-white text-black"
@@ -108,5 +110,5 @@ export function PreferencesDialog({ preferences, save, close }: PreferencesDialo
         </span>
       </div>
     </div>
-  );
+  )
 }

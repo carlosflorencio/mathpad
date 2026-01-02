@@ -3,7 +3,7 @@
  * Each function knows how to transform values
  */
 
-import Big from 'big.js';
+import Big from "big.js"
 
 /**
  * Function adapter interface
@@ -11,25 +11,25 @@ import Big from 'big.js';
  */
 export interface FunctionAdapter {
   /** Primary function name */
-  name: string;
-  
+  name: string
+
   /** Alternative names/aliases */
-  aliases?: string[];
-  
+  aliases?: string[]
+
   /** Description for autocomplete */
-  description: string;
-  
+  description: string
+
   /**
    * Execute the function on a value
    * @throws Error if execution fails
    */
-  execute(value: Big): Big;
-  
+  execute(value: Big): Big
+
   /**
    * Validate if the value is acceptable for this function
    * @returns error message if invalid, null if valid
    */
-  validate?(value: Big): string | null;
+  validate?(value: Big): string | null
 }
 
 /**
@@ -38,38 +38,38 @@ export interface FunctionAdapter {
  */
 export interface AggregateFunctionAdapter {
   /** Primary function name */
-  name: string;
-  
+  name: string
+
   /** Alternative names/aliases */
-  aliases?: string[];
-  
+  aliases?: string[]
+
   /** Description for autocomplete */
-  description: string;
-  
+  description: string
+
   /**
    * Execute the aggregate function on a collection of values
    * @param values Array of Big numbers to aggregate
    * @returns Aggregated result
    * @throws Error if execution fails
    */
-  execute(values: Big[]): Big;
-  
+  execute(values: Big[]): Big
+
   /**
    * Validate if the values are acceptable for this function
    * @returns error message if invalid, null if valid
    */
-  validate?(values: Big[]): string | null;
+  validate?(values: Big[]): string | null
 }
 
 /**
  * Round to nearest integer
  */
 export class RoundFunction implements FunctionAdapter {
-  name = 'round';
-  description = 'Round to nearest integer';
-  
+  name = "round"
+  description = "Round to nearest integer"
+
   execute(value: Big): Big {
-    return value.round(0, Big.roundHalfUp);
+    return value.round(0, Big.roundHalfUp)
   }
 }
 
@@ -77,11 +77,11 @@ export class RoundFunction implements FunctionAdapter {
  * Round up to integer (towards positive infinity)
  */
 export class CeilFunction implements FunctionAdapter {
-  name = 'ceil';
-  description = 'Round up to integer';
-  
+  name = "ceil"
+  description = "Round up to integer"
+
   execute(value: Big): Big {
-    return value.round(0, value.lt(0) ? Big.roundDown : Big.roundUp);
+    return value.round(0, value.lt(0) ? Big.roundDown : Big.roundUp)
   }
 }
 
@@ -89,11 +89,11 @@ export class CeilFunction implements FunctionAdapter {
  * Round down to integer (towards negative infinity)
  */
 export class FloorFunction implements FunctionAdapter {
-  name = 'floor';
-  description = 'Round down to integer';
-  
+  name = "floor"
+  description = "Round down to integer"
+
   execute(value: Big): Big {
-    return value.round(0, value.lt(0) ? Big.roundUp : Big.roundDown);
+    return value.round(0, value.lt(0) ? Big.roundUp : Big.roundDown)
   }
 }
 
@@ -101,11 +101,11 @@ export class FloorFunction implements FunctionAdapter {
  * Absolute value
  */
 export class AbsFunction implements FunctionAdapter {
-  name = 'abs';
-  description = 'Absolute value';
-  
+  name = "abs"
+  description = "Absolute value"
+
   execute(value: Big): Big {
-    return value.abs();
+    return value.abs()
   }
 }
 
@@ -113,18 +113,18 @@ export class AbsFunction implements FunctionAdapter {
  * Square root
  */
 export class SqrtFunction implements FunctionAdapter {
-  name = 'sqrt';
-  description = 'Square root';
-  
+  name = "sqrt"
+  description = "Square root"
+
   validate(value: Big): string | null {
     if (value.lt(0)) {
-      return 'Cannot take square root of negative number';
+      return "Cannot take square root of negative number"
     }
-    return null;
+    return null
   }
-  
+
   execute(value: Big): Big {
-    return value.sqrt();
+    return value.sqrt()
   }
 }
 
@@ -132,66 +132,66 @@ export class SqrtFunction implements FunctionAdapter {
  * Function registry - maps function names to their adapters
  */
 class FunctionRegistry {
-  private functions = new Map<string, FunctionAdapter>();
-  
+  private functions = new Map<string, FunctionAdapter>()
+
   /**
    * Register a function adapter
    */
   register(adapter: FunctionAdapter): void {
     // Register primary name
-    this.functions.set(adapter.name.toLowerCase(), adapter);
-    
+    this.functions.set(adapter.name.toLowerCase(), adapter)
+
     // Register aliases
     if (adapter.aliases) {
       for (const alias of adapter.aliases) {
-        this.functions.set(alias.toLowerCase(), adapter);
+        this.functions.set(alias.toLowerCase(), adapter)
       }
     }
   }
-  
+
   /**
    * Get a function adapter by name
    */
   get(name: string): FunctionAdapter | undefined {
-    return this.functions.get(name.toLowerCase());
+    return this.functions.get(name.toLowerCase())
   }
-  
+
   /**
    * Check if a function exists
    */
   has(name: string): boolean {
-    return this.functions.has(name.toLowerCase());
+    return this.functions.has(name.toLowerCase())
   }
-  
+
   /**
    * Get all registered function names (primary names only)
    */
   getAllNames(): string[] {
-    const names = new Set<string>();
+    const names = new Set<string>()
     for (const adapter of this.functions.values()) {
-      names.add(adapter.name);
+      names.add(adapter.name)
     }
-    return Array.from(names);
+    return Array.from(names)
   }
-  
+
   /**
    * Get all function adapters (deduplicated)
    */
   getAllAdapters(): FunctionAdapter[] {
-    const adapters = new Map<string, FunctionAdapter>();
+    const adapters = new Map<string, FunctionAdapter>()
     for (const adapter of this.functions.values()) {
-      adapters.set(adapter.name, adapter);
+      adapters.set(adapter.name, adapter)
     }
-    return Array.from(adapters.values());
+    return Array.from(adapters.values())
   }
 }
 
 // Create and populate the global registry
-export const functionRegistry = new FunctionRegistry();
+export const functionRegistry = new FunctionRegistry()
 
 // Register all math functions
-functionRegistry.register(new RoundFunction());
-functionRegistry.register(new CeilFunction());
-functionRegistry.register(new FloorFunction());
-functionRegistry.register(new AbsFunction());
-functionRegistry.register(new SqrtFunction());
+functionRegistry.register(new RoundFunction())
+functionRegistry.register(new CeilFunction())
+functionRegistry.register(new FloorFunction())
+functionRegistry.register(new AbsFunction())
+functionRegistry.register(new SqrtFunction())

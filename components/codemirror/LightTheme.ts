@@ -1,60 +1,60 @@
-import { EditorView } from '@codemirror/view';
-import { HighlightStyle, syntaxHighlighting } from '@codemirror/language';
-import { tags } from '@lezer/highlight';
+import { EditorView } from "@codemirror/view"
+import { HighlightStyle, syntaxHighlighting } from "@codemirror/language"
+import { tags } from "@lezer/highlight"
 
 export const colors = {
-  light: 'hsl(0, 0%, 70%)',
-  medium: 'hsl(0, 0%, 20%)',
-  dark: 'hsl(0, 80%, 40%)',
-  background: 'hsl(0, 0%, 98%)',
-  darkBackground: 'hsl(0, 0%, 95%)',
-  highlightBackground: 'hsl(0, 0%, 100%)',
-  selection: 'hsl(0, 0%, 90)',
-  cursor: '#528bff',
-};
+  light: "hsl(0, 0%, 70%)",
+  medium: "hsl(0, 0%, 20%)",
+  dark: "hsl(0, 80%, 40%)",
+  background: "hsl(0, 0%, 98%)",
+  darkBackground: "hsl(0, 0%, 95%)",
+  highlightBackground: "hsl(0, 0%, 100%)",
+  selection: "hsl(0, 0%, 90)",
+  cursor: "#528bff",
+}
 
 const lightTheme = EditorView.theme(
   {
-    '&': {
-      color: 'hsl(0, 0%, 50%)',
+    "&": {
+      color: "hsl(0, 0%, 50%)",
       backgroundColor: colors.background,
     },
-    '.cm-content': {
+    ".cm-content": {
       caretColor: colors.cursor,
     },
-    '&.cm-focused .cm-cursor': { borderLeftColor: colors.cursor },
-    '&.cm-focused .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection': {
+    "&.cm-focused .cm-cursor": { borderLeftColor: colors.cursor },
+    "&.cm-focused .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection": {
       backgroundColor: colors.selection,
     },
-    '.cm-searchMatch': {
+    ".cm-searchMatch": {
       backgroundColor: colors.selection,
     },
-    '.cm-searchMatch.cm-searchMatch-selected': {
-      backgroundColor: '#6199ff2f',
+    ".cm-searchMatch.cm-searchMatch-selected": {
+      backgroundColor: "#6199ff2f",
     },
-    '.cm-selectionMatch': { backgroundColor: colors.selection },
-    '.cm-activeLine, .cm-activeLineGutter, .cm-activeLineRightGutter': {
+    ".cm-selectionMatch": { backgroundColor: colors.selection },
+    ".cm-activeLine, .cm-activeLineGutter, .cm-activeLineRightGutter": {
       backgroundColor: colors.highlightBackground,
     },
-    '.cm-tooltip': {
-      border: 'none',
+    ".cm-tooltip": {
+      border: "none",
       backgroundColor: colors.darkBackground,
     },
-    '.cm-tooltip.cm-tooltip-autocomplete > ul': {
-      fontFamily: 'inherit',
+    ".cm-tooltip.cm-tooltip-autocomplete > ul": {
+      fontFamily: "inherit",
     },
-    '.cm-tooltip-autocomplete': {
-      '& > ul > li[aria-selected]': {
+    ".cm-tooltip-autocomplete": {
+      "& > ul > li[aria-selected]": {
         backgroundColor: colors.selection,
       },
     },
-    '.cm-right-gutters': {
+    ".cm-right-gutters": {
       backgroundColor: colors.darkBackground,
       color: colors.medium,
     },
   },
   { dark: false }
-);
+)
 
 const lightHighlightStyle = HighlightStyle.define([
   {
@@ -98,6 +98,6 @@ const lightHighlightStyle = HighlightStyle.define([
     tag: [tags.meta, tags.comment],
     color: colors.light,
   },
-]);
+])
 
-export const light = [lightTheme, syntaxHighlighting(lightHighlightStyle)];
+export const light = [lightTheme, syntaxHighlighting(lightHighlightStyle)]

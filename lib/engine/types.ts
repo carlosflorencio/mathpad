@@ -1,24 +1,24 @@
-import Big from 'big.js';
-import { AggregateFunctionName } from './constants';
+import Big from "big.js"
+import { AggregateFunctionName } from "./constants"
 
 // ============================================================================
 // Token Types (from Tokenizer)
 // ============================================================================
 
 export type TokenType =
-  | 'number'
-  | 'percent'
-  | 'identifier'
-  | 'operator'
-  | 'paren'
-  | 'assign'
-  | 'eof';
+  | "number"
+  | "percent"
+  | "identifier"
+  | "operator"
+  | "paren"
+  | "assign"
+  | "eof"
 
 export interface Token {
-  type: TokenType;
-  value: string;
-  position: number;
-  length: number;
+  type: TokenType
+  value: string
+  position: number
+  length: number
 }
 
 // ============================================================================
@@ -35,112 +35,108 @@ export type ASTNode =
   | AggregateNode
   | FractionNode
   | FunctionCallNode
-  | EmptyNode;
+  | EmptyNode
 
 export interface NumberNode {
-  kind: 'number';
-  value: string;
-  position: number;
-  length: number;
+  kind: "number"
+  value: string
+  position: number
+  length: number
 }
 
 export interface PercentNode {
-  kind: 'percent';
-  value: string;
-  position: number;
-  length: number;
+  kind: "percent"
+  value: string
+  position: number
+  length: number
 }
 
 export interface IdentifierNode {
-  kind: 'identifier';
-  name: string;
-  position: number;
-  length: number;
+  kind: "identifier"
+  name: string
+  position: number
+  length: number
 }
 
 export interface BinaryOpNode {
-  kind: 'binary';
-  operator: '+' | '-' | '*' | '/' | '%' | '^';
-  left: ASTNode;
-  right: ASTNode;
-  position: number;
-  length: number;
+  kind: "binary"
+  operator: "+" | "-" | "*" | "/" | "%" | "^"
+  left: ASTNode
+  right: ASTNode
+  position: number
+  length: number
 }
 
 export interface UnaryOpNode {
-  kind: 'unary';
-  operator: '+' | '-';
-  operand: ASTNode;
-  position: number;
-  length: number;
+  kind: "unary"
+  operator: "+" | "-"
+  operand: ASTNode
+  position: number
+  length: number
 }
 
 export interface AssignmentNode {
-  kind: 'assignment';
-  identifier: string;
-  expression: ASTNode;
-  position: number;
-  length: number;
+  kind: "assignment"
+  identifier: string
+  expression: ASTNode
+  position: number
+  length: number
 }
 
 export interface AggregateNode {
-  kind: 'aggregate';
-  function: AggregateFunctionName;
-  position: number;
-  length: number;
+  kind: "aggregate"
+  function: AggregateFunctionName
+  position: number
+  length: number
 }
 
 export interface FractionNode {
-  kind: 'fraction';
-  numerator: ASTNode;
-  denominator: ASTNode;
-  position: number;
-  length: number;
+  kind: "fraction"
+  numerator: ASTNode
+  denominator: ASTNode
+  position: number
+  length: number
 }
 
 export interface FunctionCallNode {
-  kind: 'function';
-  name: string;
-  argument: ASTNode;
-  position: number;
-  length: number;
+  kind: "function"
+  name: string
+  argument: ASTNode
+  position: number
+  length: number
 }
 
 export interface EmptyNode {
-  kind: 'empty';
-  position: number;
-  length: number;
+  kind: "empty"
+  position: number
+  length: number
 }
 
 // ============================================================================
 // Evaluation Result Types
 // ============================================================================
 
-export type EvalResult =
-  | NumberResult
-  | PercentResult
-  | EmptyResult
-  | ErrorResult;
+export type EvalResult = NumberResult | PercentResult | EmptyResult | ErrorResult
 
 export interface NumberResult {
-  type: 'number';
-  value: Big;
+  type: "number"
+  value: Big
 }
 
 export interface PercentResult {
-  type: 'percent';
-  value: Big;
+  type: "percent"
+  value: Big
 }
 
 export interface EmptyResult {
-  type: 'empty';
+  type: "empty"
 }
 
 export interface ErrorResult {
-  type: 'error';
-  message: string;
-  position: number;
-  length: number;
+  type: "error"
+  message: string
+  position: number
+  length: number
 }
 
 // ============================================================================
@@ -148,9 +144,9 @@ export interface ErrorResult {
 // ============================================================================
 
 export interface ExecutionContext {
-  variables: Map<string, EvalResult>;
-  lineResults: EvalResult[];
-  currentLine: number;
+  variables: Map<string, EvalResult>
+  lineResults: EvalResult[]
+  currentLine: number
 }
 
 export function createContext(): ExecutionContext {
@@ -158,7 +154,7 @@ export function createContext(): ExecutionContext {
     variables: new Map(),
     lineResults: [],
     currentLine: 0,
-  };
+  }
 }
 
 export function cloneContext(ctx: ExecutionContext): ExecutionContext {
@@ -166,7 +162,7 @@ export function cloneContext(ctx: ExecutionContext): ExecutionContext {
     variables: new Map(ctx.variables),
     lineResults: [...ctx.lineResults],
     currentLine: ctx.currentLine,
-  };
+  }
 }
 
 // ============================================================================
@@ -174,10 +170,10 @@ export function cloneContext(ctx: ExecutionContext): ExecutionContext {
 // ============================================================================
 
 export interface LineEvaluation {
-  lineNumber: number;
-  result: EvalResult;
-  formatted: string;
-  context: ExecutionContext;
+  lineNumber: number
+  result: EvalResult
+  formatted: string
+  context: ExecutionContext
 }
 
 // ============================================================================
@@ -185,9 +181,9 @@ export interface LineEvaluation {
 // ============================================================================
 
 export interface FormatOptions {
-  decimalPlaces: number;
-  thousandsSeparator: ',' | '.' | ' ' | '';
-  decimalSeparator: ',' | '.';
-  showTrailingZeros: boolean;
-  scientificNotationThreshold: number;
+  decimalPlaces: number
+  thousandsSeparator: "," | "." | " " | ""
+  decimalSeparator: "," | "."
+  showTrailingZeros: boolean
+  scientificNotationThreshold: number
 }

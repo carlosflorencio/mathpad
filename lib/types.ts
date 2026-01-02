@@ -1,17 +1,17 @@
-export type Theme = 'dark' | 'light';
+export type Theme = "dark" | "light"
 
 export interface Preferences {
-  fontSize: number;
-  decimalPlaces: number;
-  decimalSeparator: ',' | '.';
-  thousandsSeparator: ',' | '.' | ' ' | '';
-  theme: Theme;
+  fontSize: number
+  decimalPlaces: number
+  decimalSeparator: "," | "."
+  thousandsSeparator: "," | "." | " " | ""
+  theme: Theme
 }
 
 export const defaultPreferences: Preferences = {
   fontSize: 18,
   decimalPlaces: 2,
-  theme: 'dark',
-  decimalSeparator: '.',
-  thousandsSeparator: ',',
-};
+  theme: "dark",
+  decimalSeparator: ".",
+  thousandsSeparator: ",",
+}

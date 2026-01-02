@@ -3,6 +3,7 @@
 A modern calculator application with live results and variables. Built with Next.js, TypeScript, CodeMirror 6, and Tailwind CSS.
 
 Inspired by:
+
 - [NoteCalc3](https://github.com/bbodi/notecalc3)
 - [CalcPad](https://github.com/filipesabella/CalcPad)
 - [Numbr](https://github.com/antonmedv/numbr)
@@ -19,12 +20,14 @@ Open [http://localhost:3000](http://localhost:3000) with your browser.
 ## Features
 
 ### Editor
+
 - **CodeMirror 6** with custom right gutter for live results
 - **Syntax highlighting** for mathematical expressions
 - **Auto-completion** for functions and variables
 - **JetBrains Mono** font
 
 ### Calculations
+
 - **Basic arithmetic**: `+`, `-`, `*`, `/`, `^`, `%`
 - **Math functions**: `round()`, `ceil()`, `floor()`, `abs()`, `sqrt()`
 - **Aggregate functions**: `sum`, `avg`, `min`, `max`, `count`
@@ -33,6 +36,7 @@ Open [http://localhost:3000](http://localhost:3000) with your browser.
 - **Number formats**: `10k`, `1M`, `1,000,000`
 
 ### Preferences
+
 - **Dark/Light theme** with system detection
 - **Decimal places** (0-20)
 - **Number formatting** (decimal/thousands separators)
@@ -41,6 +45,7 @@ Open [http://localhost:3000](http://localhost:3000) with your browser.
 - **URL sharing** via hash
 
 ### Keyboard Shortcuts
+
 - `ESC` - Close dialogs
 - `Tab` - Accept autocomplete
 - `Ctrl+Space` - Trigger autocomplete
@@ -92,29 +97,31 @@ The calculation engine uses an **adapter pattern** for easy extensibility:
 ### Adding a New Math Function
 
 1. Create `lib/engine/adapters/functions/myfunction.ts`:
+
 ```typescript
-import Big from 'big.js';
-import { FunctionAdapter } from '../base';
+import Big from "big.js"
+import { FunctionAdapter } from "../base"
 
 export class MyFunction implements FunctionAdapter {
-  name = 'myfunction';
-  description = 'Description for autocomplete';
-  
+  name = "myfunction"
+  description = "Description for autocomplete"
+
   execute(value: Big): Big {
-    return value.times(2); // Your logic here
+    return value.times(2) // Your logic here
   }
-  
+
   validate?(value: Big): string | null {
     // Optional validation
-    return null;
+    return null
   }
 }
 ```
 
 2. Register in `lib/engine/adapters/registry.ts`:
+
 ```typescript
-import { MyFunction } from './functions/myfunction';
-functionRegistry.register(new MyFunction());
+import { MyFunction } from "./functions/myfunction"
+functionRegistry.register(new MyFunction())
 ```
 
 3. Create test file `myfunction.test.ts` as a sibling
@@ -136,6 +143,7 @@ npm run test:watch    # Watch mode
 ```
 
 Tests are co-located with source files:
+
 - `round.ts` + `round.test.ts`
 - `add.ts` + `add.test.ts`
 - Integration tests in `lib/engine/__tests__/`
@@ -152,6 +160,7 @@ Tests are co-located with source files:
 ## Why Big.js?
 
 JavaScript's native numbers use IEEE 754 floating-point, which causes precision issues:
+
 - `0.1 + 0.2 = 0.30000000000004` ❌
 - With Big.js: `0.1 + 0.2 = 0.3` ✅
 
