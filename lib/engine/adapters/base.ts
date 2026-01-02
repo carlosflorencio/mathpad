@@ -8,6 +8,12 @@
 import Big from "big.js"
 
 /**
+ * Aggregate function names
+ * These are the canonical names for aggregate functions that operate on collections
+ */
+export type AggregateFunctionName = "sum" | "avg" | "min" | "max" | "count"
+
+/**
  * Math Function Adapter
  *
  * Represents a single-argument mathematical function (e.g., round, sqrt, abs)

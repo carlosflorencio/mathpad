@@ -18,10 +18,8 @@ export class SubtractOperator implements BinaryOperatorAdapter {
     return left.times(new Big(1).minus(rightPercent.div(100)))
   }
 
-  executePercentNumber(leftPercent: Big, right: Big): Big {
-    // 20% - 100 is not a typical operation, but we'll subtract normally
-    return leftPercent.minus(right)
-  }
+  // Note: executePercentNumber is NOT implemented
+  // Percent - Number is not a valid operation (e.g., 10% - 20 is invalid)
 
   executePercentPercent(left: Big, right: Big): Big {
     // 30% - 10% = 20%

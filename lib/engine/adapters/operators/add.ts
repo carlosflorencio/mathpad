@@ -17,10 +17,8 @@ export class AddOperator implements BinaryOperatorAdapter {
     return left.times(new Big(1).plus(rightPercent.div(100)))
   }
 
-  executePercentNumber(leftPercent: Big, right: Big): Big {
-    // 20% + 100 = 120 (percent applies to the number)
-    return right.times(new Big(1).plus(leftPercent.div(100)))
-  }
+  // Note: executePercentNumber is NOT implemented
+  // Percent + Number is not a valid operation (e.g., 10% + 20 is invalid)
 
   executePercentPercent(left: Big, right: Big): Big {
     // 20% + 10% = 30%

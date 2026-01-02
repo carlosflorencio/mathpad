@@ -1,12 +1,12 @@
 import { Token, TokenType } from "./types"
-import { getAllAggregateKeywords } from "./constants"
+import { aggregateFunctionRegistry } from "./adapters/registry"
 
 // Operators that can appear in expressions
 const OPERATORS = new Set(["+", "-", "*", "/", "%", "^", "×", "−"])
 const PARENS = new Set(["(", ")"])
 
 // Keywords for aggregate functions
-const AGGREGATE_KEYWORDS = getAllAggregateKeywords()
+const AGGREGATE_KEYWORDS = aggregateFunctionRegistry.getAllKeywords()
 
 /**
  * Tokenizes a line of input into tokens

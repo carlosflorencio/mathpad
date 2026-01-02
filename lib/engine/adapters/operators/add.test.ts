@@ -27,11 +27,8 @@ describe("AddOperator", () => {
     })
   })
 
-  describe("executePercentNumber", () => {
-    it("should add percentage to number (20% + 100 = 120)", () => {
-      expect(add.executePercentNumber?.(new Big("20"), new Big("100")).toString()).toBe("120")
-    })
-  })
+  // Note: executePercentNumber is not implemented for add
+  // Percent + Number is invalid (e.g., 10% + 20 should error)
 
   describe("executePercentPercent", () => {
     it("should add two percentages", () => {

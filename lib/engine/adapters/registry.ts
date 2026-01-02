@@ -183,6 +183,20 @@ class AggregateFunctionRegistry {
     const adapter = this.get(keyword)
     return adapter ? adapter.name : null
   }
+
+  /**
+   * Check if a string is a valid aggregate function keyword
+   */
+  isAggregateKeyword(keyword: string): boolean {
+    return this.has(keyword)
+  }
+
+  /**
+   * Map an aggregate keyword to its canonical name
+   */
+  mapAggregateKeyword(keyword: string): string | null {
+    return this.mapKeywordToName(keyword)
+  }
 }
 
 // ============================================================================

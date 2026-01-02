@@ -1,12 +1,7 @@
 import { CompletionContext, Completion } from "@codemirror/autocomplete"
-import {
-  functionRegistry,
-  AGGREGATE_FUNCTIONS,
-  AGGREGATE_FUNCTION_DESCRIPTIONS,
-  AggregateFunctionName,
-} from "@/lib/engine/constants"
+import { functionRegistry, aggregateFunctionRegistry } from "@/lib/engine/adapters/registry"
 
-// Build completions from constants
+// Build completions from adapter registries
 const mathpadFunctions: Completion[] = [
   // Math functions (from adapter registry)
   ...functionRegistry.getAllAdapters().map((adapter) => ({
@@ -14,11 +9,11 @@ const mathpadFunctions: Completion[] = [
     type: "function" as const,
     info: adapter.description,
   })),
-  // Aggregate functions (use primary name only, not aliases)
-  ...(Object.keys(AGGREGATE_FUNCTIONS) as AggregateFunctionName[]).map((name) => ({
-    label: name,
+  // Aggregate functions (from adapter registry)
+  ...aggregateFunctionRegistry.getAllAdapters().map((adapter) => ({
+    label: adapter.name,
     type: "function" as const,
-    info: AGGREGATE_FUNCTION_DESCRIPTIONS[name],
+    info: adapter.description,
   })),
 ]
 

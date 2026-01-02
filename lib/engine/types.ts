@@ -1,5 +1,5 @@
 import Big from "big.js"
-import { AggregateFunctionName } from "./constants"
+import { AggregateFunctionName } from "./adapters/base"
 
 // ============================================================================
 // Token Types (from Tokenizer)

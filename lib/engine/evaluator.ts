@@ -8,7 +8,12 @@ import {
   EmptyResult,
   ErrorResult,
 } from "./types"
-import { functionRegistry } from "./functions"
+import {
+  functionRegistry,
+  binaryOperatorRegistry,
+  unaryOperatorRegistry,
+  aggregateFunctionRegistry,
+} from "./adapters/registry"
 
 // Configure Big.js for better precision
 Big.DP = 20 // Decimal places
@@ -218,60 +223,37 @@ function evaluateBinaryNumbers(
   node: ASTNode,
   context: ExecutionContext
 ): [EvalResult, ExecutionContext] {
-  try {
-    let result: Big
-    switch (op) {
-      case "+":
-        result = left.value.plus(right.value)
-        break
-      case "-":
-        result = left.value.minus(right.value)
-        break
-      case "*":
-        result = left.value.times(right.value)
-        break
-      case "/":
-        if (right.value.eq(0)) {
-          return [
-            {
-              type: "error",
-              message: "Division by zero",
-              position: node.position,
-              length: node.length,
-            },
-            context,
-          ]
-        }
-        result = left.value.div(right.value)
-        break
-      case "%":
-        if (right.value.eq(0)) {
-          return [
-            {
-              type: "error",
-              message: "Modulo by zero",
-              position: node.position,
-              length: node.length,
-            },
-            context,
-          ]
-        }
-        result = left.value.mod(right.value)
-        break
-      case "^":
-        result = left.value.pow(right.value.toNumber())
-        break
-      default:
-        return [
-          {
-            type: "error",
-            message: `Unknown operator '${op}'`,
-            position: node.position,
-            length: node.length,
-          },
-          context,
-        ]
+  const adapter = binaryOperatorRegistry.get(op)
+  if (!adapter || !adapter.executeNumbers) {
+    return [
+      {
+        type: "error",
+        message: `Unknown operator '${op}'`,
+        position: node.position,
+        length: node.length,
+      },
+      context,
+    ]
+  }
+
+  // Validate if the adapter has validation logic
+  if (adapter.validate) {
+    const validationError = adapter.validate(left.value, right.value)
+    if (validationError) {
+      return [
+        {
+          type: "error",
+          message: validationError,
+          position: node.position,
+          length: node.length,
+        },
+        context,
+      ]
     }
+  }
+
+  try {
+    const result = adapter.executeNumbers(left.value, right.value)
     return [{ type: "number", value: result }, context]
   } catch (error) {
     return [
@@ -296,32 +278,21 @@ function evaluateNumberPercent(
   node: ASTNode,
   context: ExecutionContext
 ): [EvalResult, ExecutionContext] {
+  const adapter = binaryOperatorRegistry.get(op)
+  if (!adapter || !adapter.executeNumberPercent) {
+    return [
+      {
+        type: "error",
+        message: `Cannot apply '${op}' to number and percent`,
+        position: node.position,
+        length: node.length,
+      },
+      context,
+    ]
+  }
+
   try {
-    let result: Big
-    switch (op) {
-      case "+":
-        // 100 + 20% = 120
-        result = left.value.times(new Big(1).plus(right.value.div(100)))
-        break
-      case "-":
-        // 100 - 20% = 80
-        result = left.value.times(new Big(1).minus(right.value.div(100)))
-        break
-      case "*":
-        // 100 * 20% = 20
-        result = left.value.times(right.value).div(100)
-        break
-      default:
-        return [
-          {
-            type: "error",
-            message: `Cannot apply '${op}' to number and percent`,
-            position: node.position,
-            length: node.length,
-          },
-          context,
-        ]
-    }
+    const result = adapter.executeNumberPercent(left.value, right.value)
     return [{ type: "number", value: result }, context]
   } catch (error) {
     return [
@@ -346,39 +317,22 @@ function evaluatePercentNumber(
   node: ASTNode,
   context: ExecutionContext
 ): [EvalResult, ExecutionContext] {
+  const adapter = binaryOperatorRegistry.get(op)
+  if (!adapter || !adapter.executePercentNumber) {
+    return [
+      {
+        type: "error",
+        message: `Cannot apply '${op}' to percent and number`,
+        position: node.position,
+        length: node.length,
+      },
+      context,
+    ]
+  }
+
   try {
-    let result: Big
-    switch (op) {
-      case "*":
-        // 20% * 5 = 100%
-        result = left.value.times(right.value)
-        return [{ type: "percent", value: result }, context]
-      case "/":
-        if (right.value.eq(0)) {
-          return [
-            {
-              type: "error",
-              message: "Division by zero",
-              position: node.position,
-              length: node.length,
-            },
-            context,
-          ]
-        }
-        // 100% / 2 = 50%
-        result = left.value.div(right.value)
-        return [{ type: "percent", value: result }, context]
-      default:
-        return [
-          {
-            type: "error",
-            message: `Cannot apply '${op}' to percent and number`,
-            position: node.position,
-            length: node.length,
-          },
-          context,
-        ]
-    }
+    const result = adapter.executePercentNumber(left.value, right.value)
+    return [{ type: "percent", value: result }, context]
   } catch (error) {
     return [
       {
@@ -402,60 +356,37 @@ function evaluatePercentPercent(
   node: ASTNode,
   context: ExecutionContext
 ): [EvalResult, ExecutionContext] {
-  try {
-    let result: Big
-    switch (op) {
-      case "+":
-        result = left.value.plus(right.value)
-        break
-      case "-":
-        result = left.value.minus(right.value)
-        break
-      case "*":
-        result = left.value.times(right.value)
-        break
-      case "/":
-        if (right.value.eq(0)) {
-          return [
-            {
-              type: "error",
-              message: "Division by zero",
-              position: node.position,
-              length: node.length,
-            },
-            context,
-          ]
-        }
-        result = left.value.div(right.value)
-        break
-      case "%":
-        if (right.value.eq(0)) {
-          return [
-            {
-              type: "error",
-              message: "Modulo by zero",
-              position: node.position,
-              length: node.length,
-            },
-            context,
-          ]
-        }
-        result = left.value.mod(right.value)
-        break
-      case "^":
-        result = left.value.pow(right.value.toNumber())
-        break
-      default:
-        return [
-          {
-            type: "error",
-            message: `Unknown operator '${op}'`,
-            position: node.position,
-            length: node.length,
-          },
-          context,
-        ]
+  const adapter = binaryOperatorRegistry.get(op)
+  if (!adapter || !adapter.executePercentPercent) {
+    return [
+      {
+        type: "error",
+        message: `Unknown operator '${op}'`,
+        position: node.position,
+        length: node.length,
+      },
+      context,
+    ]
+  }
+
+  // Validate if the adapter has validation logic
+  if (adapter.validate) {
+    const validationError = adapter.validate(left.value, right.value)
+    if (validationError) {
+      return [
+        {
+          type: "error",
+          message: validationError,
+          position: node.position,
+          length: node.length,
+        },
+        context,
+      ]
     }
+  }
+
+  try {
+    const result = adapter.executePercentPercent(left.value, right.value)
     return [{ type: "percent", value: result }, context]
   } catch (error) {
     return [
@@ -482,26 +413,49 @@ function evaluateUnary(
   if (operand.type === "error") return [operand, ctx]
   if (operand.type === "empty") return [operand, ctx]
 
-  if (node.operator === "-") {
-    if (operand.type === "number") {
-      return [{ type: "number", value: operand.value.times(-1) }, ctx]
-    }
-    if (operand.type === "percent") {
-      return [{ type: "percent", value: operand.value.times(-1) }, ctx]
-    }
-  } else if (node.operator === "+") {
-    return [operand, ctx]
+  const adapter = unaryOperatorRegistry.get(node.operator)
+  if (!adapter) {
+    return [
+      {
+        type: "error",
+        message: `Unknown unary operator '${node.operator}'`,
+        position: node.position,
+        length: node.length,
+      },
+      ctx,
+    ]
   }
 
-  return [
-    {
-      type: "error",
-      message: `Cannot apply unary '${node.operator}' to this type`,
-      position: node.position,
-      length: node.length,
-    },
-    ctx,
-  ]
+  try {
+    if (operand.type === "number" && adapter.executeNumber) {
+      const result = adapter.executeNumber(operand.value)
+      return [{ type: "number", value: result }, ctx]
+    }
+    if (operand.type === "percent" && adapter.executePercent) {
+      const result = adapter.executePercent(operand.value)
+      return [{ type: "percent", value: result }, ctx]
+    }
+
+    return [
+      {
+        type: "error",
+        message: `Cannot apply unary '${node.operator}' to this type`,
+        position: node.position,
+        length: node.length,
+      },
+      ctx,
+    ]
+  } catch (error) {
+    return [
+      {
+        type: "error",
+        message: error instanceof Error ? error.message : "Calculation error",
+        position: node.position,
+        length: node.length,
+      },
+      ctx,
+    ]
+  }
 }
 
 /**
@@ -553,35 +507,37 @@ function evaluateAggregate(
     ]
   }
 
-  try {
-    let result: Big
-    switch (node.function) {
-      case "sum":
-        result = numbers.reduce((acc, n) => acc.plus(n), new Big(0))
-        break
-      case "avg":
-        result = numbers.reduce((acc, n) => acc.plus(n), new Big(0)).div(numbers.length)
-        break
-      case "min":
-        result = numbers.reduce((min, n) => (n.lt(min) ? n : min))
-        break
-      case "max":
-        result = numbers.reduce((max, n) => (n.gt(max) ? n : max))
-        break
-      case "count":
-        result = new Big(numbers.length)
-        break
-      default:
-        return [
-          {
-            type: "error",
-            message: `Unknown function '${node.function}'`,
-            position: node.position,
-            length: node.length,
-          },
-          context,
-        ]
+  const adapter = aggregateFunctionRegistry.get(node.function)
+  if (!adapter) {
+    return [
+      {
+        type: "error",
+        message: `Unknown function '${node.function}'`,
+        position: node.position,
+        length: node.length,
+      },
+      context,
+    ]
+  }
+
+  // Validate if the adapter has validation logic
+  if (adapter.validate) {
+    const validationError = adapter.validate(numbers)
+    if (validationError) {
+      return [
+        {
+          type: "error",
+          message: validationError,
+          position: node.position,
+          length: node.length,
+        },
+        context,
+      ]
     }
+  }
+
+  try {
+    const result = adapter.execute(numbers)
     return [{ type: "number", value: result }, context]
   } catch (error) {
     return [

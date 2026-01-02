@@ -12,7 +12,7 @@ import {
   FunctionCallNode,
   EmptyNode,
 } from "./types"
-import { isAggregateKeyword, mapAggregateKeyword, isMathFunction } from "./constants"
+import { functionRegistry, aggregateFunctionRegistry } from "./adapters/registry"
 
 /**
  * Recursive descent parser for mathematical expressions
@@ -237,8 +237,11 @@ class Parser {
     }
 
     // Aggregate functions (sum, avg, min, max, count)
-    if (current.type === "operator" && isAggregateKeyword(current.value)) {
-      const funcName = mapAggregateKeyword(current.value)
+    if (
+      current.type === "operator" &&
+      aggregateFunctionRegistry.isAggregateKeyword(current.value)
+    ) {
+      const funcName = aggregateFunctionRegistry.mapAggregateKeyword(current.value)
       if (!funcName) {
         const node: EmptyNode = {
           kind: "empty",
@@ -269,7 +272,7 @@ class Parser {
       if (this.current().type === "paren" && this.current().value === "(") {
         // Check if it's a known function
         const lowerName = name.toLowerCase()
-        if (isMathFunction(lowerName)) {
+        if (functionRegistry.has(lowerName)) {
           this.advance() // consume '('
           const argument = this.parseExpression()
           if (this.current().type === "paren" && this.current().value === ")") {
