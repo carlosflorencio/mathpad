@@ -1,6 +1,5 @@
 import { describe, it, expect } from "vitest"
-import Big from "big.js"
-import { evaluateDocument, computeResults } from "../index"
+import { computeResults } from "../index"
 import { defaultPreferences } from "@/lib/types"
 
 describe("Integration Tests", () => {

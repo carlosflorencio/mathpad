@@ -15,6 +15,7 @@ import {
   BinaryOperatorAdapter,
   UnaryOperatorAdapter,
   AggregateFunctionAdapter,
+  AggregateFunctionName,
 } from "./base"
 
 // Import all functions
@@ -179,9 +180,9 @@ class AggregateFunctionRegistry {
     return Array.from(adapters.values())
   }
 
-  mapKeywordToName(keyword: string): string | null {
+  mapKeywordToName(keyword: string): AggregateFunctionName | null {
     const adapter = this.get(keyword)
-    return adapter ? adapter.name : null
+    return adapter ? (adapter.name as AggregateFunctionName) : null
   }
 
   /**
@@ -194,7 +195,7 @@ class AggregateFunctionRegistry {
   /**
    * Map an aggregate keyword to its canonical name
    */
-  mapAggregateKeyword(keyword: string): string | null {
+  mapAggregateKeyword(keyword: string): AggregateFunctionName | null {
     return this.mapKeywordToName(keyword)
   }
 }

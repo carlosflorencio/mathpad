@@ -2,7 +2,7 @@ import { tokenize } from "./tokenizer"
 import { parse } from "./parser"
 import { evaluate } from "./evaluator"
 import { formatResult, createFormatOptions } from "./formatter"
-import { ExecutionContext, createContext, LineEvaluation, EvalResult } from "./types"
+import { createContext, LineEvaluation } from "./types"
 import { Preferences } from "../types"
 
 /**

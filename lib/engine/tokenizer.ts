@@ -1,4 +1,4 @@
-import { Token, TokenType } from "./types"
+import { Token } from "./types"
 import { aggregateFunctionRegistry } from "./adapters/registry"
 
 // Operators that can appear in expressions

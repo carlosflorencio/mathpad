@@ -1,13 +1,5 @@
 import Big from "big.js"
-import {
-  ASTNode,
-  EvalResult,
-  ExecutionContext,
-  NumberResult,
-  PercentResult,
-  EmptyResult,
-  ErrorResult,
-} from "./types"
+import { ASTNode, EvalResult, ExecutionContext, NumberResult, PercentResult } from "./types"
 import {
   functionRegistry,
   binaryOperatorRegistry,
@@ -57,6 +49,8 @@ export function evaluate(node: ASTNode, context: ExecutionContext): [EvalResult,
         return evaluateFunction(node, context)
 
       default:
+        // TypeScript exhaustiveness check
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const exhaustiveCheck: never = node
         return [
           {
