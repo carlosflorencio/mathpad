@@ -285,4 +285,71 @@ net = salary - tax`;
       expect(results[0]).toBe('1.000,5');
     });
   });
+
+  describe('Math Functions', () => {
+    it('should round to nearest integer', () => {
+      const results = computeResults('round(3.14)\nround(3.5)\nround(3.9)', prefs);
+      expect(results[0]).toBe('3');
+      expect(results[1]).toBe('4');
+      expect(results[2]).toBe('4');
+    });
+
+    it('should round up with ceil', () => {
+      const results = computeResults('ceil(3.14)\nceil(3.9)\nceil(-2.3)', prefs);
+      expect(results[0]).toBe('4');
+      expect(results[1]).toBe('4');
+      expect(results[2]).toBe('-2'); // ceil rounds towards positive infinity
+    });
+
+    it('should round down with floor', () => {
+      const results = computeResults('floor(3.14)\nfloor(3.9)\nfloor(-2.3)', prefs);
+      expect(results[0]).toBe('3');
+      expect(results[1]).toBe('3');
+      expect(results[2]).toBe('-3'); // floor rounds towards negative infinity
+    });
+
+    it('should calculate absolute value', () => {
+      const results = computeResults('abs(-5)\nabs(5)\nabs(-3.14)', prefs);
+      expect(results[0]).toBe('5');
+      expect(results[1]).toBe('5');
+      expect(results[2]).toBe('3.14');
+    });
+
+    it('should calculate square root', () => {
+      const results = computeResults('sqrt(4)\nsqrt(9)\nsqrt(2)', prefs);
+      expect(results[0]).toBe('2');
+      expect(results[1]).toBe('3');
+      expect(results[2]).toBe('1.41');
+    });
+
+    it('should handle functions in expressions', () => {
+      const results = computeResults('round(3.7) + ceil(2.1)', prefs);
+      expect(results[0]).toBe('7');
+    });
+
+    it('should handle nested functions', () => {
+      const results = computeResults('round(sqrt(10))', prefs);
+      expect(results[0]).toBe('3');
+    });
+
+    it('should handle functions with variables', () => {
+      const input = `x = 3.7
+y = round(x)
+z = y * 2`;
+      const results = computeResults(input, prefs);
+      expect(results[0]).toBe('3.7');
+      expect(results[1]).toBe('4');
+      expect(results[2]).toBe('8');
+    });
+
+    it('should error on sqrt of negative number', () => {
+      const results = computeResults('sqrt(-4)', prefs);
+      expect(results[0]).toContain('Error');
+    });
+
+    it('should work with percentages', () => {
+      const results = computeResults('round(33.7%)', prefs);
+      expect(results[0]).toBe('34%');
+    });
+  });
 });

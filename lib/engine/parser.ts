@@ -1,4 +1,5 @@
-import { Token, ASTNode, NumberNode, PercentNode, IdentifierNode, BinaryOpNode, UnaryOpNode, AssignmentNode, AggregateNode, FractionNode, EmptyNode } from './types';
+import { Token, ASTNode, NumberNode, PercentNode, IdentifierNode, BinaryOpNode, UnaryOpNode, AssignmentNode, AggregateNode, FractionNode, FunctionCallNode, EmptyNode } from './types';
+import { isAggregateKeyword, mapAggregateKeyword, isMathFunction } from './constants';
 
 /**
  * Recursive descent parser for mathematical expressions
@@ -223,8 +224,13 @@ class Parser {
     }
 
     // Aggregate functions (sum, avg, min, max, count)
-    if (current.type === 'operator' && this.isAggregateKeyword(current.value)) {
-      const funcName = this.mapAggregateKeyword(current.value);
+    if (current.type === 'operator' && isAggregateKeyword(current.value)) {
+      const funcName = mapAggregateKeyword(current.value);
+      if (!funcName) {
+        const node: EmptyNode = { kind: 'empty', position: current.position, length: current.length };
+        this.advance();
+        return node;
+      }
       const node: AggregateNode = {
         kind: 'aggregate',
         function: funcName,
@@ -235,15 +241,41 @@ class Parser {
       return node;
     }
 
-    // Identifiers (variables)
+    // Identifiers (variables) or function calls
     if (current.type === 'identifier') {
+      const name = current.value;
+      const position = current.position;
+      const length = current.length;
+      this.advance();
+      
+      // Check if this is a function call (identifier followed by '(')
+      if (this.current().type === 'paren' && this.current().value === '(') {
+        // Check if it's a known function
+        const lowerName = name.toLowerCase();
+        if (isMathFunction(lowerName)) {
+          this.advance(); // consume '('
+          const argument = this.parseExpression();
+          if (this.current().type === 'paren' && this.current().value === ')') {
+            this.advance(); // consume ')'
+          }
+          const node: FunctionCallNode = {
+            kind: 'function',
+            name: lowerName,
+            argument,
+            position,
+            length: this.position - position,
+          };
+          return node;
+        }
+      }
+      
+      // Regular identifier (variable)
       const node: IdentifierNode = {
         kind: 'identifier',
-        name: current.value,
-        position: current.position,
-        length: current.length,
+        name,
+        position,
+        length,
       };
-      this.advance();
       return node;
     }
 
@@ -265,20 +297,6 @@ class Parser {
     };
     this.advance();
     return node;
-  }
-
-  private isAggregateKeyword(value: string): boolean {
-    const lower = value.toLowerCase();
-    return ['sum', 'total', 'avg', 'average', 'mean', 'min', 'minimum', 'max', 'maximum', 'count'].includes(lower);
-  }
-
-  private mapAggregateKeyword(value: string): 'sum' | 'avg' | 'min' | 'max' | 'count' {
-    const lower = value.toLowerCase();
-    if (lower === 'sum' || lower === 'total') return 'sum';
-    if (lower === 'avg' || lower === 'average' || lower === 'mean') return 'avg';
-    if (lower === 'min' || lower === 'minimum') return 'min';
-    if (lower === 'max' || lower === 'maximum') return 'max';
-    return 'count';
   }
 }
 

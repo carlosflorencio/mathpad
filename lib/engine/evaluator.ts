@@ -1,5 +1,6 @@
 import Big from 'big.js';
 import { ASTNode, EvalResult, ExecutionContext, NumberResult, PercentResult, EmptyResult, ErrorResult } from './types';
+import { functionRegistry } from './functions';
 
 // Configure Big.js for better precision
 Big.DP = 20; // Decimal places
@@ -38,6 +39,9 @@ export function evaluate(node: ASTNode, context: ExecutionContext): [EvalResult,
 
       case 'fraction':
         return evaluateFraction(node, context);
+
+      case 'function':
+        return evaluateFunction(node, context);
 
       default:
         const exhaustiveCheck: never = node;
@@ -555,4 +559,94 @@ function evaluateFraction(node: ASTNode & { kind: 'fraction' }, context: Executi
     },
     ctx2,
   ];
+}
+
+/**
+ * Evaluate a function call (e.g., "round(3.14)")
+ * Uses the adapter pattern - each function knows how to transform values
+ */
+function evaluateFunction(node: ASTNode & { kind: 'function' }, context: ExecutionContext): [EvalResult, ExecutionContext] {
+  const [argResult, newContext] = evaluate(node.argument, context);
+
+  if (argResult.type === 'error') return [argResult, newContext];
+  if (argResult.type === 'empty') {
+    return [
+      {
+        type: 'error',
+        message: 'Function requires an argument',
+        position: node.position,
+        length: node.length,
+      },
+      newContext,
+    ];
+  }
+
+  // Get numeric value (works for both number and percent types)
+  let value: Big;
+  if (argResult.type === 'number') {
+    value = argResult.value;
+  } else if (argResult.type === 'percent') {
+    value = argResult.value;
+  } else {
+    return [
+      {
+        type: 'error',
+        message: 'Function requires a numeric argument',
+        position: node.position,
+        length: node.length,
+      },
+      newContext,
+    ];
+  }
+
+  // Look up the function adapter
+  const adapter = functionRegistry.get(node.name);
+  if (!adapter) {
+    return [
+      {
+        type: 'error',
+        message: `Unknown function '${node.name}'`,
+        position: node.position,
+        length: node.length,
+      },
+      newContext,
+    ];
+  }
+
+  // Validate if the adapter has validation logic
+  if (adapter.validate) {
+    const validationError = adapter.validate(value);
+    if (validationError) {
+      return [
+        {
+          type: 'error',
+          message: validationError,
+          position: node.position,
+          length: node.length,
+        },
+        newContext,
+      ];
+    }
+  }
+
+  // Execute the function
+  try {
+    const result = adapter.execute(value);
+
+    // Return same type as input (number or percent)
+    if (argResult.type === 'percent') {
+      return [{ type: 'percent', value: result }, newContext];
+    }
+    return [{ type: 'number', value: result }, newContext];
+  } catch (error) {
+    return [
+      {
+        type: 'error',
+        message: error instanceof Error ? error.message : 'Function evaluation error',
+        position: node.position,
+        length: node.length,
+      },
+      newContext,
+    ];
+  }
 }

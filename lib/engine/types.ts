@@ -1,4 +1,5 @@
 import Big from 'big.js';
+import { AggregateFunctionName } from './constants';
 
 // ============================================================================
 // Token Types (from Tokenizer)
@@ -33,6 +34,7 @@ export type ASTNode =
   | AssignmentNode
   | AggregateNode
   | FractionNode
+  | FunctionCallNode
   | EmptyNode;
 
 export interface NumberNode {
@@ -83,7 +85,7 @@ export interface AssignmentNode {
 
 export interface AggregateNode {
   kind: 'aggregate';
-  function: 'sum' | 'avg' | 'min' | 'max' | 'count';
+  function: AggregateFunctionName;
   position: number;
   length: number;
 }
@@ -92,6 +94,14 @@ export interface FractionNode {
   kind: 'fraction';
   numerator: ASTNode;
   denominator: ASTNode;
+  position: number;
+  length: number;
+}
+
+export interface FunctionCallNode {
+  kind: 'function';
+  name: string;
+  argument: ASTNode;
   position: number;
   length: number;
 }

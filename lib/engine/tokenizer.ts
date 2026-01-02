@@ -1,17 +1,12 @@
 import { Token, TokenType } from './types';
+import { getAllAggregateKeywords } from './constants';
 
 // Operators that can appear in expressions
 const OPERATORS = new Set(['+', '-', '*', '/', '%', '^', '×', '−']);
 const PARENS = new Set(['(', ')']);
 
 // Keywords for aggregate functions
-const AGGREGATE_KEYWORDS = new Set([
-  'sum', 'total',
-  'avg', 'average', 'mean',
-  'min', 'minimum',
-  'max', 'maximum',
-  'count'
-]);
+const AGGREGATE_KEYWORDS = getAllAggregateKeywords();
 
 /**
  * Tokenizes a line of input into tokens
