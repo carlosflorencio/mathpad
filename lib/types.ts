@@ -3,8 +3,8 @@ export type Theme = 'dark' | 'light';
 export interface Preferences {
   fontSize: number;
   decimalPlaces: number;
-  decimalSeparator: string;
-  thousandsSeparator: string;
+  decimalSeparator: ',' | '.';
+  thousandsSeparator: ',' | '.' | ' ' | '';
   theme: Theme;
 }
 

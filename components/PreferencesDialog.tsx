@@ -64,7 +64,12 @@ export function PreferencesDialog({ preferences, save, close }: PreferencesDialo
           type="text"
           maxLength={1}
           value={decimalSeparator}
-          onChange={(e) => setDecimalSeparator(e.target.value)}
+          onChange={(e) => {
+            const val = e.target.value;
+            if (val === ',' || val === '.') {
+              setDecimalSeparator(val);
+            }
+          }}
           className="w-12 border border-black px-2 py-1 mr-4 bg-white text-black"
         />
       </div>
@@ -75,7 +80,12 @@ export function PreferencesDialog({ preferences, save, close }: PreferencesDialo
           type="text"
           maxLength={1}
           value={thousandsSeparator}
-          onChange={(e) => setThousandsSeparator(e.target.value)}
+          onChange={(e) => {
+            const val = e.target.value;
+            if (val === '' || val === ',' || val === '.' || val === ' ') {
+              setThousandsSeparator(val as '' | ',' | '.' | ' ');
+            }
+          }}
           className="w-12 border border-black px-2 py-1 mr-4 bg-white text-black"
         />
       </div>
