@@ -75,11 +75,33 @@ const baseTheme = EditorView.baseTheme({
     boxSizing: 'border-box',
     minHeight: '100%',
     overflow: 'hidden',
+    outline: 'none',
+    userSelect: 'none',
   },
 
   '.cm-right-gutterElement': {
     boxSizing: 'border-box',
     padding: '0 10px',
+    cursor: 'pointer',
+    transition: 'background-color 0.15s ease, opacity 0.15s ease',
+    outline: 'none',
+    userSelect: 'none',
+  },
+
+  '.cm-right-gutterElement:hover': {
+    backgroundColor: 'rgba(0, 0, 0, 0.05)',
+  },
+
+  '.cm-right-gutterElement:active': {
+    backgroundColor: 'rgba(0, 0, 0, 0.1)',
+  },
+
+  '.cm-right-gutterElement:empty': {
+    cursor: 'default',
+  },
+
+  '.cm-right-gutterElement:empty:hover': {
+    backgroundColor: 'transparent',
   },
 });
 
@@ -394,13 +416,18 @@ const activeLineRightGutterHighlighter = gutterLineClass.compute(['selection'], 
   return RangeSet.of(marks);
 });
 
-export function rightGutter(results: (lineNumber: number) => string) {
+export function rightGutter(
+  results: (lineNumber: number) => string,
+  onCopy?: (value: string) => void
+) {
   return gutter({
     lineMarker: (view, line) => {
       const lineNumber = view.state.doc.lineAt(line.from).number;
+      const result = results(lineNumber);
       return new (class extends RightGutterMarker {
         toDOM() {
-          return document.createTextNode(results(lineNumber));
+          const node = document.createTextNode(result);
+          return node;
         }
       })();
     },
@@ -409,7 +436,48 @@ export function rightGutter(results: (lineNumber: number) => string) {
     },
     domEventHandlers: {
       click: (view: EditorView, line: BlockInfo, event: Event) => {
-        // TODO: Add click handler for result copying
+        const mouseEvent = event as MouseEvent;
+        const lineNumber = view.state.doc.lineAt(line.from).number;
+        const result = results(lineNumber);
+        
+        // Don't do anything if result is empty
+        if (!result || result.trim() === '') {
+          return false;
+        }
+
+        // Prevent default behavior and stop propagation
+        mouseEvent.preventDefault();
+        mouseEvent.stopPropagation();
+
+        if (mouseEvent.shiftKey) {
+          // Shift+click: Insert result as a new line at the end of the document
+          const docLength = view.state.doc.length;
+          const lastLine = view.state.doc.line(view.state.doc.lines);
+          const needsNewline = lastLine.text.length > 0;
+          const textToInsert = (needsNewline ? '\n' : '') + result;
+          
+          view.dispatch({
+            changes: { from: docLength, insert: textToInsert },
+            selection: { anchor: docLength + textToInsert.length },
+          });
+          
+          // Scroll to the end to show the new line
+          view.dispatch({
+            effects: EditorView.scrollIntoView(docLength + textToInsert.length, {
+              y: 'end',
+            }),
+          });
+        } else {
+          // Regular click: Copy to clipboard
+          navigator.clipboard.writeText(result).then(() => {
+            if (onCopy) {
+              onCopy(result);
+            }
+          }).catch((err) => {
+            console.error('Failed to copy to clipboard:', err);
+          });
+        }
+        
         return true;
       },
     },

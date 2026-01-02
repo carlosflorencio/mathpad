@@ -20,6 +20,7 @@ interface EditorProps {
   value: string;
   onUpdate: (value: string) => void;
   preferences: Preferences;
+  onCopy?: (value: string) => void;
 }
 
 function textToEvaluations(text: string, preferences: Preferences): LineEvaluation[] {
@@ -37,7 +38,7 @@ function textToEvaluations(text: string, preferences: Preferences): LineEvaluati
   }
 }
 
-export function Editor({ value, onUpdate, preferences }: EditorProps) {
+export function Editor({ value, onUpdate, preferences, onCopy }: EditorProps) {
   const evaluations = textToEvaluations(value, preferences);
   const evaluationsRef = useRef(evaluations);
   evaluationsRef.current = evaluations;
@@ -49,6 +50,10 @@ export function Editor({ value, onUpdate, preferences }: EditorProps) {
 
   // Extract error information
   const errorsRef = useRef<ErrorInfo[]>([]);
+  
+  // Store onCopy in a ref so it doesn't cause extension recreation
+  const onCopyRef = useRef(onCopy);
+  onCopyRef.current = onCopy;
 
   const onChange = (value: string) => {
     const newEvaluations = textToEvaluations(value, preferences);
@@ -92,7 +97,10 @@ export function Editor({ value, onUpdate, preferences }: EditorProps) {
         highlightSelectionMatches(),
         EditorView.lineWrapping,
         mathpadLanguage,
-        rightGutter((lineNumber) => resultsRef.current[lineNumber - 1]),
+        rightGutter(
+          (lineNumber) => resultsRef.current[lineNumber - 1],
+          (value) => onCopyRef.current?.(value)
+        ),
         errorDecorations(),
         errorUpdateExtension,
         autocompletion({ override: [completions] }),

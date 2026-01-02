@@ -25,6 +25,11 @@ body {
 
 .cm-editor {
   height: 100%;
+  outline: none !important;
+}
+
+.cm-editor.cm-focused {
+  outline: none !important;
 }
 
 .cm-content,
@@ -33,4 +38,5 @@ body {
   font-family: var(--font-jetbrains-mono), 'JetBrains Mono', monospace;
   font-size: var(--font-size);
   line-height: calc(var(--font-size) + 10px);
+  outline: none !important;
 }

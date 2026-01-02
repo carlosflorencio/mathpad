@@ -6,6 +6,7 @@ import { Preferences } from '@/lib/types';
 import { Editor } from './Editor';
 import { Help } from './Help';
 import { PreferencesDialog } from './PreferencesDialog';
+import { ToastContainer } from './Toast';
 import * as darkTheme from './codemirror/DarkTheme';
 import * as lightTheme from './codemirror/LightTheme';
 
@@ -26,6 +27,7 @@ export function App() {
   const { content, preferences, isLoaded, saveContent, savePreferences } = useLocalStorage();
   const [showPreferences, setShowPreferences] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
+  const [toasts, setToasts] = useState<Array<{ id: number; message: string }>>([]);
 
   useEffect(() => {
     if (isLoaded) {
@@ -54,6 +56,15 @@ export function App() {
     configureCSSVars(prefs);
   }, [savePreferences]);
 
+  const showToast = useCallback((message: string) => {
+    const id = Date.now();
+    setToasts((prev) => [...prev, { id, message }]);
+  }, []);
+
+  const removeToast = useCallback((id: number) => {
+    setToasts((prev) => prev.filter((toast) => toast.id !== id));
+  }, []);
+
   if (!isLoaded || typeof window === 'undefined') {
     return <div className="flex flex-1 bg-[hsl(220,13%,18%)]"></div>;
   }
@@ -64,9 +75,18 @@ export function App() {
 
   return (
     <div className={`flex flex-1 font-mono ${bgColor}`}>
-      {!showHelp && !showPreferences && <Editor value={content} onUpdate={saveContent} preferences={preferences} />}
+      {!showHelp && !showPreferences && (
+        <Editor 
+          value={content} 
+          onUpdate={saveContent} 
+          preferences={preferences}
+          onCopy={(value: string) => showToast(`Copied: ${value}`)}
+        />
+      )}
       {showPreferences && <PreferencesDialog preferences={preferences} close={closeDialogs} save={handleSavePreferences} />}
       {showHelp && <Help close={closeDialogs} />}
+      
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
       
       <div className={`fixed bottom-1 right-1 ${textColor} text-2xl select-none cursor-pointer text-right group`}>
         <div className="hidden group-hover:block group-hover:bg-[var(--dialog-bg-color)] px-1">
