@@ -8,7 +8,7 @@ import { Token } from "@/lib/engine/types"
 /**
  * Map engine token types to CodeMirror highlight tags
  */
-function tokenTypeToTag(token: Token): string | null {
+function tokenTypeToTag(token: Token, state: any): string | null {
   switch (token.type) {
     case "number":
       return "number"
@@ -17,7 +17,7 @@ function tokenTypeToTag(token: Token): string | null {
       return "number"
 
     case "identifier":
-      // Check if it's a math function or variable
+      // Check if it's a math function
       const mathFuncs = new Set([
         "abs",
         "acos",
@@ -43,9 +43,18 @@ function tokenTypeToTag(token: Token): string | null {
       if (mathFuncs.has(token.value)) {
         return "function"
       }
-      return "variableName"
+      // Only highlight as variable if line has assignment or operators
+      // Otherwise it's just plain text (like "Earth's circumference is around 40k km")
+      if (state.hasAssignment || state.hasOperators) {
+        return "variableName"
+      }
+      return null
 
     case "keyword":
+      return "keyword"
+
+    case "conversion":
+      // "to" and "in" when used for unit conversions
       return "keyword"
 
     case "operator":
@@ -104,6 +113,8 @@ const mathpadLanguage = StreamLanguage.define({
       colonIndex: -1,
       inUnitPart: false,
       currentToken: null as Token | null,
+      hasAssignment: false, // Track if line has = sign
+      hasOperators: false, // Track if line has operators
     }
   },
 
@@ -115,6 +126,8 @@ const mathpadLanguage = StreamLanguage.define({
       state.colonIndex = -1
       state.inUnitPart = false
       state.currentToken = null
+      state.hasAssignment = false
+      state.hasOperators = false
 
       // Check for separator line
       if (/^---+$/.test(state.lineText.trim())) {
@@ -140,6 +153,12 @@ const mathpadLanguage = StreamLanguage.define({
       // Tokenize the expression part (after label if present)
       try {
         state.tokens = tokenize(state.lineText)
+
+        // Analyze tokens to determine if line has assignments or operators
+        state.hasAssignment = state.tokens.some((t) => t.type === "assign")
+        state.hasOperators = state.tokens.some(
+          (t) => t.type === "operator" && !["/"].includes(t.value)
+        )
       } catch (e) {
         // If tokenization fails, just skip to end
         state.tokens = []
@@ -205,10 +224,33 @@ const mathpadLanguage = StreamLanguage.define({
           }
         }
 
+        // Special handling for compound units like km/h, m/s
+        // Check if this is a keyword/operator that could be part of a compound unit
+        if (
+          (token.type === "keyword" || token.type === "operator") &&
+          state.currentTokenIndex + 2 < state.tokens.length
+        ) {
+          const nextToken = state.tokens[state.currentTokenIndex + 1]
+          const nextNextToken = state.tokens[state.currentTokenIndex + 2]
+
+          // Pattern: unit + "/" + unit (e.g., km/h, m/s)
+          if (
+            nextToken.type === "operator" &&
+            nextToken.value === "/" &&
+            (nextNextToken.type === "keyword" || nextNextToken.type === "identifier")
+          ) {
+            // This is a compound unit - highlight all three tokens as unit
+            const compoundEnd = nextNextToken.position + nextNextToken.length
+            stream.pos = compoundEnd
+            state.currentTokenIndex += 3
+            return "unit"
+          }
+        }
+
         // Normal token without special handling
         stream.pos = tokenEnd
         state.currentTokenIndex++
-        return tokenTypeToTag(token)
+        return tokenTypeToTag(token, state)
       }
 
       // Token is behind current position - move to next token

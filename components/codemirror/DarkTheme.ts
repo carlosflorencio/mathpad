@@ -6,8 +6,11 @@ export const colors = {
   light: "hsl(95, 6.7%, 64.7%)",
   medium: "hsl(180, 14.9%, 46.1%)",
   dark: "hsl(90, 3.3%, 47.1%)",
+  number: "hsl(25, 70%, 60%)", // Orange/brown for numbers (lighter for dark theme)
   unit: "hsl(210, 80%, 65%)", // Blue for units/formats
   variable: "hsl(280, 65%, 70%)", // Purple/magenta for variables (lighter for dark theme)
+  operator: "hsl(0, 0%, 60%)", // Gray for operators
+  conversionKeyword: "hsl(150, 60%, 55%)", // Green for conversion keywords (to, in) - lighter for dark theme
   background: "hsl(220, 13%, 18%)",
   darkBackground: "hsl(216, 13.2%, 14.9%)",
   highlightBackground: "hsl(218.6, 13.7%, 20%)",
@@ -63,6 +66,11 @@ const darkTheme = EditorView.theme(
       backgroundColor: "rgb(41, 41, 46)",
       color: colors.light,
     },
+    // Custom syntax highlighting for conversion keywords
+    ".tok-conversionKeyword": {
+      color: colors.conversionKeyword,
+      fontWeight: "500",
+    },
   },
   { dark: true }
 )
@@ -89,8 +97,6 @@ const darkHighlightStyle = HighlightStyle.define([
       tags.modifier,
       tags.self,
       tags.namespace,
-      tags.operator,
-      tags.operatorKeyword,
       tags.url,
       tags.escape,
       tags.regexp,
@@ -102,7 +108,7 @@ const darkHighlightStyle = HighlightStyle.define([
   },
   {
     tag: [tags.number, tags.string],
-    color: colors.medium,
+    color: colors.number,
   },
   {
     tag: [tags.unit],
@@ -111,6 +117,15 @@ const darkHighlightStyle = HighlightStyle.define([
   {
     tag: [tags.variableName],
     color: colors.variable,
+  },
+  {
+    tag: [tags.operator, tags.operatorKeyword],
+    color: colors.operator,
+  },
+  {
+    tag: [tags.keyword],
+    color: colors.conversionKeyword,
+    fontWeight: "500",
   },
   {
     tag: [tags.meta, tags.comment],

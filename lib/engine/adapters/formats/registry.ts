@@ -17,6 +17,9 @@ import { GramsFormat } from "./g"
 import { LitersFormat } from "./L"
 import { MillilitersFormat } from "./ml"
 import { GallonsFormat } from "./gal"
+import { KilometersPerHourFormat } from "./kmh"
+import { MetersPerSecondFormat } from "./mps"
+import { MilesPerHourFormat } from "./mph"
 
 /**
  * Registry for all format adapters
@@ -97,6 +100,11 @@ formatRegistry.register(new GramsFormat())
 formatRegistry.register(new LitersFormat())
 formatRegistry.register(new MillilitersFormat())
 formatRegistry.register(new GallonsFormat())
+
+// Register speed unit formats
+formatRegistry.register(new KilometersPerHourFormat())
+formatRegistry.register(new MetersPerSecondFormat())
+formatRegistry.register(new MilesPerHourFormat())
 
 /**
  * Helper to check if a string is a valid registered format suffix

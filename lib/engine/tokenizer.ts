@@ -104,8 +104,9 @@ export function tokenize(line: string): Token[] {
         const parser = formatRegistry.findParser(candidate)
         if (parser) {
           // Make sure it's not part of a longer identifier
+          // Note: We don't include / in the boundary check to allow compound units like km/h, m/s
           const nextCharPos = tempPos + len
-          if (nextCharPos >= line.length || /[\s\+\-\*\/\%\^\(\)\=]/.test(line[nextCharPos])) {
+          if (nextCharPos >= line.length || /[\s\+\-\*\%\^\(\)\=]/.test(line[nextCharPos])) {
             matchedSuffixLength = len
             break
           }
@@ -291,9 +292,25 @@ export function tokenize(line: string): Token[] {
       }
 
       // Check if it's the "in" or "to" keyword (but not if followed by =)
+      // Determine if this is a conversion context by checking previous and next tokens
       if ((lowerIdentifier === "in" || lowerIdentifier === "to") && !isAssignment) {
+        // Check if this is a conversion: previous token should be a number/keyword,
+        // and next token should be a keyword (format specifier)
+        const prevToken = tokens.length > 0 ? tokens[tokens.length - 1] : null
+
+        // Peek ahead to see if next token is a format specifier
+        let peekPos = pos
+        while (peekPos < line.length && /\s/.test(line[peekPos])) {
+          peekPos++
+        }
+        const nextWordMatch = line.slice(peekPos).match(/^([a-zA-Z_]+)/)
+        const nextWord = nextWordMatch ? nextWordMatch[1] : null
+
+        const isConversionContext =
+          prevToken && prevToken.type === "number" && nextWord && isFormatSuffix(nextWord)
+
         tokens.push({
-          type: "keyword",
+          type: isConversionContext ? "conversion" : "keyword",
           value: lowerIdentifier,
           position: start,
           length: identifier.length,

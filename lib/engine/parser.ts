@@ -113,7 +113,10 @@ class Parser {
       const position = this.current().position
 
       // Check for "var in FORMAT = expr" pattern (e.g., "price in K = 100")
-      if (this.peek().type === "keyword" && this.peek().value === "in") {
+      if (
+        (this.peek().type === "keyword" || this.peek().type === "conversion") &&
+        this.peek().value === "in"
+      ) {
         const formatToken = this.peek(2)
         if (formatToken.type === "keyword" && isFormatSuffix(formatToken.value)) {
           const assignToken = this.peek(3)
@@ -163,7 +166,11 @@ class Parser {
     const expression = this.parseExpression()
 
     // Check for "in FORMAT" suffix (e.g., "in K", "in M", "in $")
-    if (!this.isAtEnd() && this.current().type === "keyword" && this.current().value === "in") {
+    if (
+      !this.isAtEnd() &&
+      (this.current().type === "keyword" || this.current().type === "conversion") &&
+      this.current().value === "in"
+    ) {
       this.advance() // skip 'in'
       if (this.current().type === "keyword") {
         const format = this.current().value
@@ -184,13 +191,42 @@ class Parser {
     }
 
     // Check for "to UNIT" suffix (e.g., "100km to m", "1hr to min")
-    if (!this.isAtEnd() && this.current().type === "keyword" && this.current().value === "to") {
+    if (
+      !this.isAtEnd() &&
+      (this.current().type === "keyword" || this.current().type === "conversion") &&
+      this.current().value === "to"
+    ) {
       this.advance() // skip 'to'
       // After "to", the unit might be tokenized as keyword or operator (e.g., "min" is an aggregate)
+      // For compound units like "m/s" or "km/h", we need to combine multiple tokens
       if (this.current().type === "keyword" || this.current().type === "operator") {
-        const targetUnit = this.current().value
+        let targetUnit = this.current().value
+        this.advance() // skip first part of unit
+
+        // Check if this is a compound unit (e.g., m/s, km/h)
+        // Look for pattern: unit + "/" + unit
+        if (
+          !this.isAtEnd() &&
+          this.current().type === "operator" &&
+          this.current().value === "/" &&
+          this.position + 1 < this.tokens.length
+        ) {
+          const nextToken = this.tokens[this.position + 1]
+
+          // Check if next token after "/" could be part of a unit
+          if (nextToken.type === "keyword" || nextToken.type === "identifier") {
+            const compoundUnit = targetUnit + "/" + nextToken.value
+
+            // Check if this compound unit is a valid format
+            if (isFormatSuffix(compoundUnit)) {
+              this.advance() // skip "/"
+              this.advance() // skip second part
+              targetUnit = compoundUnit
+            }
+          }
+        }
+
         if (isFormatSuffix(targetUnit)) {
-          this.advance() // skip target unit
           return {
             kind: "conversion",
             expression,

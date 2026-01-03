@@ -25,6 +25,7 @@ export type TokenType =
   | "paren"
   | "assign"
   | "keyword"
+  | "conversion" // Special token type for "to" and "in" when used for conversions
   | "eof"
 
 export interface Token {

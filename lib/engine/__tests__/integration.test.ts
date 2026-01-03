@@ -798,6 +798,68 @@ z = y * 2`
     })
   })
 
+  describe("Inline Formats - Speed Units", () => {
+    it("should parse and preserve km/h", () => {
+      const results = computeResults("80km/h", prefs)
+      expect(results[0]).toBe("80km/h")
+    })
+
+    it("should parse km/h with space", () => {
+      const results = computeResults("80 km/h", prefs)
+      expect(results[0]).toBe("80km/h")
+    })
+
+    it("should parse kmh variant", () => {
+      const results = computeResults("100kmh", prefs)
+      expect(results[0]).toBe("100km/h")
+    })
+
+    it("should parse kph variant", () => {
+      const results = computeResults("120 kph", prefs)
+      expect(results[0]).toBe("120km/h")
+    })
+
+    it("should propagate km/h format through calculations", () => {
+      const results = computeResults("80km/h + 20km/h", prefs)
+      expect(results[0]).toBe("100km/h")
+    })
+
+    it("should parse and preserve m/s", () => {
+      const results = computeResults("10m/s", prefs)
+      expect(results[0]).toBe("10m/s")
+    })
+
+    it("should parse m/s with space", () => {
+      const results = computeResults("15 m/s", prefs)
+      expect(results[0]).toBe("15m/s")
+    })
+
+    it("should parse mps variant", () => {
+      const results = computeResults("20mps", prefs)
+      expect(results[0]).toBe("20m/s")
+    })
+
+    it("should propagate m/s format through calculations", () => {
+      const results = computeResults("10m/s * 2", prefs)
+      expect(results[0]).toBe("20m/s")
+    })
+
+    it("should parse and preserve mph", () => {
+      const results = computeResults("60mph", prefs)
+      expect(results[0]).toBe("60mph")
+    })
+
+    it("should parse mph with space", () => {
+      const results = computeResults("70 mph", prefs)
+      expect(results[0]).toBe("70mph")
+    })
+
+    it("should propagate mph format through calculations", () => {
+      const results = computeResults("50mph + 20mph", prefs)
+      expect(results[0]).toBe("70mph")
+    })
+  })
+
   describe("Unit Type Validation - Incompatible Operations", () => {
     it("should reject adding currency and time units", () => {
       const results = computeResults("100$ + 10sec", prefs)
@@ -909,6 +971,31 @@ z = y * 2`
     it("should convert gallons to liters", () => {
       const results = computeResults("1gal to L", prefs)
       expect(results[0]).toBe("3.79L")
+    })
+
+    it("should convert km/h to m/s", () => {
+      const results = computeResults("100km/h to m/s", prefs)
+      expect(results[0]).toBe("27.78m/s")
+    })
+
+    it("should convert m/s to km/h", () => {
+      const results = computeResults("10m/s to km/h", prefs)
+      expect(results[0]).toBe("36km/h")
+    })
+
+    it("should convert mph to km/h", () => {
+      const results = computeResults("60mph to km/h", prefs)
+      expect(results[0]).toBe("96.56km/h")
+    })
+
+    it("should convert km/h to mph", () => {
+      const results = computeResults("100km/h to mph", prefs)
+      expect(results[0]).toBe("62.14mph")
+    })
+
+    it("should convert mph to m/s", () => {
+      const results = computeResults("60mph to m/s", prefs)
+      expect(results[0]).toBe("26.82m/s")
     })
 
     it("should reject conversion between incompatible categories", () => {

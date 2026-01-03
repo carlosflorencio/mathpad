@@ -20,6 +20,8 @@ export type UnitCategory =
   | "time" // Time units (min, sec, hr)
   | "weight" // Mass units (kg, lb, g)
   | "volume" // Volume units (L, ml, gal)
+  | "speed" // Speed units (km/h, m/s, mph)
+  | "compound" // Other compound units (kg/m³, km/L, etc)
 
 /**
  * Unit category constants - use these instead of string literals
@@ -32,6 +34,8 @@ export const UNIT_CATEGORIES = {
   TIME: "time",
   WEIGHT: "weight",
   VOLUME: "volume",
+  SPEED: "speed",
+  COMPOUND: "compound",
 } as const
 
 /**
