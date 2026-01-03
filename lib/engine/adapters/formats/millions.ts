@@ -1,4 +1,4 @@
-import { FormatAdapter, FormatResult } from "./base"
+import { FormatAdapter, FormatResult, UNIT_CATEGORIES } from "./base"
 
 /**
  * Millions (M) format adapter
@@ -9,6 +9,7 @@ export class MillionsFormat implements FormatAdapter {
   id = "M"
   name = "Millions"
   description = "Format numbers in millions (M)"
+  unitCategory = UNIT_CATEGORIES.NUMBER
 
   parseMultiplier(): number {
     return 1000000

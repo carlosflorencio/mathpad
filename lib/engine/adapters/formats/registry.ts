@@ -110,10 +110,15 @@ formatRegistry.register(new MilesPerHourFormat())
  * Helper to check if a string is a valid registered format suffix
  * This is a type guard that can be used for TypeScript narrowing
  * @param value - The string to check
- * @returns true if the value is a registered format ID
+ * @returns true if the value is a registered format ID or can be parsed by any format
  */
 export function isFormatSuffix(value: string): boolean {
-  return formatRegistry.isValidFormat(value)
+  // Check if it's a direct ID match
+  if (formatRegistry.isValidFormat(value)) {
+    return true
+  }
+  // Check if any adapter can parse this suffix
+  return formatRegistry.findParser(value) !== null
 }
 
 // To add a new format (e.g., currency or units), create a new adapter:

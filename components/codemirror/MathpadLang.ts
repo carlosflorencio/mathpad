@@ -4,6 +4,8 @@
 import { StreamLanguage } from "@codemirror/language"
 import { tokenize } from "@/lib/engine/tokenizer"
 import { Token } from "@/lib/engine/types"
+import { formatRegistry } from "@/lib/engine/adapters/formats/registry"
+import { UNIT_CATEGORIES } from "@/lib/engine/adapters/formats/base"
 
 /**
  * Map engine token types to CodeMirror highlight tags
@@ -51,10 +53,19 @@ function tokenTypeToTag(token: Token, state: any): string | null {
       return null
 
     case "keyword":
-      return "keyword"
+      // Highlight format specifiers (units, currencies, K/M/B, etc.) as "unit" (blue)
+      // Don't highlight plain "in" and "to" keywords that appear in sentences
+      // Note: When "in" or "to" are used for conversions, they get type="conversion" not "keyword"
+      if (token.value === "in" || token.value === "to") {
+        // These are plain keywords in a sentence, don't highlight
+        return null
+      }
+      // This is a format specifier like "km", "$", "hr", "k", "M", etc. - highlight as unit (blue)
+      return "unit"
 
     case "conversion":
-      // "to" and "in" when used for unit conversions
+      // "to" and "in" when used for unit conversions (e.g., "100 in km", "100 to k")
+      // Highlight as keyword (green) to distinguish from format specifiers
       return "keyword"
 
     case "operator":
@@ -217,9 +228,15 @@ const mathpadLanguage = StreamLanguage.define({
               return "number"
             } else {
               // Currently in the unit part
+              // Check the adapter's unitCategory to determine if this is a numeric multiplier
+              const parser = formatRegistry.findParser(split.unitPart)
+              const isNumericMultiplier = parser?.adapter.unitCategory === UNIT_CATEGORIES.NUMBER
+
               stream.pos = tokenEnd
               state.currentTokenIndex++
-              return "unit"
+              // Numeric multipliers are part of the number literal (40k = 40,000)
+              // Physical units are separate (40km = 40 kilometers)
+              return isNumericMultiplier ? "number" : "unit"
             }
           }
         }

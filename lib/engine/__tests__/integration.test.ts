@@ -1156,6 +1156,11 @@ z = y * 2`
       expect(results[1]).toBe("80km")
     })
 
+    it("should handle 'in' and 'to' in middle of sentences", () => {
+      const results = computeResults("Earth's circumference is in to around 40k km", prefs)
+      expect(results[0]).toBe("40,000km")
+    })
+
     it("should work with multi-word labels and format syntax", () => {
       const results = computeResults("My bank account balance: 1000$ in $", prefs)
       expect(results[0]).toBe("1,000$")
@@ -1180,6 +1185,11 @@ z = y * 2`
     it("should extract calculations from text with numbers", () => {
       const results = computeResults("The distance is 50 in km", prefs)
       expect(results[0]).toBe("50km")
+    })
+
+    it("should format numbers with 'in' keyword", () => {
+      const results = computeResults("1000 in k", prefs)
+      expect(results[0]).toBe("1k")
     })
 
     it("should extract formatted numbers", () => {

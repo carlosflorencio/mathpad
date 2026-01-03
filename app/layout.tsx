@@ -19,6 +19,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        <meta name="apple-mobile-web-app-title" content="MathPad" />
+      </head>
       <body className={`${jetbrainsMono.variable} antialiased flex flex-col min-h-screen`}>
         {children}
       </body>

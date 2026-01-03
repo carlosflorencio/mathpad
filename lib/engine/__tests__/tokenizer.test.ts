@@ -207,4 +207,49 @@ describe("Tokenizer", () => {
       expect(tokens[1]).toMatchObject({ type: "number", value: "2" })
     })
   })
+
+  describe("Conversion keyword detection", () => {
+    it("should mark 'in' as conversion when between number and format", () => {
+      const tokens = tokenize("100 in km")
+      expect(tokens[0]).toMatchObject({ type: "number", value: "100" })
+      expect(tokens[1]).toMatchObject({ type: "conversion", value: "in" })
+      expect(tokens[2]).toMatchObject({ type: "keyword", value: "km" })
+    })
+
+    it("should mark 'in' as conversion for k/m/b formats", () => {
+      const tokens = tokenize("1000 in k")
+      expect(tokens[0]).toMatchObject({ type: "number", value: "1000" })
+      expect(tokens[1]).toMatchObject({ type: "conversion", value: "in" })
+      expect(tokens[2]).toMatchObject({ type: "keyword", value: "k" })
+    })
+
+    it("should mark 'to' as conversion when between number and format", () => {
+      const tokens = tokenize("100 to km")
+      expect(tokens[0]).toMatchObject({ type: "number", value: "100" })
+      expect(tokens[1]).toMatchObject({ type: "conversion", value: "to" })
+      expect(tokens[2]).toMatchObject({ type: "keyword", value: "km" })
+    })
+
+    it("should NOT mark 'in' as conversion in middle of sentence", () => {
+      const tokens = tokenize("Earth's circumference is in to around 40k km")
+      // Find the 'in' token
+      const inToken = tokens.find((t) => t.value === "in")
+      expect(inToken).toBeDefined()
+      expect(inToken?.type).toBe("keyword")
+    })
+
+    it("should NOT mark 'to' as conversion in middle of sentence", () => {
+      const tokens = tokenize("Earth's circumference is in to around 40k km")
+      // Find the 'to' token
+      const toToken = tokens.find((t) => t.value === "to")
+      expect(toToken).toBeDefined()
+      expect(toToken?.type).toBe("keyword")
+    })
+
+    it("should NOT mark 'in' as conversion when not followed by format", () => {
+      const tokens = tokenize("10 in the morning")
+      const inToken = tokens.find((t) => t.value === "in")
+      expect(inToken?.type).toBe("keyword")
+    })
+  })
 })

@@ -76,13 +76,15 @@ function formatNumber(value: Big, options: FormatOptions, format?: FormatSuffix)
  * Format a number with a format suffix using the format registry
  */
 function formatWithSuffix(value: Big, suffix: FormatSuffix, options: FormatOptions): string {
-  const adapter = formatRegistry.get(suffix)
-  if (!adapter) {
+  // Use findParser to handle case-insensitive lookups (e.g., "k" -> "K")
+  const parser = formatRegistry.findParser(suffix)
+  if (!parser) {
     // Fallback if adapter not found
     return formatNumber(value, options)
   }
+  const adapter = parser.adapter
 
-  const { divisor, suffix: suffixStr, prefix } = adapter.format()
+  const { divisor, suffix: adapterSuffix, prefix } = adapter.format()
   const divided = value.div(divisor)
 
   // Format the divided value
@@ -107,11 +109,13 @@ function formatWithSuffix(value: Big, suffix: FormatSuffix, options: FormatOptio
     ? `${integerPart}${options.decimalSeparator}${decimalPart}`
     : integerPart
 
-  // Apply prefix/suffix from adapter
+  // Apply prefix/suffix - use original user input (suffix param) if available,
+  // otherwise fall back to adapter's suffix (for backwards compatibility)
   if (prefix) {
     return `${prefix}${number}`
   }
-  return `${number}${suffixStr ?? ""}`
+  // Use the original suffix the user typed (e.g., "k") instead of the canonical ID (e.g., "K")
+  return `${number}${suffix ?? adapterSuffix ?? ""}`
 }
 
 /**
