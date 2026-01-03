@@ -931,4 +931,116 @@ z = y * 2`
       expect(results[1]).toBe("5,000m")
     })
   })
+
+  describe("Previous Result References", () => {
+    it("should use previous result with operator prefix (+)", () => {
+      const results = computeResults("100\n+ 2", prefs)
+      expect(results[0]).toBe("100")
+      expect(results[1]).toBe("102")
+    })
+
+    it("should use previous result with operator prefix (-)", () => {
+      const results = computeResults("100\n- 25", prefs)
+      expect(results[0]).toBe("100")
+      expect(results[1]).toBe("75")
+    })
+
+    it("should use previous result with operator prefix (*)", () => {
+      const results = computeResults("10\n* 5", prefs)
+      expect(results[0]).toBe("10")
+      expect(results[1]).toBe("50")
+    })
+
+    it("should use previous result with operator prefix (/)", () => {
+      const results = computeResults("100\n/ 4", prefs)
+      expect(results[0]).toBe("100")
+      expect(results[1]).toBe("25")
+    })
+
+    it("should use previous result with operator prefix (^)", () => {
+      const results = computeResults("2\n^ 3", prefs)
+      expect(results[0]).toBe("2")
+      expect(results[1]).toBe("8")
+    })
+
+    it("should work with prev identifier", () => {
+      const results = computeResults("100\nprev + 2", prefs)
+      expect(results[0]).toBe("100")
+      expect(results[1]).toBe("102")
+    })
+
+    it("should work with previous identifier", () => {
+      const results = computeResults("100\nprevious + 2", prefs)
+      expect(results[0]).toBe("100")
+      expect(results[1]).toBe("102")
+    })
+
+    it("should work with prev in complex expressions", () => {
+      const results = computeResults("10\nprev * 2 + 5", prefs)
+      expect(results[0]).toBe("10")
+      expect(results[1]).toBe("25")
+    })
+
+    it("should preserve format from previous result with operator prefix", () => {
+      const results = computeResults("100$\n+ 2", prefs)
+      expect(results[0]).toBe("$100")
+      expect(results[1]).toBe("$102")
+    })
+
+    it("should preserve format from previous result with prev", () => {
+      const results = computeResults("100$\nprev + 50", prefs)
+      expect(results[0]).toBe("$100")
+      expect(results[1]).toBe("$150")
+    })
+
+    it("should work across multiple lines", () => {
+      const results = computeResults("100\n+ 10\n+ 5\n* 2", prefs)
+      expect(results[0]).toBe("100")
+      expect(results[1]).toBe("110")
+      expect(results[2]).toBe("115")
+      expect(results[3]).toBe("230")
+    })
+
+    it("should skip empty lines", () => {
+      const results = computeResults("100\n\n+ 2", prefs)
+      expect(results[0]).toBe("100")
+      expect(results[1]).toBe("")
+      expect(results[2]).toBe("102")
+    })
+
+    it("should work with percentages", () => {
+      const results = computeResults("100\n+ 20%", prefs)
+      expect(results[0]).toBe("100")
+      expect(results[1]).toBe("120")
+    })
+
+    it("should error when no previous result exists", () => {
+      const results = computeResults("+ 2", prefs)
+      expect(results[0]).toBe("Error: No previous result available")
+    })
+
+    it("should error when using prev on first line", () => {
+      const results = computeResults("prev + 2", prefs)
+      expect(results[0]).toBe("Error: No previous result available")
+    })
+
+    it("should reset after separator", () => {
+      const results = computeResults("100\n---\n+ 2", prefs)
+      expect(results[0]).toBe("100")
+      expect(results[1]).toBe("")
+      expect(results[2]).toBe("Error: No previous result available")
+    })
+
+    it("should work with prev and variables", () => {
+      const results = computeResults("x = 10\n100\nprev + x", prefs)
+      expect(results[1]).toBe("100")
+      expect(results[2]).toBe("110")
+    })
+
+    it("should work with unit conversions", () => {
+      const results = computeResults("100km\nprev to m", prefs)
+      expect(results[0]).toBe("100km")
+      expect(results[1]).toBe("100,000m")
+    })
+  })
 })

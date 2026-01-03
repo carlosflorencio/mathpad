@@ -58,6 +58,9 @@ export function evaluate(node: ASTNode, context: ExecutionContext): [EvalResult,
       case "conversion":
         return evaluateConversion(node, context)
 
+      case "previousResult":
+        return evaluatePreviousResult(node, context)
+
       default:
         // TypeScript exhaustiveness check
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -160,11 +163,18 @@ function evaluatePercent(
 
 /**
  * Evaluate an identifier (variable reference)
+ * Special identifiers: "prev" and "previous" reference the previous line's result
  */
 function evaluateIdentifier(
   node: ASTNode & { kind: "identifier" },
   context: ExecutionContext
 ): [EvalResult, ExecutionContext] {
+  // Check for special "prev" or "previous" identifier
+  const name = node.name.toLowerCase()
+  if (name === "prev" || name === "previous") {
+    return evaluatePreviousResult(node, context)
+  }
+
   const value = context.variables.get(node.name)
   if (value === undefined) {
     return [
@@ -178,6 +188,46 @@ function evaluateIdentifier(
     ]
   }
   return [value, context]
+}
+
+/**
+ * Evaluate a reference to the previous line's result
+ */
+function evaluatePreviousResult(
+  node: ASTNode & { kind: "previousResult" | "identifier" },
+  context: ExecutionContext
+): [EvalResult, ExecutionContext] {
+  // Get the last non-empty result from lineResults
+  if (context.lineResults.length === 0) {
+    return [
+      {
+        type: "error",
+        message: "No previous result available",
+        position: node.position,
+        length: node.length,
+      },
+      context,
+    ]
+  }
+
+  // Find the last non-empty result
+  for (let i = context.lineResults.length - 1; i >= 0; i--) {
+    const result = context.lineResults[i]
+    if (result.type !== "empty") {
+      return [result, context]
+    }
+  }
+
+  // All previous results were empty
+  return [
+    {
+      type: "error",
+      message: "No previous result available",
+      position: node.position,
+      length: node.length,
+    },
+    context,
+  ]
 }
 
 /**

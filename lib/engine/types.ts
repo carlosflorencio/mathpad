@@ -51,6 +51,7 @@ export type ASTNode =
   | AggregateNode
   | FractionNode
   | FunctionCallNode
+  | PreviousResultNode
   | EmptyNode
 
 export interface NumberNode {
@@ -143,6 +144,12 @@ export interface FunctionCallNode {
   kind: "function"
   name: string
   argument: ASTNode
+  position: number
+  length: number
+}
+
+export interface PreviousResultNode {
+  kind: "previousResult"
   position: number
   length: number
 }

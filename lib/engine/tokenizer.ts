@@ -1,9 +1,17 @@
 import { Token } from "./types"
-import { aggregateFunctionRegistry } from "./adapters/registry"
+import {
+  aggregateFunctionRegistry,
+  binaryOperatorRegistry,
+  unaryOperatorRegistry,
+} from "./adapters/registry"
 import { formatRegistry, isFormatSuffix } from "./adapters/formats/registry"
 
-// Operators that can appear in expressions
-const OPERATORS = new Set(["+", "-", "*", "/", "%", "^", "×", "−"])
+// Build operator set from registered adapters
+// Include both binary and unary operators (unary includes prefix and postfix)
+const BINARY_SYMBOLS = new Set(binaryOperatorRegistry.getAllSymbols())
+const UNARY_SYMBOLS = new Set(unaryOperatorRegistry.getAllSymbols())
+const OPERATORS = new Set([...BINARY_SYMBOLS, ...UNARY_SYMBOLS, "×", "−"])
+
 const PARENS = new Set(["(", ")"])
 
 // Keywords for aggregate functions

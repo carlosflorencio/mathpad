@@ -8,7 +8,12 @@ import {
   FunctionCallNode,
   EmptyNode,
 } from "./types"
-import { functionRegistry, aggregateFunctionRegistry } from "./adapters/registry"
+import {
+  functionRegistry,
+  aggregateFunctionRegistry,
+  binaryOperatorRegistry,
+  unaryOperatorRegistry,
+} from "./adapters/registry"
 import { isFormatSuffix } from "./adapters/formats/registry"
 
 /**
@@ -60,6 +65,45 @@ class Parser {
         kind: "empty",
         position: 0,
         length: 0,
+      }
+    }
+
+    // Check if line starts with a binary operator
+    // If so, treat it as: previousResult <operator> <expression>
+    // To avoid conflicts with unary operators, we only treat it as operator-prefix
+    // if there's whitespace after the operator (e.g., "- 5" vs "-5")
+    const firstToken = this.current()
+    const nextToken = this.peek()
+    const hasWhitespaceAfterOperator =
+      nextToken.type !== "eof" && firstToken.position + firstToken.length < nextToken.position
+
+    if (
+      firstToken.type === "operator" &&
+      binaryOperatorRegistry.has(firstToken.value) &&
+      hasWhitespaceAfterOperator
+    ) {
+      const operator = firstToken.value as "+" | "-" | "*" | "/" | "%" | "^"
+      const operatorPosition = firstToken.position
+      this.advance() // skip operator
+
+      // Create a node representing the previous line's result
+      const prevResultNode: ASTNode = {
+        kind: "previousResult",
+        position: 0,
+        length: 0,
+      }
+
+      // Parse the rest as the right operand
+      const right = this.parseFormatted()
+
+      // Return a binary operation with previousResult on the left
+      return {
+        kind: "binary",
+        operator,
+        left: prevResultNode,
+        right,
+        position: operatorPosition,
+        length: right.position + right.length - operatorPosition,
       }
     }
 
@@ -189,7 +233,11 @@ class Parser {
       }
 
       // Addition and subtraction
-      if (current.type === "operator" && (current.value === "+" || current.value === "-")) {
+      if (
+        current.type === "operator" &&
+        binaryOperatorRegistry.has(current.value) &&
+        (current.value === "+" || current.value === "-")
+      ) {
         const operator = current.value as "+" | "-"
         this.advance()
         const right = this.parseMultiplication()
@@ -219,7 +267,11 @@ class Parser {
     while (!this.isAtEnd()) {
       const current = this.current()
 
-      if (current.type === "operator" && ["*", "/", "%"].includes(current.value)) {
+      if (
+        current.type === "operator" &&
+        binaryOperatorRegistry.has(current.value) &&
+        ["*", "/", "%"].includes(current.value)
+      ) {
         const operator = current.value as "*" | "/" | "%"
         this.advance()
         const right = this.parseExponentiation()
@@ -246,7 +298,12 @@ class Parser {
   private parseExponentiation(): ASTNode {
     let node = this.parseUnary()
 
-    if (!this.isAtEnd() && this.current().type === "operator" && this.current().value === "^") {
+    if (
+      !this.isAtEnd() &&
+      this.current().type === "operator" &&
+      binaryOperatorRegistry.has(this.current().value) &&
+      this.current().value === "^"
+    ) {
       this.advance()
       const right = this.parseExponentiation() // Right-associative
       node = {
@@ -268,7 +325,11 @@ class Parser {
   private parseUnary(): ASTNode {
     const current = this.current()
 
-    if (current.type === "operator" && (current.value === "+" || current.value === "-")) {
+    if (
+      current.type === "operator" &&
+      unaryOperatorRegistry.has(current.value) &&
+      (current.value === "+" || current.value === "-")
+    ) {
       const operator = current.value as "+" | "-"
       const position = current.position
       this.advance()
@@ -294,7 +355,10 @@ class Parser {
     // Check for postfix operators
     if (!this.isAtEnd() && this.current().type === "operator") {
       const current = this.current()
-      if (current.value === "++" || current.value === "--") {
+      if (
+        unaryOperatorRegistry.has(current.value) &&
+        (current.value === "++" || current.value === "--")
+      ) {
         const operator = current.value as "++" | "--"
         this.advance()
         node = {

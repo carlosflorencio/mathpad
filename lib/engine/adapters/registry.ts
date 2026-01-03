@@ -106,6 +106,13 @@ class BinaryOperatorRegistry {
   has(symbol: string): boolean {
     return this.operators.has(symbol)
   }
+
+  /**
+   * Get all registered binary operator symbols (including aliases)
+   */
+  getAllSymbols(): string[] {
+    return Array.from(this.operators.keys())
+  }
 }
 
 // ============================================================================
@@ -125,6 +132,13 @@ class UnaryOperatorRegistry {
 
   has(symbol: string): boolean {
     return this.operators.has(symbol)
+  }
+
+  /**
+   * Get all registered unary operator symbols
+   */
+  getAllSymbols(): string[] {
+    return Array.from(this.operators.keys())
   }
 }
 
