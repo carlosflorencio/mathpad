@@ -3,7 +3,7 @@ import { FormatAdapter, FormatResult } from "./base"
 /**
  * Kilometer format adapter
  * Displays numbers with km suffix
- * Parses: 100km, 100 km
+ * Parses: km, kilometer, kilometers (case-insensitive)
  */
 export class KilometerFormat implements FormatAdapter {
   id = "km"
@@ -23,6 +23,7 @@ export class KilometerFormat implements FormatAdapter {
   }
 
   canParse(suffix: string): boolean {
-    return suffix.toLowerCase() === "km"
+    const lower = suffix.toLowerCase()
+    return lower === "km" || lower === "kilometer" || lower === "kilometers"
   }
 }

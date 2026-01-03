@@ -31,6 +31,18 @@ describe("KilometerFormat", () => {
     expect(format.canParse("Km")).toBe(true)
   })
 
+  it("should parse kilometer suffix (case-insensitive)", () => {
+    expect(format.canParse("kilometer")).toBe(true)
+    expect(format.canParse("KILOMETER")).toBe(true)
+    expect(format.canParse("Kilometer")).toBe(true)
+  })
+
+  it("should parse kilometers suffix (case-insensitive)", () => {
+    expect(format.canParse("kilometers")).toBe(true)
+    expect(format.canParse("KILOMETERS")).toBe(true)
+    expect(format.canParse("Kilometers")).toBe(true)
+  })
+
   it("should not parse other suffixes", () => {
     expect(format.canParse("k")).toBe(false)
     expect(format.canParse("m")).toBe(false)

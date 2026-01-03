@@ -3,7 +3,8 @@ import { FormatAdapter, FormatResult } from "./base"
 /**
  * Meter format adapter
  * Displays numbers with m suffix
- * Parses: 100m, 100 m (lowercase only, to avoid confusion with M for millions)
+ * Parses: m (lowercase only), meter, meters, metre, metres
+ * Note: Uppercase M is reserved for millions
  */
 export class MeterFormat implements FormatAdapter {
   id = "m"
@@ -23,7 +24,11 @@ export class MeterFormat implements FormatAdapter {
   }
 
   canParse(suffix: string): boolean {
-    // Only match lowercase 'm', not uppercase 'M' (which is millions)
-    return suffix === "m"
+    // Only match lowercase 'm' for abbreviation (uppercase 'M' is millions)
+    // But allow full words case-insensitively
+    if (suffix === "m") return true
+
+    const lower = suffix.toLowerCase()
+    return lower === "meter" || lower === "meters" || lower === "metre" || lower === "metres"
   }
 }

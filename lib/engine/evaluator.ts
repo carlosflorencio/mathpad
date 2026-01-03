@@ -95,22 +95,20 @@ function evaluateNumber(
     let detectedFormat: string | undefined
 
     // Try to detect format suffix from the end of the string
-    // We need to check from longest to shortest to avoid matching 'm' when 'km' is present
-    const formatIds = formatRegistry.getAllIds().sort((a, b) => b.length - a.length)
+    // Check from longest to shortest possible suffix (up to 12 chars for "milliliters")
+    const maxSuffixLength = Math.min(numStr.length, 12)
+    for (let len = maxSuffixLength; len > 0; len--) {
+      const potentialSuffix = numStr.slice(-len)
 
-    for (const formatId of formatIds) {
-      // Extract the potential suffix from the end of numStr (same length as formatId)
-      const potentialSuffix = numStr.slice(-formatId.length)
-
-      // Check if this format can parse the potential suffix
+      // Check if any format can parse this potential suffix
       const parser = formatRegistry.findParser(potentialSuffix)
-      if (parser && parser.adapter.id === formatId) {
+      if (parser) {
         multiplier = parser.multiplier
         // Only preserve format if the adapter wants inline preservation
         if (parser.adapter.preserveInline) {
           detectedFormat = parser.adapter.id
         }
-        numStr = numStr.slice(0, -formatId.length).trim()
+        numStr = numStr.slice(0, -len).trim()
         break
       }
     }

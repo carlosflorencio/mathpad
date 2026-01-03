@@ -82,27 +82,13 @@ export function tokenize(line: string): Token[] {
       }
 
       // Try to match a format suffix
-      // We try from longest to shortest, and prefer exact case matches over case-insensitive
+      // We try from longest to shortest, checking if any format adapter can parse it
       let matchedSuffixLength = 0
       const remainingText = line.slice(tempPos)
 
-      // Sort format IDs by length (longest first)
-      const formatIds = formatRegistry.getAllIds().sort((a, b) => b.length - a.length)
-
-      // Group format IDs by length to handle same-length formats properly
-      const formatIdsByLength = new Map<number, string[]>()
-      for (const formatId of formatIds) {
-        const len = formatId.length
-        if (!formatIdsByLength.has(len)) {
-          formatIdsByLength.set(len, [])
-        }
-        formatIdsByLength.get(len)!.push(formatId)
-      }
-
-      // Try each length group, longest first
-      const lengths = Array.from(formatIdsByLength.keys()).sort((a, b) => b - a)
-      for (const len of lengths) {
-        const idsOfThisLength = formatIdsByLength.get(len)!
+      // Try suffixes of decreasing length (start with reasonable max like 12 chars for "milliliters")
+      const maxSuffixLength = Math.min(remainingText.length, 12)
+      for (let len = maxSuffixLength; len > 0; len--) {
         const candidate = remainingText.slice(0, len)
 
         // Try to find a parser that can handle this candidate
@@ -299,20 +285,21 @@ export function tokenize(line: string): Token[] {
           length: identifier.length,
         })
       }
+      // Check if it's an aggregate keyword (but not if followed by =)
+      // These take priority over format specifiers to avoid conflicts (e.g., "min")
+      else if (AGGREGATE_KEYWORDS.has(lowerIdentifier) && !isAssignment) {
+        tokens.push({
+          type: "operator",
+          value: lowerIdentifier,
+          position: start,
+          length: identifier.length,
+        })
+      }
       // Check if it's a format specifier - these are always keywords unless used as regular variable names
       else if (isFormatSpecifierToken) {
         tokens.push({
           type: "keyword",
           value: identifier,
-          position: start,
-          length: identifier.length,
-        })
-      }
-      // Check if it's an aggregate keyword (but not if followed by =)
-      else if (AGGREGATE_KEYWORDS.has(lowerIdentifier) && !isAssignment) {
-        tokens.push({
-          type: "operator",
-          value: lowerIdentifier,
           position: start,
           length: identifier.length,
         })

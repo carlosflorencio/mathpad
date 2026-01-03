@@ -654,4 +654,147 @@ z = y * 2`
       expect(results[0]).toBe("75km")
     })
   })
+
+  describe("Inline Formats - Time Units", () => {
+    it("should parse and preserve minutes", () => {
+      const results = computeResults("30min + 15min", prefs)
+      expect(results[0]).toBe("45min")
+    })
+
+    it("should parse minutes with full word", () => {
+      const results = computeResults("30 minutes", prefs)
+      expect(results[0]).toBe("30min")
+    })
+
+    it("should parse and preserve seconds", () => {
+      const results = computeResults("90sec * 2", prefs)
+      expect(results[0]).toBe("180sec")
+    })
+
+    it("should parse seconds with full word", () => {
+      const results = computeResults("45 seconds", prefs)
+      expect(results[0]).toBe("45sec")
+    })
+
+    it("should parse and preserve hours", () => {
+      const results = computeResults("2hr + 3hr", prefs)
+      expect(results[0]).toBe("5hr")
+    })
+
+    it("should parse hours with h suffix", () => {
+      const results = computeResults("8h", prefs)
+      expect(results[0]).toBe("8hr")
+    })
+  })
+
+  describe("Inline Formats - Distance Units", () => {
+    it("should parse and preserve kilometers", () => {
+      const results = computeResults("10km + 5km", prefs)
+      expect(results[0]).toBe("15km")
+    })
+
+    it("should parse kilometers with full word", () => {
+      const results = computeResults("100 kilometers", prefs)
+      expect(results[0]).toBe("100km")
+    })
+
+    it("should parse and preserve meters", () => {
+      const results = computeResults("100m * 2", prefs)
+      expect(results[0]).toBe("200m")
+    })
+
+    it("should parse meters with full word (US spelling)", () => {
+      const results = computeResults("50 meters", prefs)
+      expect(results[0]).toBe("50m")
+    })
+
+    it("should parse metres with full word (British spelling)", () => {
+      const results = computeResults("50 metres", prefs)
+      expect(results[0]).toBe("50m")
+    })
+
+    it("should parse and preserve miles", () => {
+      const results = computeResults("10mi + 5mi", prefs)
+      expect(results[0]).toBe("15mi")
+    })
+
+    it("should parse miles with full word", () => {
+      const results = computeResults("100 miles", prefs)
+      expect(results[0]).toBe("100mi")
+    })
+
+    it("should parse and preserve feet", () => {
+      const results = computeResults("100ft * 2", prefs)
+      expect(results[0]).toBe("200ft")
+    })
+
+    it("should parse feet with full word", () => {
+      const results = computeResults("50 feet", prefs)
+      expect(results[0]).toBe("50ft")
+    })
+  })
+
+  describe("Inline Formats - Weight Units", () => {
+    it("should parse and preserve kilograms", () => {
+      const results = computeResults("50kg + 25kg", prefs)
+      expect(results[0]).toBe("75kg")
+    })
+
+    it("should parse kilograms with full word", () => {
+      const results = computeResults("100 kilograms", prefs)
+      expect(results[0]).toBe("100kg")
+    })
+
+    it("should parse and preserve pounds", () => {
+      const results = computeResults("150lb + 50lb", prefs)
+      expect(results[0]).toBe("200lb")
+    })
+
+    it("should parse pounds with lbs suffix", () => {
+      const results = computeResults("200lbs", prefs)
+      expect(results[0]).toBe("200lb")
+    })
+
+    it("should parse and preserve grams", () => {
+      const results = computeResults("500g * 2", prefs)
+      expect(results[0]).toBe("1,000g")
+    })
+
+    it("should distinguish grams (g) from uppercase G", () => {
+      const results = computeResults("100g + 50g", prefs)
+      expect(results[0]).toBe("150g")
+    })
+  })
+
+  describe("Inline Formats - Volume Units", () => {
+    it("should parse and preserve liters", () => {
+      const results = computeResults("2L + 3L", prefs)
+      expect(results[0]).toBe("5L")
+    })
+
+    it("should parse liters with full word", () => {
+      const results = computeResults("10 liters", prefs)
+      expect(results[0]).toBe("10L")
+    })
+
+    it("should parse and preserve milliliters", () => {
+      const results = computeResults("250ml * 4", prefs)
+      expect(results[0]).toBe("1,000ml")
+    })
+
+    it("should parse milliliters with full word", () => {
+      const results = computeResults("500 milliliters", prefs)
+      expect(results[0]).toBe("500ml")
+    })
+
+    it("should parse and preserve gallons", () => {
+      const results = computeResults("5gal + 3gal", prefs)
+      expect(results[0]).toBe("8gal")
+    })
+
+    it("should parse gallons with full word", () => {
+      const results = computeResults("20 gallons", prefs)
+      expect(results[0]).toBe("20gal")
+    })
+  })
 })

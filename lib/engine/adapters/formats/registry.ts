@@ -6,6 +6,17 @@ import { USDFormat } from "./usd"
 import { EURFormat } from "./eur"
 import { KilometerFormat } from "./km"
 import { MeterFormat } from "./m"
+import { MinutesFormat } from "./min"
+import { SecondsFormat } from "./sec"
+import { HoursFormat } from "./hr"
+import { MilesFormat } from "./mi"
+import { FeetFormat } from "./ft"
+import { KilogramsFormat } from "./kg"
+import { PoundsFormat } from "./lb"
+import { GramsFormat } from "./g"
+import { LitersFormat } from "./L"
+import { MillilitersFormat } from "./ml"
+import { GallonsFormat } from "./gal"
 
 /**
  * Registry for all format adapters
@@ -66,9 +77,26 @@ formatRegistry.register(new BillionsFormat())
 formatRegistry.register(new USDFormat())
 formatRegistry.register(new EURFormat())
 
-// Register unit formats
+// Register distance unit formats
 formatRegistry.register(new KilometerFormat())
 formatRegistry.register(new MeterFormat())
+formatRegistry.register(new MilesFormat())
+formatRegistry.register(new FeetFormat())
+
+// Register time unit formats
+formatRegistry.register(new MinutesFormat())
+formatRegistry.register(new SecondsFormat())
+formatRegistry.register(new HoursFormat())
+
+// Register weight unit formats
+formatRegistry.register(new KilogramsFormat())
+formatRegistry.register(new PoundsFormat())
+formatRegistry.register(new GramsFormat())
+
+// Register volume unit formats
+formatRegistry.register(new LitersFormat())
+formatRegistry.register(new MillilitersFormat())
+formatRegistry.register(new GallonsFormat())
 
 /**
  * Helper to check if a string is a valid registered format suffix
