@@ -9,6 +9,7 @@ import {
   EmptyNode,
 } from "./types"
 import { functionRegistry, aggregateFunctionRegistry } from "./adapters/registry"
+import { isFormatSuffix } from "./adapters/formats/registry"
 
 /**
  * Recursive descent parser for mathematical expressions
@@ -62,23 +63,82 @@ class Parser {
       }
     }
 
-    // Check for assignment: identifier = expression
-    if (this.current().type === "identifier" && this.peek().type === "assign") {
+    // Check for assignment: identifier = expression or identifier in FORMAT = expression
+    if (this.current().type === "identifier") {
       const identifier = this.current().value
       const position = this.current().position
-      this.advance() // skip identifier
-      this.advance() // skip '='
-      const expression = this.parseExpression()
-      return {
-        kind: "assignment",
-        identifier,
-        expression,
-        position,
-        length: expression.position + expression.length - position,
+
+      // Check for "var in FORMAT = expr" pattern (e.g., "price in K = 100")
+      if (this.peek().type === "keyword" && this.peek().value === "in") {
+        const formatToken = this.peek(2)
+        if (formatToken.type === "keyword" && isFormatSuffix(formatToken.value)) {
+          const assignToken = this.peek(3)
+          if (assignToken.type === "assign") {
+            const format = formatToken.value
+            this.advance() // skip identifier
+            this.advance() // skip 'in'
+            this.advance() // skip format
+            this.advance() // skip '='
+            const expression = this.parseExpression()
+            return {
+              kind: "assignment",
+              identifier,
+              expression,
+              format,
+              position,
+              length: expression.position + expression.length - position,
+            }
+          }
+        }
+      }
+
+      // Check for regular assignment: identifier = expression
+      if (this.peek().type === "assign") {
+        this.advance() // skip identifier
+        this.advance() // skip '='
+        const expression = this.parseExpression()
+        return {
+          kind: "assignment",
+          identifier,
+          expression,
+          position,
+          length: expression.position + expression.length - position,
+        }
       }
     }
 
-    return this.parseExpression()
+    return this.parseFormatted()
+  }
+
+  /**
+   * Parse formatted expression: expression in FORMAT
+   * Example: "5000 in K" or "100 in $"
+   */
+  private parseFormatted(): ASTNode {
+    const expression = this.parseExpression()
+
+    // Check for "in FORMAT" suffix (e.g., "in K", "in M", "in $")
+    if (!this.isAtEnd() && this.current().type === "keyword" && this.current().value === "in") {
+      this.advance() // skip 'in'
+      if (this.current().type === "keyword") {
+        const format = this.current().value
+        if (isFormatSuffix(format)) {
+          this.advance() // skip format
+          return {
+            kind: "formatted",
+            expression,
+            format,
+            position: expression.position,
+            length:
+              this.tokens[this.position - 1].position +
+              this.tokens[this.position - 1].length -
+              expression.position,
+          }
+        }
+      }
+    }
+
+    return expression
   }
 
   /**

@@ -518,4 +518,66 @@ z = y * 2`
       expect(results[0]).toBe("34%")
     })
   })
+
+  describe("K/M/B Formatting", () => {
+    it("should format expression with K suffix", () => {
+      const results = computeResults("5000 in K", prefs)
+      expect(results[0]).toBe("5K")
+    })
+
+    it("should format expression with M suffix", () => {
+      const results = computeResults("2500000 in M", prefs)
+      expect(results[0]).toBe("2.5M")
+    })
+
+    it("should format expression with B suffix", () => {
+      const results = computeResults("1500000000 in B", prefs)
+      expect(results[0]).toBe("1.5B")
+    })
+
+    it("should format variable assignment with K suffix", () => {
+      const results = computeResults("price in K = 10000\nprice", prefs)
+      expect(results[0]).toBe("10K")
+      expect(results[1]).toBe("10K")
+    })
+
+    it("should format variable assignment with M suffix", () => {
+      const results = computeResults("revenue in M = 5000000\nrevenue", prefs)
+      expect(results[0]).toBe("5M")
+      expect(results[1]).toBe("5M")
+    })
+
+    it("should format variable assignment with B suffix", () => {
+      const results = computeResults("budget in B = 3000000000\nbudget", prefs)
+      expect(results[0]).toBe("3B")
+      expect(results[1]).toBe("3B")
+    })
+
+    it("should format complex expressions with K", () => {
+      const results = computeResults("(1000 + 500) * 2 in K", prefs)
+      expect(results[0]).toBe("3K")
+    })
+
+    it("should handle decimals with K formatting", () => {
+      const results = computeResults("1234 in K", prefs)
+      expect(results[0]).toBe("1.23K")
+    })
+
+    it("should handle decimals with M formatting", () => {
+      const results = computeResults("12345678 in M", prefs)
+      expect(results[0]).toBe("12.35M")
+    })
+
+    it("should format percentage with K suffix", () => {
+      const results = computeResults("5000% in K", prefs)
+      expect(results[0]).toBe("5K%")
+    })
+
+    it("should use formatted variable in calculations", () => {
+      const results = computeResults("base in K = 5000\nresult = base * 2\nresult in K", prefs)
+      expect(results[0]).toBe("5K")
+      expect(results[1]).toBe("10K")
+      expect(results[2]).toBe("10K")
+    })
+  })
 })

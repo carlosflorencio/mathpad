@@ -2,6 +2,18 @@ import Big from "big.js"
 import { AggregateFunctionName } from "./adapters/base"
 
 // ============================================================================
+// Format Types
+// ============================================================================
+
+/**
+ * Format suffix type - represents any registered format ID
+ * This is a string type since formats are dynamically registered at runtime
+ * Built-in formats: "K" (thousands), "M" (millions), "B" (billions)
+ * Additional formats can be registered via the formatRegistry
+ */
+export type FormatSuffix = string
+
+// ============================================================================
 // Token Types (from Tokenizer)
 // ============================================================================
 
@@ -12,6 +24,7 @@ export type TokenType =
   | "operator"
   | "paren"
   | "assign"
+  | "keyword"
   | "eof"
 
 export interface Token {
@@ -33,6 +46,7 @@ export type ASTNode =
   | UnaryOpNode
   | PostfixOpNode
   | AssignmentNode
+  | FormattedExpressionNode
   | AggregateNode
   | FractionNode
   | FunctionCallNode
@@ -88,6 +102,15 @@ export interface AssignmentNode {
   kind: "assignment"
   identifier: string
   expression: ASTNode
+  format?: FormatSuffix
+  position: number
+  length: number
+}
+
+export interface FormattedExpressionNode {
+  kind: "formatted"
+  expression: ASTNode
+  format: FormatSuffix
   position: number
   length: number
 }
@@ -130,11 +153,13 @@ export type EvalResult = NumberResult | PercentResult | EmptyResult | ErrorResul
 export interface NumberResult {
   type: "number"
   value: Big
+  format?: FormatSuffix
 }
 
 export interface PercentResult {
   type: "percent"
   value: Big
+  format?: FormatSuffix
 }
 
 export interface EmptyResult {

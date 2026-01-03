@@ -1,5 +1,6 @@
 import Big from "big.js"
-import { EvalResult, FormatOptions } from "./types"
+import { EvalResult, FormatOptions, FormatSuffix } from "./types"
+import { formatRegistry } from "./adapters/formats/registry"
 
 /**
  * Format a result for display in the results gutter
@@ -13,10 +14,10 @@ export function formatResult(result: EvalResult, options: FormatOptions): string
       return `Error: ${result.message}`
 
     case "number":
-      return formatNumber(result.value, options)
+      return formatNumber(result.value, options, result.format)
 
     case "percent":
-      return formatPercent(result.value, options)
+      return formatPercent(result.value, options, result.format)
 
     default:
       return ""
@@ -26,7 +27,12 @@ export function formatResult(result: EvalResult, options: FormatOptions): string
 /**
  * Format a number with the given options
  */
-function formatNumber(value: Big, options: FormatOptions): string {
+function formatNumber(value: Big, options: FormatOptions, format?: FormatSuffix): string {
+  // Apply format suffix if specified (e.g., K, M, B)
+  if (format) {
+    return formatWithSuffix(value, format, options)
+  }
+
   const num = value.toNumber()
 
   // Check for scientific notation threshold
@@ -67,10 +73,52 @@ function formatNumber(value: Big, options: FormatOptions): string {
 }
 
 /**
+ * Format a number with a format suffix using the format registry
+ */
+function formatWithSuffix(value: Big, suffix: FormatSuffix, options: FormatOptions): string {
+  const adapter = formatRegistry.get(suffix)
+  if (!adapter) {
+    // Fallback if adapter not found
+    return formatNumber(value, options)
+  }
+
+  const { divisor, suffix: suffixStr, prefix } = adapter.format()
+  const divided = value.div(divisor)
+
+  // Format the divided value
+  let formatted = divided.toFixed(options.decimalPlaces)
+
+  // Remove trailing zeros
+  formatted = formatted.replace(/(\.\d*?)0+$/, "$1")
+  formatted = formatted.replace(/\.$/, "")
+
+  // Split into parts
+  const parts = formatted.split(".")
+  let integerPart = parts[0]
+  const decimalPart = parts[1]
+
+  // Add thousands separator
+  if (options.thousandsSeparator) {
+    integerPart = addThousandsSeparator(integerPart, options.thousandsSeparator)
+  }
+
+  // Combine
+  const number = decimalPart
+    ? `${integerPart}${options.decimalSeparator}${decimalPart}`
+    : integerPart
+
+  // Apply prefix/suffix from adapter
+  if (prefix) {
+    return `${prefix}${number}`
+  }
+  return `${number}${suffixStr ?? ""}`
+}
+
+/**
  * Format a percentage value
  */
-function formatPercent(value: Big, options: FormatOptions): string {
-  const formatted = formatNumber(value, options)
+function formatPercent(value: Big, options: FormatOptions, format?: FormatSuffix): string {
+  const formatted = formatNumber(value, options, format)
   return `${formatted}%`
 }
 

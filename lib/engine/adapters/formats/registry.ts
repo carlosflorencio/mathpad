@@ -1,0 +1,92 @@
+import { FormatAdapter } from "./base"
+import { ThousandsFormat } from "./thousands"
+import { MillionsFormat } from "./millions"
+import { BillionsFormat } from "./billions"
+
+/**
+ * Registry for all format adapters
+ * Provides lookup by ID and parsing capabilities
+ */
+class FormatRegistry {
+  private formats = new Map<string, FormatAdapter>()
+
+  register(adapter: FormatAdapter): void {
+    this.formats.set(adapter.id, adapter)
+  }
+
+  /**
+   * Get a format adapter by its ID
+   */
+  get(id: string): FormatAdapter | undefined {
+    return this.formats.get(id)
+  }
+
+  /**
+   * Get all registered format IDs
+   */
+  getAllIds(): string[] {
+    return Array.from(this.formats.keys())
+  }
+
+  /**
+   * Find a format adapter that can parse the given suffix
+   * Returns the adapter and the multiplier to apply
+   */
+  findParser(suffix: string): { adapter: FormatAdapter; multiplier: number } | null {
+    for (const adapter of this.formats.values()) {
+      if (adapter.canParse(suffix)) {
+        const multiplier = adapter.parseMultiplier?.() ?? 1
+        return { adapter, multiplier }
+      }
+    }
+    return null
+  }
+
+  /**
+   * Check if a string is a valid format ID
+   */
+  isValidFormat(id: string): boolean {
+    return this.formats.has(id)
+  }
+}
+
+// Create and populate the global registry
+export const formatRegistry = new FormatRegistry()
+
+// Register built-in formats
+formatRegistry.register(new ThousandsFormat())
+formatRegistry.register(new MillionsFormat())
+formatRegistry.register(new BillionsFormat())
+
+/**
+ * Helper to check if a string is a valid registered format suffix
+ * This is a type guard that can be used for TypeScript narrowing
+ * @param value - The string to check
+ * @returns true if the value is a registered format ID
+ */
+export function isFormatSuffix(value: string): boolean {
+  return formatRegistry.isValidFormat(value)
+}
+
+// To add a new format (e.g., currency or units), create a new adapter:
+//
+// Example: Currency format
+// ```typescript
+// class DollarFormat implements FormatAdapter {
+//   id = "$"
+//   name = "US Dollar"
+//   description = "Format as US currency"
+//
+//   format() {
+//     return { divisor: 1, prefix: "$" }
+//   }
+//
+//   canParse(suffix: string): boolean {
+//     return suffix === "$"
+//   }
+// }
+//
+// formatRegistry.register(new DollarFormat())
+// ```
+//
+// Then you can use: "price in $ = 100" or "100 in $"

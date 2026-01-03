@@ -6,6 +6,7 @@ import {
   unaryOperatorRegistry,
   aggregateFunctionRegistry,
 } from "./adapters/registry"
+import { formatRegistry } from "./adapters/formats/registry"
 
 // Configure Big.js for better precision
 Big.DP = 20 // Decimal places
@@ -51,6 +52,9 @@ export function evaluate(node: ASTNode, context: ExecutionContext): [EvalResult,
       case "function":
         return evaluateFunction(node, context)
 
+      case "formatted":
+        return evaluateFormatted(node, context)
+
       default:
         // TypeScript exhaustiveness check
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -89,16 +93,24 @@ function evaluateNumber(
     let numStr = node.value
     let multiplier = 1
 
-    // Handle suffixes
+    // Handle suffixes using format registry
+    // Check if the last character(s) match a format suffix
+    for (const formatId of formatRegistry.getAllIds()) {
+      const parser = formatRegistry.findParser(numStr[numStr.length - 1])
+      if (parser) {
+        multiplier = parser.multiplier
+        numStr = numStr.slice(0, -1)
+        break
+      }
+    }
+
+    // Also check for lowercase 'k' which is commonly used
     if (numStr.endsWith("k")) {
-      multiplier = 1000
-      numStr = numStr.slice(0, -1)
-    } else if (numStr.endsWith("M")) {
-      multiplier = 1000000
-      numStr = numStr.slice(0, -1)
-    } else if (numStr.endsWith("B")) {
-      multiplier = 1000000000
-      numStr = numStr.slice(0, -1)
+      const parser = formatRegistry.findParser("k")
+      if (parser) {
+        multiplier = parser.multiplier
+        numStr = numStr.slice(0, -1)
+      }
     }
 
     // Remove separators (spaces, commas, underscores, apostrophes)
@@ -254,7 +266,9 @@ function evaluateBinaryNumbers(
 
   try {
     const result = adapter.executeNumbers(left.value, right.value)
-    return [{ type: "number", value: result }, context]
+    // Inherit format from left operand if it has one, otherwise from right
+    const format = left.format || right.format
+    return [{ type: "number", value: result, format }, context]
   } catch (error) {
     return [
       {
@@ -293,7 +307,9 @@ function evaluateNumberPercent(
 
   try {
     const result = adapter.executeNumberPercent(left.value, right.value)
-    return [{ type: "number", value: result }, context]
+    // Inherit format from left operand if it has one, otherwise from right
+    const format = left.format || right.format
+    return [{ type: "number", value: result, format }, context]
   } catch (error) {
     return [
       {
@@ -332,7 +348,9 @@ function evaluatePercentNumber(
 
   try {
     const result = adapter.executePercentNumber(left.value, right.value)
-    return [{ type: "percent", value: result }, context]
+    // Inherit format from left operand if it has one, otherwise from right
+    const format = left.format || right.format
+    return [{ type: "percent", value: result, format }, context]
   } catch (error) {
     return [
       {
@@ -526,14 +544,39 @@ function evaluateAssignment(
 
   if (value.type === "error") return [value, ctx]
 
+  // Apply format if specified
+  let finalValue = value
+  if (node.format && (value.type === "number" || value.type === "percent")) {
+    finalValue = { ...value, format: node.format }
+  }
+
   // Create new context with updated variables
   const newContext: ExecutionContext = {
     ...ctx,
     variables: new Map(ctx.variables),
   }
-  newContext.variables.set(node.identifier, value)
+  newContext.variables.set(node.identifier, finalValue)
 
-  return [value, newContext]
+  return [finalValue, newContext]
+}
+
+/**
+ * Evaluate a formatted expression (e.g., "1000000 in M")
+ */
+function evaluateFormatted(
+  node: ASTNode & { kind: "formatted" },
+  context: ExecutionContext
+): [EvalResult, ExecutionContext] {
+  const [value, ctx] = evaluate(node.expression, context)
+
+  if (value.type === "error") return [value, ctx]
+
+  // Apply format to number or percent
+  if (value.type === "number" || value.type === "percent") {
+    return [{ ...value, format: node.format }, ctx]
+  }
+
+  return [value, ctx]
 }
 
 /**

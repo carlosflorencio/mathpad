@@ -1,5 +1,6 @@
 import { Token } from "./types"
 import { aggregateFunctionRegistry } from "./adapters/registry"
+import { formatRegistry, isFormatSuffix } from "./adapters/formats/registry"
 
 // Operators that can appear in expressions
 const OPERATORS = new Set(["+", "-", "*", "/", "%", "^", "×", "−"])
@@ -9,46 +10,32 @@ const PARENS = new Set(["(", ")"])
 const AGGREGATE_KEYWORDS = aggregateFunctionRegistry.getAllKeywords()
 
 /**
- * Tokenizes a line of input into tokens
- * @param line The input string to tokenize
- * @returns Array of tokens
+ * Tokenize a line into tokens
  */
 export function tokenize(line: string): Token[] {
   const tokens: Token[] = []
   let pos = 0
 
-  // Skip colon prefix if exists (for labels like "Tax: 100 * 0.2")
-  if (line.includes(":")) {
-    const colonIndex = line.indexOf(":")
-    pos = colonIndex + 1
-    // Skip whitespace after colon
-    while (pos < line.length && /\s/.test(line[pos])) {
-      pos++
+  // Skip label (text followed by colon) if present
+  const colonIndex = line.indexOf(":")
+  if (colonIndex !== -1) {
+    // Check if there's text before the colon that looks like a label
+    const beforeColon = line.substring(0, colonIndex).trim()
+    // Label should be alphanumeric with possible spaces
+    if (beforeColon.length > 0 && /^[a-zA-Z][a-zA-Z0-9 ]*$/.test(beforeColon)) {
+      // Skip past the colon and any following whitespace
+      pos = colonIndex + 1
+      while (pos < line.length && /\s/.test(line[pos])) {
+        pos++
+      }
     }
   }
 
-  // Check for assignment (identifier = expression)
-  // Match: letter/underscore, followed by letters/digits/underscores/spaces, then =
-  // But only include spaces if they're between word characters (for "total price = 100")
-  const assignMatch = line.slice(pos).match(/^([a-zA-Z_][\w\s]*?)\s*=(?!=)/)
-  if (assignMatch) {
-    const identifierName = assignMatch[1].trim()
-    tokens.push({
-      type: "identifier",
-      value: identifierName,
-      position: pos,
-      length: assignMatch[1].length,
-    })
-    tokens.push({
-      type: "assign",
-      value: "=",
-      position: pos + assignMatch[1].length,
-      length: 1,
-    })
-    pos += assignMatch[0].length
+  // Skip leading whitespace
+  while (pos < line.length && /\s/.test(line[pos])) {
+    pos++
   }
 
-  // Main tokenization loop
   while (pos < line.length) {
     const ch = line[pos]
 
@@ -146,6 +133,18 @@ export function tokenize(line: string): Token[] {
       }
     }
 
+    // Assignment operator
+    if (ch === "=") {
+      tokens.push({
+        type: "assign",
+        value: "=",
+        position: pos,
+        length: 1,
+      })
+      pos++
+      continue
+    }
+
     // Operators
     if (OPERATORS.has(ch)) {
       tokens.push({
@@ -186,16 +185,21 @@ export function tokenize(line: string): Token[] {
         } else if (c === " " && pos + 1 < line.length && /[a-zA-Z_]/.test(line[pos + 1])) {
           // Check if current identifier is a special keyword that shouldn't be extended
           const currentLower = identifier.toLowerCase()
-          if (currentLower === "of") {
-            // Don't extend "of" keyword with more words
+          if (currentLower === "of" || currentLower === "in") {
+            // Don't extend special keywords with more words
             break
           }
 
-          // Peek ahead to see if the next word is a special keyword
+          // Peek ahead to see if the next word is a special keyword or format specifier
           const nextWordMatch = line.slice(pos + 1).match(/^([a-zA-Z_]+)/)
-          if (nextWordMatch && nextWordMatch[1].toLowerCase() === "of") {
-            // Don't include space before "of" keyword
-            break
+          if (nextWordMatch) {
+            const nextWord = nextWordMatch[1]
+            const nextLower = nextWord.toLowerCase()
+            // Break before special keywords (in, of) or format specifiers
+            if (nextLower === "of" || nextLower === "in" || isFormatSuffix(nextWord)) {
+              // Don't include space before special keywords
+              break
+            }
           }
 
           // Include space only if followed by a letter
@@ -209,8 +213,56 @@ export function tokenize(line: string): Token[] {
       identifier = identifier.trim()
       const lowerIdentifier = identifier.toLowerCase()
 
-      // Check if it's an aggregate keyword
-      if (AGGREGATE_KEYWORDS.has(lowerIdentifier)) {
+      // Peek ahead to see if the next non-whitespace character is "="
+      // OR if followed by "in FORMAT =" pattern (for formatted assignments)
+      // If so, this should be treated as an identifier (for assignment), not a keyword
+      let nextPos = pos
+      while (nextPos < line.length && /\s/.test(line[nextPos])) {
+        nextPos++
+      }
+
+      // Special handling for format specifiers: they should NEVER be treated as assignment targets
+      // even if followed by "=", because they're format specifiers (e.g., K, M, B, $)
+      const isFormatSpecifierToken = isFormatSuffix(identifier)
+      let isAssignment = false
+
+      if (!isFormatSpecifierToken) {
+        // Check if directly followed by "="
+        isAssignment = nextPos < line.length && line[nextPos] === "="
+
+        // Also check for "in FORMAT =" pattern after identifier (e.g., "price in K =")
+        if (!isAssignment && nextPos < line.length) {
+          const restOfLine = line.slice(nextPos)
+          // Build regex pattern from registered format IDs
+          const formatIds = formatRegistry.getAllIds().join("")
+          const formatPattern = `^in\\s+([${formatIds}])\\s*=`
+          const formatMatch = restOfLine.match(new RegExp(formatPattern))
+          if (formatMatch) {
+            isAssignment = true
+          }
+        }
+      }
+
+      // Check if it's the "in" keyword (but not if followed by =)
+      if (lowerIdentifier === "in" && !isAssignment) {
+        tokens.push({
+          type: "keyword",
+          value: "in",
+          position: start,
+          length: identifier.length,
+        })
+      }
+      // Check if it's a format specifier - these are always keywords unless used as regular variable names
+      else if (isFormatSpecifierToken) {
+        tokens.push({
+          type: "keyword",
+          value: identifier,
+          position: start,
+          length: identifier.length,
+        })
+      }
+      // Check if it's an aggregate keyword (but not if followed by =)
+      else if (AGGREGATE_KEYWORDS.has(lowerIdentifier) && !isAssignment) {
         tokens.push({
           type: "operator",
           value: lowerIdentifier,
