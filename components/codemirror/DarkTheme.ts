@@ -6,6 +6,8 @@ export const colors = {
   light: "hsl(95, 6.7%, 64.7%)",
   medium: "hsl(180, 14.9%, 46.1%)",
   dark: "hsl(90, 3.3%, 47.1%)",
+  unit: "hsl(210, 80%, 65%)", // Blue for units/formats
+  variable: "hsl(280, 65%, 70%)", // Purple/magenta for variables (lighter for dark theme)
   background: "hsl(220, 13%, 18%)",
   darkBackground: "hsl(216, 13.2%, 14.9%)",
   highlightBackground: "hsl(218.6, 13.7%, 20%)",
@@ -95,13 +97,20 @@ const darkHighlightStyle = HighlightStyle.define([
       tags.link,
       tags.atom,
       tags.bool,
-      tags.special(tags.variableName),
     ],
     color: colors.light,
   },
   {
     tag: [tags.number, tags.string],
     color: colors.medium,
+  },
+  {
+    tag: [tags.unit],
+    color: colors.unit,
+  },
+  {
+    tag: [tags.variableName],
+    color: colors.variable,
   },
   {
     tag: [tags.meta, tags.comment],
