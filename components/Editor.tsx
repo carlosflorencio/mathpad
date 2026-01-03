@@ -19,6 +19,7 @@ import { light } from "./codemirror/LightTheme"
 import { rightGutter } from "./codemirror/ResultsGutter"
 import { errorDecorations, setErrorsEffect, ErrorInfo } from "./codemirror/ErrorDecorations"
 import { separatorDecorationsExtension } from "./codemirror/SeparatorDecorations"
+import { aggregateDecorationsExtension } from "./codemirror/AggregateDecorations"
 import { CodeMirror } from "./codemirror/CodeMirror"
 import { Preferences } from "@/lib/types"
 import { evaluateDocument, LineEvaluation } from "@/lib/engine"
@@ -147,6 +148,7 @@ export function Editor({ value, onUpdate, preferences, onCopy }: EditorProps) {
         ),
         errorDecorations(),
         separatorDecorationsExtension(),
+        aggregateDecorationsExtension(),
         updateExtension,
         autocompletion({ override: [completions] }),
         preferences.theme === "dark" ? dark : light,
