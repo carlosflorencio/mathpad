@@ -5,7 +5,7 @@ import { StreamLanguage } from "@codemirror/language"
 import { StateField, StateEffect, Facet } from "@codemirror/state"
 import { ViewPlugin, ViewUpdate, EditorView } from "@codemirror/view"
 import { tokenize } from "@/lib/engine/tokenizer"
-import { Token, ExecutionContext } from "@/lib/engine/types"
+import { Token, ExecutionContext, EvalResult } from "@/lib/engine/types"
 import { formatRegistry } from "@/lib/engine/adapters/formats/registry"
 import { UNIT_CATEGORIES } from "@/lib/engine/adapters/formats/base"
 
@@ -13,6 +13,11 @@ import { UNIT_CATEGORIES } from "@/lib/engine/adapters/formats/base"
  * StateEffect to update execution contexts for all lines
  */
 export const setContextsEffect = StateEffect.define<Map<number, ExecutionContext>>()
+
+/**
+ * StateEffect to update evaluation results for all lines
+ */
+export const setResultsEffect = StateEffect.define<Map<number, EvalResult>>()
 
 /**
  * Facet for providing initial contexts when creating the editor state
@@ -23,6 +28,15 @@ export const initialContextsFacet = Facet.define<
 >({
   combine(values) {
     // Return the first provided map, or an empty map if none provided
+    return values[0] || new Map()
+  },
+})
+
+/**
+ * Facet for providing initial results when creating the editor state
+ */
+export const initialResultsFacet = Facet.define<Map<number, EvalResult>, Map<number, EvalResult>>({
+  combine(values) {
     return values[0] || new Map()
   },
 })
@@ -43,6 +57,24 @@ export const contextsField = StateField.define<Map<number, ExecutionContext>>({
       }
     }
     return contexts
+  },
+})
+
+/**
+ * StateField that stores evaluation results for each line (0-based line numbers)
+ * This allows hover tooltips to show the result of aggregate functions
+ */
+export const resultsField = StateField.define<Map<number, EvalResult>>({
+  create(state) {
+    return state.facet(initialResultsFacet) || new Map()
+  },
+  update(results, tr) {
+    for (const effect of tr.effects) {
+      if (effect.is(setResultsEffect)) {
+        return effect.value
+      }
+    }
+    return results
   },
 })
 
@@ -100,6 +132,16 @@ function tokenTypeToTag(token: Token, state: any): string | null {
       return "number"
 
     case "identifier":
+      // Check if it's a special keyword like "prev", "previous", "it"
+      const lowerValue = token.value.toLowerCase()
+      const isSpecialKeyword =
+        lowerValue === "prev" || lowerValue === "previous" || lowerValue === "it"
+
+      // Special keywords should be highlighted like operators (same as aggregate functions)
+      if (isSpecialKeyword) {
+        return "operator"
+      }
+
       // Check if it's a math function
       const mathFuncs = new Set([
         "abs",
@@ -126,9 +168,15 @@ function tokenTypeToTag(token: Token, state: any): string | null {
       if (mathFuncs.has(token.value)) {
         return "function"
       }
-      // Only highlight as variable if line has assignment or operators
-      // Otherwise it's just plain text (like "Earth's circumference is around 40k km")
-      if (state.hasAssignment || state.hasOperators) {
+
+      // Get context to check if this identifier is defined
+      const context = getContextForLine(currentView, state.lineNumber)
+      const isDefined = context && context.variables.has(token.value)
+
+      // Highlight if:
+      // 1. It's a defined variable in the context
+      // 2. Line has assignment or operators (for expressions)
+      if (isDefined || state.hasAssignment || state.hasOperators) {
         return "variableName"
       }
       return null
@@ -211,6 +259,25 @@ const mathpadLanguage = StreamLanguage.define({
     }
   },
 
+  copyState(state) {
+    return {
+      tokens: state.tokens,
+      currentTokenIndex: state.currentTokenIndex,
+      lineText: state.lineText,
+      lineNumber: state.lineNumber,
+      colonIndex: state.colonIndex,
+      inUnitPart: state.inUnitPart,
+      currentToken: state.currentToken,
+      hasAssignment: state.hasAssignment,
+      hasOperators: state.hasOperators,
+    }
+  },
+
+  blankLine(state) {
+    // Increment line number for blank lines
+    state.lineNumber++
+  },
+
   token(stream, state) {
     // New line - tokenize the entire line using engine tokenizer
     if (stream.sol()) {
@@ -257,10 +324,12 @@ const mathpadLanguage = StreamLanguage.define({
 
         // Analyze tokens to determine if line has assignments or operators
         state.hasAssignment = state.tokens.some((t) => t.type === "assign")
-        state.hasOperators = state.tokens.some(
-          (t) => t.type === "operator" && !["/"].includes(t.value)
-        )
-      } catch (e) {
+        state.hasOperators = state.tokens.some((t) => t.type === "operator" && t.value !== "/")
+
+        // Analyze tokens to determine if line has assignments or operators
+        state.hasAssignment = state.tokens.some((t) => t.type === "assign")
+        state.hasOperators = state.tokens.some((t) => t.type === "operator" && t.value !== "/")
+      } catch {
         // If tokenization fails, just skip to end
         state.tokens = []
       }

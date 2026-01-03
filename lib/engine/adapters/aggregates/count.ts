@@ -7,7 +7,7 @@ import { AggregateFunctionAdapter } from "../base"
 
 export class CountAggregate implements AggregateFunctionAdapter {
   name = "count"
-  description = "Count of all previous numbers"
+  description = "Count how many line numbers exist"
 
   validate(values: Big[]): string | null {
     if (values.length === 0) {

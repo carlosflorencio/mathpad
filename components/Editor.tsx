@@ -10,8 +10,11 @@ import {
   mathpadLanguage,
   contextsField,
   setContextsEffect,
+  resultsField,
+  setResultsEffect,
   viewTracker,
   initialContextsFacet,
+  initialResultsFacet,
 } from "./codemirror/MathpadLang"
 import { completions } from "./codemirror/Completions"
 import { dark } from "./codemirror/DarkTheme"
@@ -20,6 +23,7 @@ import { rightGutter } from "./codemirror/ResultsGutter"
 import { errorDecorations, setErrorsEffect, ErrorInfo } from "./codemirror/ErrorDecorations"
 import { separatorDecorationsExtension } from "./codemirror/SeparatorDecorations"
 import { aggregateDecorationsExtension } from "./codemirror/AggregateDecorations"
+import { variableHoverExtension } from "./codemirror/VariableHover"
 import { CodeMirror } from "./codemirror/CodeMirror"
 import { Preferences } from "@/lib/types"
 import { evaluateDocument, LineEvaluation } from "@/lib/engine"
@@ -109,23 +113,31 @@ export function Editor({ value, onUpdate, preferences, onCopy }: EditorProps) {
 
     // Dispatch context and error updates on doc changes (defer to avoid conflicts)
     if (update.docChanged) {
-      // Build context map from evaluations
+      // Build context and results maps from evaluations
       const contextMap = new Map()
+      const resultsMap = new Map()
       evaluationsRef.current.forEach((evaluation) => {
         contextMap.set(evaluation.lineNumber, evaluation.context)
+        resultsMap.set(evaluation.lineNumber, evaluation.result)
       })
       setTimeout(() => {
         update.view.dispatch({
-          effects: [setErrorsEffect.of(errorsRef.current), setContextsEffect.of(contextMap)],
+          effects: [
+            setErrorsEffect.of(errorsRef.current),
+            setContextsEffect.of(contextMap),
+            setResultsEffect.of(resultsMap),
+          ],
         })
       }, 0)
     }
   })
 
-  // Build initial context map for syntax highlighting
+  // Build initial context and results maps for syntax highlighting
   const initialContexts = new Map()
+  const initialResults = new Map()
   evaluations.forEach((evaluation) => {
     initialContexts.set(evaluation.lineNumber, evaluation.context)
+    initialResults.set(evaluation.lineNumber, evaluation.result)
   })
 
   return (
@@ -139,8 +151,10 @@ export function Editor({ value, onUpdate, preferences, onCopy }: EditorProps) {
         highlightSelectionMatches(),
         EditorView.lineWrapping,
         initialContextsFacet.of(initialContexts),
+        initialResultsFacet.of(initialResults),
         mathpadLanguage,
         contextsField,
+        resultsField,
         viewTracker,
         rightGutter(
           (lineNumber) => resultsRef.current[lineNumber - 1],
@@ -149,6 +163,7 @@ export function Editor({ value, onUpdate, preferences, onCopy }: EditorProps) {
         errorDecorations(),
         separatorDecorationsExtension(),
         aggregateDecorationsExtension(),
+        variableHoverExtension(preferences),
         updateExtension,
         autocompletion({ override: [completions] }),
         preferences.theme === "dark" ? dark : light,
