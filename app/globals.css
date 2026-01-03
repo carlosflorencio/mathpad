@@ -5,15 +5,32 @@
 }
 
 :root {
+  /* Editor */
   --font-size: 18px;
   --line-height: 34px;
-  --dialog-bg-color: rgb(33, 34, 38);
-  --text-color: rgb(227, 230, 232);
+
+  /* Paper */
   --paper-width: 900px;
   --paper-margin: 16px;
   --paper-shadow-light: 0 1px 1px 0 rgba(66, 66, 66, 0.08), 0 1px 3px 1px rgba(66, 66, 66, 0.16);
   --paper-shadow-dark: 0 1px 2px 0 rgba(0, 0, 0, 0.15), 0 2px 4px 1px rgba(0, 0, 0, 0.18);
   --paper-shadow: var(--paper-shadow-light);
+
+  /* UI Elements */
+  --ui-radius: 12px;
+  --ui-border-color: rgba(0, 0, 0, 0.1);
+  --ui-modal-width: 500px;
+  --ui-modal-max-width: 90vw;
+  --ui-backdrop-blur: 8px;
+
+  /* Colors (defaults - overridden by theme) */
+  --text-color: rgb(227, 230, 232);
+  --text-muted: rgba(214, 221, 209, 0.7);
+  --bg-modal: rgba(33, 34, 38, 0.95);
+  --bg-dropdown: rgba(33, 34, 38, 0.8);
+  --bg-input: rgba(255, 255, 255, 0.05);
+  --bg-button-hover: rgba(255, 255, 255, 0.1);
+  --bg-menu-item-hover: rgba(122, 122, 122, 0.1);
 }
 
 html,
@@ -73,6 +90,85 @@ body {
   border-radius: 0;
   position: relative;
   transition: box-shadow 0.3s ease;
+}
+
+/* UI Components */
+.modal {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: var(--ui-modal-width);
+  max-width: var(--ui-modal-max-width);
+  padding: 2.5rem;
+  border: 1px solid var(--ui-border-color);
+  border-radius: var(--ui-radius);
+  background: var(--bg-modal);
+  color: var(--text-color);
+  box-shadow:
+    0 20px 25px -5px rgba(0, 0, 0, 0.1),
+    0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  z-index: 50;
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  backdrop-filter: blur(var(--ui-backdrop-blur));
+  transition: all 0.3s;
+  z-index: 40;
+}
+
+.icon-button {
+  padding: 0.5rem;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  color: var(--text-color);
+}
+
+.icon-button:hover {
+  background-color: var(--bg-button-hover);
+}
+
+.dropdown-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 0.5rem;
+  padding: 0.5rem 0;
+  width: 12rem;
+  border: 1px solid var(--ui-border-color);
+  border-radius: var(--ui-radius);
+  background: var(--bg-dropdown);
+  backdrop-filter: blur(12px);
+  box-shadow:
+    0 10px 15px -3px rgba(0, 0, 0, 0.1),
+    0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  z-index: 50;
+}
+
+.dropdown-item {
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  color: var(--text-color);
+}
+
+.dropdown-item:hover {
+  background-color: var(--bg-menu-item-hover);
+}
+
+.form-input,
+.form-select {
+  border: 1px solid var(--ui-border-color);
+  padding: 0.25rem 0.5rem;
+  background: var(--bg-input);
+  color: var(--text-color);
+}
+
+.form-label {
+  display: inline-block;
+  width: 12rem;
 }
 
 @media (max-width: 1000px) {

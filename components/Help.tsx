@@ -6,12 +6,16 @@ interface HelpProps {
 
 export function Help({ close }: HelpProps) {
   return (
-    <div className="fixed inset-0 bg-[hsl(220,13%,18%)] text-[rgba(214,221,209)] p-8 overflow-auto">
+    <div className="modal">
       <h1 className="text-2xl mb-4">Help</h1>
-      <p className="mb-4">Documentation will be added here.</p>
+      <div className="overflow-auto max-h-[70vh]">
+        <p className="mb-4">Documentation will be added here.</p>
+      </div>
 
-      <div className="fixed top-4 right-8 underline cursor-pointer" onClick={() => close()}>
-        Close
+      <div className="flex justify-end mt-6">
+        <button onClick={close} className="cursor-pointer underline text-[var(--text-color)]">
+          Close
+        </button>
       </div>
     </div>
   )

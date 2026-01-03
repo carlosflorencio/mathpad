@@ -27,21 +27,14 @@ export function PreferencesDialog({ preferences, save, close }: PreferencesDialo
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fontSize, decimalPlaces, theme, thousandsSeparator, decimalSeparator])
 
-  const isDark = theme === "dark"
-  const bgColor = isDark ? "bg-[hsl(220,13%,18%)]" : "bg-[hsl(0,0%,95%)]"
-  const textColor = isDark ? "text-[rgba(214,221,209)]" : "text-[hsl(0,0%,50%)]"
-  const borderColor = "border-black"
-
   return (
-    <div
-      className={`fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 p-6 border ${borderColor} ${bgColor} ${textColor}`}
-    >
+    <div className="modal">
       <div className="mb-4">
-        <label className="inline-block w-48">Theme</label>
+        <label className="form-label">Theme</label>
         <select
           value={theme}
           onChange={(e) => setTheme(e.target.value as Theme)}
-          className="border border-black px-2 py-1 mr-4 bg-white text-black"
+          className="form-select mr-4"
         >
           <option value="dark">Dark</option>
           <option value="light">Light</option>
@@ -49,19 +42,19 @@ export function PreferencesDialog({ preferences, save, close }: PreferencesDialo
       </div>
 
       <div className="mb-4">
-        <label className="inline-block w-48">Font Size</label>
+        <label className="form-label">Font Size</label>
         <input
           type="number"
           min="8"
           value={fontSize}
           onChange={(e) => setFontSize(parseInt(e.target.value))}
-          className="w-12 border border-black px-2 py-1 mr-4 bg-white text-black"
+          className="form-input w-12 mr-4"
         />
         px
       </div>
 
       <div className="mb-4">
-        <label className="inline-block w-48">Decimal Separator</label>
+        <label className="form-label">Decimal Separator</label>
         <input
           type="text"
           maxLength={1}
@@ -72,12 +65,12 @@ export function PreferencesDialog({ preferences, save, close }: PreferencesDialo
               setDecimalSeparator(val)
             }
           }}
-          className="w-12 border border-black px-2 py-1 mr-4 bg-white text-black"
+          className="form-input w-12 mr-4"
         />
       </div>
 
       <div className="mb-4">
-        <label className="inline-block w-48">Thousands Separator</label>
+        <label className="form-label">Thousands Separator</label>
         <input
           type="text"
           maxLength={1}
@@ -88,26 +81,26 @@ export function PreferencesDialog({ preferences, save, close }: PreferencesDialo
               setThousandsSeparator(val as "" | "," | "." | " ")
             }
           }}
-          className="w-12 border border-black px-2 py-1 mr-4 bg-white text-black"
+          className="form-input w-12 mr-4"
         />
       </div>
 
       <div className="mb-4">
-        <label className="inline-block w-48">Decimal Places</label>
+        <label className="form-label">Decimal Places</label>
         <input
           type="number"
           min="2"
           max="8"
           value={decimalPlaces}
           onChange={(e) => setDecimalPlaces(parseInt(e.target.value))}
-          className="w-12 border border-black px-2 py-1 mr-4 bg-white text-black"
+          className="form-input w-12 mr-4"
         />
       </div>
 
       <div className="flex justify-end mt-6">
-        <span onClick={() => close()} className="cursor-pointer underline">
+        <button onClick={close} className="cursor-pointer underline text-[var(--text-color)]">
           Close
-        </span>
+        </button>
       </div>
     </div>
   )
