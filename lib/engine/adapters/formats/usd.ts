@@ -2,7 +2,7 @@ import { FormatAdapter, FormatResult, UNIT_CATEGORIES } from "./base"
 
 /**
  * USD Dollar format adapter
- * Displays numbers with $ prefix
+ * Displays numbers with $ suffix
  * Parses: 100$, 100 $, $100
  */
 export class USDFormat implements FormatAdapter {
@@ -19,7 +19,7 @@ export class USDFormat implements FormatAdapter {
   format(): FormatResult {
     return {
       divisor: 1,
-      prefix: "$",
+      suffix: "$",
     }
   }
 

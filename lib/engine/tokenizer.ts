@@ -29,8 +29,9 @@ export function tokenize(line: string): Token[] {
   if (colonIndex !== -1) {
     // Check if there's text before the colon that looks like a label
     const beforeColon = line.substring(0, colonIndex).trim()
-    // Label should be alphanumeric with possible spaces
-    if (beforeColon.length > 0 && /^[a-zA-Z][a-zA-Z0-9 ]*$/.test(beforeColon)) {
+    // Label can contain letters, numbers, spaces, apostrophes, commas, and common punctuation
+    // This allows natural language descriptions like "Earth's circumference, approximately"
+    if (beforeColon.length > 0 && /^[a-zA-Z][a-zA-Z0-9 ',.!?-]*$/.test(beforeColon)) {
       // Skip past the colon and any following whitespace
       pos = colonIndex + 1
       while (pos < line.length && /\s/.test(line[pos])) {

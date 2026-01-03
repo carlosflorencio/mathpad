@@ -584,37 +584,37 @@ z = y * 2`
   describe("Inline Formats - Currency", () => {
     it("should parse inline dollar format without space", () => {
       const results = computeResults("100$", prefs)
-      expect(results[0]).toBe("$100")
+      expect(results[0]).toBe("100$")
     })
 
     it("should parse inline dollar format with space", () => {
       const results = computeResults("100 $", prefs)
-      expect(results[0]).toBe("$100")
+      expect(results[0]).toBe("100$")
     })
 
     it("should parse inline euro format without space", () => {
       const results = computeResults("100€", prefs)
-      expect(results[0]).toBe("€100")
+      expect(results[0]).toBe("100€")
     })
 
     it("should parse inline euro format with space", () => {
       const results = computeResults("100 €", prefs)
-      expect(results[0]).toBe("€100")
+      expect(results[0]).toBe("100€")
     })
 
     it("should propagate dollar format through calculations", () => {
       const results = computeResults("100$ * 2", prefs)
-      expect(results[0]).toBe("$200")
+      expect(results[0]).toBe("200$")
     })
 
     it("should propagate euro format through calculations", () => {
       const results = computeResults("50€ + 25€", prefs)
-      expect(results[0]).toBe("€75")
+      expect(results[0]).toBe("75€")
     })
 
     it("should handle dollar format in complex expressions", () => {
       const results = computeResults("(100$ + 50$) * 2", prefs)
-      expect(results[0]).toBe("$300")
+      expect(results[0]).toBe("300$")
     })
   })
 
@@ -831,7 +831,7 @@ z = y * 2`
 
     it("should allow operations between same unit types", () => {
       const results = computeResults("100$ + 50$", prefs)
-      expect(results[0]).toBe("$150")
+      expect(results[0]).toBe("150$")
     })
 
     it("should allow operations between units and plain numbers", () => {
@@ -841,7 +841,7 @@ z = y * 2`
 
     it("should allow operations with K/M/B formats (number category)", () => {
       const results = computeResults("10k + 100$", prefs)
-      expect(results[0]).toBe("$10,100")
+      expect(results[0]).toBe("10,100$")
     })
   })
 
@@ -983,14 +983,14 @@ z = y * 2`
 
     it("should preserve format from previous result with operator prefix", () => {
       const results = computeResults("100$\n+ 2", prefs)
-      expect(results[0]).toBe("$100")
-      expect(results[1]).toBe("$102")
+      expect(results[0]).toBe("100$")
+      expect(results[1]).toBe("102$")
     })
 
     it("should preserve format from previous result with prev", () => {
       const results = computeResults("100$\nprev + 50", prefs)
-      expect(results[0]).toBe("$100")
-      expect(results[1]).toBe("$150")
+      expect(results[0]).toBe("100$")
+      expect(results[1]).toBe("150$")
     })
 
     it("should work across multiple lines", () => {
@@ -1041,6 +1041,94 @@ z = y * 2`
       const results = computeResults("100km\nprev to m", prefs)
       expect(results[0]).toBe("100km")
       expect(results[1]).toBe("100,000m")
+    })
+  })
+
+  describe("Labels", () => {
+    it("should skip simple labels", () => {
+      const results = computeResults("Distance: 100km", prefs)
+      expect(results[0]).toBe("100km")
+    })
+
+    it("should skip labels with apostrophes", () => {
+      const results = computeResults("Earth's circumference: 40,000km", prefs)
+      expect(results[0]).toBe("40,000km")
+    })
+
+    it("should skip labels with commas and punctuation", () => {
+      const results = computeResults("Speed, approximately: 80 in km", prefs)
+      expect(results[0]).toBe("80km")
+    })
+
+    it("should allow descriptive text without errors", () => {
+      const results = computeResults(
+        "Earth's circumference is around 40k km: 40,000 km\nTravelling constantly at 80 km per hour: 80 km",
+        prefs
+      )
+      expect(results[0]).toBe("40,000km")
+      expect(results[1]).toBe("80km")
+    })
+
+    it("should work with multi-word labels and format syntax", () => {
+      const results = computeResults("My bank account balance: 1000$ in $", prefs)
+      expect(results[0]).toBe("1,000$")
+    })
+  })
+
+  describe("Plain Text / Comments", () => {
+    it("should treat standalone undefined identifiers as empty", () => {
+      const results = computeResults("Hello\nWorld", prefs)
+      expect(results[0]).toBe("")
+      expect(results[1]).toBe("")
+    })
+
+    it("should extract and calculate numbers from descriptive text", () => {
+      const results = computeResults("Earth's circumference is around 40k km\n100", prefs)
+      // First line: extract "40k km" from the text (40 thousand kilometers)
+      expect(results[0]).toBe("40,000km")
+      // Second line: actual calculation
+      expect(results[1]).toBe("100")
+    })
+
+    it("should extract calculations from text with numbers", () => {
+      const results = computeResults("The distance is 50 in km", prefs)
+      expect(results[0]).toBe("50km")
+    })
+
+    it("should extract formatted numbers", () => {
+      const results = computeResults("Price: 1000$ in $", prefs)
+      expect(results[0]).toBe("1,000$")
+    })
+
+    it("should support hash comments", () => {
+      const results = computeResults("# This is a comment\n100", prefs)
+      expect(results[0]).toBe("")
+      expect(results[1]).toBe("100")
+    })
+
+    it("should work with mixed text and calculations", () => {
+      const results = computeResults("Introduction\nx = 50\nCalculation\nx + 10", prefs)
+      expect(results[0]).toBe("") // "Introduction" - no number
+      expect(results[1]).toBe("50") // x = 50
+      expect(results[2]).toBe("") // "Calculation" - no number
+      expect(results[3]).toBe("60") // x + 10
+    })
+
+    it("should still error on undefined variables in expressions", () => {
+      const results = computeResults("x + 10", prefs)
+      expect(results[0]).toBe("Error: Variable 'x' not defined")
+    })
+
+    it("should extract simple expressions from text", () => {
+      const results = computeResults("The total is 100 + 200", prefs)
+      expect(results[0]).toBe("300")
+    })
+
+    it("should handle text with multiple numbers", () => {
+      const results = computeResults("From 10 to 20", prefs)
+      // Should parse "10 to 20" where "to" is a keyword for conversion
+      // Since conversion requires units, this will fail and just show "10"
+      expect(results[0]).toBe("10")
     })
   })
 })

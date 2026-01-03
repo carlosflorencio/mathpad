@@ -18,11 +18,11 @@ describe("USDFormat", () => {
     expect(format.parseMultiplier()).toBe(1)
   })
 
-  it("should format with prefix $", () => {
+  it("should format with suffix $", () => {
     const result = format.format()
     expect(result.divisor).toBe(1)
-    expect(result.prefix).toBe("$")
-    expect(result.suffix).toBeUndefined()
+    expect(result.suffix).toBe("$")
+    expect(result.prefix).toBeUndefined()
   })
 
   it("should parse $ suffix", () => {

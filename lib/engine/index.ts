@@ -4,6 +4,7 @@ import { evaluate } from "./evaluator"
 import { formatResult, createFormatOptions } from "./formatter"
 import { createContext, LineEvaluation } from "./types"
 import { Preferences } from "../types"
+import { formatRegistry } from "./adapters/formats/registry"
 
 /**
  * Evaluate a complete document (multiple lines)
@@ -91,7 +92,68 @@ export function evaluateDocument(text: string, preferences: Preferences): LineEv
     const ast = parse(tokens)
 
     // Evaluate the AST
-    const [result, newContext] = evaluate(ast, context)
+    let [result, newContext] = evaluate(ast, context)
+
+    // Special case: If the result is an "undefined variable" error and the AST is just
+    // a standalone identifier, try to extract a calculable expression from the line
+    // This allows users to write descriptive text with numbers like:
+    // "Earth's circumference is around 40k km" -> extracts and calculates "40k km"
+    if (
+      result.type === "error" &&
+      result.message.includes("not defined") &&
+      ast.kind === "identifier"
+    ) {
+      // Try to find a number in the token stream and parse from there
+      const numberIndex = tokens.findIndex((t) => t.type === "number" || t.type === "percent")
+      if (numberIndex !== -1) {
+        // Found a number - try parsing from that point
+        let remainingTokens = tokens.slice(numberIndex)
+
+        // Check if the token after the number is a keyword that's a valid format
+        // This handles cases like "40k km" where we want to treat "km" as a format
+        // Note: format identifiers are tokenized as "keyword" type
+        if (
+          remainingTokens.length >= 2 &&
+          remainingTokens[0].type === "number" &&
+          remainingTokens[1].type === "keyword"
+        ) {
+          const potentialFormat = remainingTokens[1].value.toLowerCase()
+          if (formatRegistry.findParser(potentialFormat)) {
+            // Insert an "in" keyword to convert "40k km" to "40k in km"
+            remainingTokens = [
+              remainingTokens[0],
+              {
+                type: "keyword",
+                value: "in",
+                position: remainingTokens[1].position,
+                length: 0,
+              },
+              {
+                type: "keyword",
+                value: potentialFormat,
+                position: remainingTokens[1].position,
+                length: remainingTokens[1].length,
+              },
+              ...remainingTokens.slice(2),
+            ]
+          }
+        }
+
+        const newAst = parse(remainingTokens)
+        const [newResult, newNewContext] = evaluate(newAst, context)
+        if (newResult.type !== "error") {
+          // Successfully parsed an expression from the remaining tokens
+          result = newResult
+          newContext = newNewContext
+        } else {
+          // Still failed, treat as empty
+          result = { type: "empty" }
+        }
+      } else {
+        // No number found, treat as empty (plain text comment)
+        result = { type: "empty" }
+      }
+    }
 
     // Format the result
     const formatted = formatResult(result, formatOptions)
