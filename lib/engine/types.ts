@@ -31,6 +31,7 @@ export type ASTNode =
   | IdentifierNode
   | BinaryOpNode
   | UnaryOpNode
+  | PostfixOpNode
   | AssignmentNode
   | AggregateNode
   | FractionNode
@@ -70,6 +71,14 @@ export interface BinaryOpNode {
 export interface UnaryOpNode {
   kind: "unary"
   operator: "+" | "-"
+  operand: ASTNode
+  position: number
+  length: number
+}
+
+export interface PostfixOpNode {
+  kind: "postfix"
+  operator: "++" | "--"
   operand: ASTNode
   position: number
   length: number

@@ -33,6 +33,7 @@ import { DivideOperator } from "./operators/divide"
 import { ModuloOperator } from "./operators/modulo"
 import { PowerOperator } from "./operators/power"
 import { UnaryPlusOperator, UnaryMinusOperator } from "./operators/unary"
+import { IncrementOperator, DecrementOperator } from "./operators/postfix"
 
 // Import all aggregates
 import { SumAggregate } from "./aggregates/sum"
@@ -227,6 +228,10 @@ binaryOperatorRegistry.register(new PowerOperator())
 // Register all unary operators
 unaryOperatorRegistry.register(new UnaryPlusOperator())
 unaryOperatorRegistry.register(new UnaryMinusOperator())
+
+// Register postfix operators
+unaryOperatorRegistry.register(new IncrementOperator())
+unaryOperatorRegistry.register(new DecrementOperator())
 
 // Register all aggregate functions
 aggregateFunctionRegistry.register(new SumAggregate())

@@ -199,7 +199,32 @@ class Parser {
       }
     }
 
-    return this.parsePrimary()
+    return this.parsePostfix()
+  }
+
+  /**
+   * Parse postfix operators (++ and --)
+   */
+  private parsePostfix(): ASTNode {
+    let node = this.parsePrimary()
+
+    // Check for postfix operators
+    if (!this.isAtEnd() && this.current().type === "operator") {
+      const current = this.current()
+      if (current.value === "++" || current.value === "--") {
+        const operator = current.value as "++" | "--"
+        this.advance()
+        node = {
+          kind: "postfix",
+          operator,
+          operand: node,
+          position: node.position,
+          length: current.position + current.length - node.position,
+        }
+      }
+    }
+
+    return node
   }
 
   /**

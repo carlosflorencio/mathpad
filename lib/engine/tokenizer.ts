@@ -123,6 +123,29 @@ export function tokenize(line: string): Token[] {
       continue
     }
 
+    // Multi-character operators (++, --)
+    // Only treat as postfix if the previous token was a value or closing paren
+    if ((ch === "+" || ch === "-") && pos + 1 < line.length && line[pos + 1] === ch) {
+      const lastToken = tokens.length > 0 ? tokens[tokens.length - 1] : null
+      const canBePostfix =
+        lastToken &&
+        (lastToken.type === "number" ||
+          lastToken.type === "percent" ||
+          lastToken.type === "identifier" ||
+          (lastToken.type === "paren" && lastToken.value === ")"))
+
+      if (canBePostfix) {
+        tokens.push({
+          type: "operator",
+          value: ch + ch, // "++" or "--"
+          position: pos,
+          length: 2,
+        })
+        pos += 2
+        continue
+      }
+    }
+
     // Operators
     if (OPERATORS.has(ch)) {
       tokens.push({

@@ -36,6 +36,9 @@ export function evaluate(node: ASTNode, context: ExecutionContext): [EvalResult,
       case "unary":
         return evaluateUnary(node, context)
 
+      case "postfix":
+        return evaluatePostfix(node, context)
+
       case "assignment":
         return evaluateAssignment(node, context)
 
@@ -434,6 +437,63 @@ function evaluateUnary(
       {
         type: "error",
         message: `Cannot apply unary '${node.operator}' to this type`,
+        position: node.position,
+        length: node.length,
+      },
+      ctx,
+    ]
+  } catch (error) {
+    return [
+      {
+        type: "error",
+        message: error instanceof Error ? error.message : "Calculation error",
+        position: node.position,
+        length: node.length,
+      },
+      ctx,
+    ]
+  }
+}
+
+/**
+ * Evaluate a postfix operation (++ or --)
+ */
+function evaluatePostfix(
+  node: ASTNode & { kind: "postfix" },
+  context: ExecutionContext
+): [EvalResult, ExecutionContext] {
+  const [operand, ctx] = evaluate(node.operand, context)
+
+  if (operand.type === "error") return [operand, ctx]
+  if (operand.type === "empty") return [operand, ctx]
+
+  const adapter = unaryOperatorRegistry.get(node.operator)
+  if (!adapter) {
+    return [
+      {
+        type: "error",
+        message: `Unknown postfix operator '${node.operator}'`,
+        position: node.position,
+        length: node.length,
+      },
+      ctx,
+    ]
+  }
+
+  try {
+    if (operand.type === "number" && adapter.executeNumber) {
+      const result = adapter.executeNumber(operand.value)
+      return [{ type: "number", value: result }, ctx]
+    }
+    if (operand.type === "percent" && adapter.executePercent) {
+      const result = adapter.executePercent(operand.value)
+      return [{ type: "percent", value: result }, ctx]
+    }
+
+    return [
+      {
+        type: "error",
+        message: `Cannot apply postfix '${node.operator}' to this type`,
         position: node.position,
         length: node.length,
       },

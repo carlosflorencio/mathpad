@@ -176,6 +176,49 @@ describe("Integration Tests", () => {
     })
   })
 
+  describe("Postfix Operators", () => {
+    it("should increment number", () => {
+      const results = computeResults("2++", prefs)
+      expect(results[0]).toBe("3")
+    })
+
+    it("should decrement number", () => {
+      const results = computeResults("5--", prefs)
+      expect(results[0]).toBe("4")
+    })
+
+    it("should increment expression in parentheses", () => {
+      const results = computeResults("(2 + 3)++", prefs)
+      expect(results[0]).toBe("6")
+    })
+
+    it("should decrement expression in parentheses", () => {
+      const results = computeResults("(10 - 3)--", prefs)
+      expect(results[0]).toBe("6")
+    })
+
+    it("should increment percentage", () => {
+      const results = computeResults("50%++", prefs)
+      expect(results[0]).toBe("51%")
+    })
+
+    it("should decrement percentage", () => {
+      const results = computeResults("75%--", prefs)
+      expect(results[0]).toBe("74%")
+    })
+
+    it("should work in larger expressions", () => {
+      const results = computeResults("5++ + 10", prefs)
+      expect(results[0]).toBe("16")
+    })
+
+    it("should work with variables", () => {
+      const results = computeResults("x = 10\nx++", prefs)
+      expect(results[0]).toBe("10")
+      expect(results[1]).toBe("11")
+    })
+  })
+
   describe("Error Handling", () => {
     it("should handle division by zero", () => {
       const results = computeResults("1 / 0", prefs)
