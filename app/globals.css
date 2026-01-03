@@ -9,6 +9,10 @@
   --line-height: 34px;
   --dialog-bg-color: rgb(33, 34, 38);
   --text-color: rgb(227, 230, 232);
+  --paper-width: 900px;
+  --paper-margin: 16px;
+  --paper-shadow: 0 1px 1px 0 rgba(66, 66, 66, 0.08), 0 1px 3px 1px rgba(66, 66, 66, 0.16);
+  --paper-shadow-light: 0 1px 1px 0 rgba(66, 66, 66, 0.08), 0 1px 3px 1px rgba(66, 66, 66, 0.16);
 }
 
 html,
@@ -34,9 +38,49 @@ body {
 
 .cm-content,
 .cm-scroller {
-  padding: 0.1em 0 0 0.2em;
+  padding: 0;
   font-family: var(--font-jetbrains-mono), "JetBrains Mono", monospace;
   font-size: var(--font-size);
   line-height: calc(var(--font-size) + 10px);
   outline: none !important;
+}
+
+.cm-line {
+  padding: 1px 10px !important;
+}
+
+.cm-line.cm-separator-line {
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+
+.desk-container {
+  overflow-y: auto;
+  padding: var(--paper-margin) 0;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  min-height: 100vh;
+}
+
+.paper-container {
+  width: 100%;
+  max-width: var(--paper-width);
+  min-height: calc(100vh - (var(--paper-margin) * 2));
+  background-color: var(--cm-background);
+  box-shadow: var(--paper-shadow);
+  border-radius: 0;
+  position: relative;
+  transition: box-shadow 0.3s ease;
+}
+
+@media (max-width: 1000px) {
+  .desk-container {
+    padding: 20px;
+  }
+
+  .paper-container {
+    max-width: 100%;
+    min-height: auto;
+  }
 }

@@ -20,6 +20,8 @@ function configureCSSVars(preferences: Preferences): void {
 
     style.setProperty("--text-color", isDark ? colors.light : colors.medium)
     style.setProperty("--dialog-bg-color", isDark ? colors.background : colors.darkBackground)
+    style.setProperty("--desk-bg-color", isDark ? colors.darkBackground : "#f8f9fa")
+    style.setProperty("--cm-background", colors.background)
   }
 }
 
@@ -73,18 +75,22 @@ export function App() {
   }
 
   const isDark = preferences.theme === "dark"
-  const bgColor = isDark ? "bg-[hsl(220,13%,18%)]" : "bg-[hsl(0,0%,98%)]"
+  const bgColor = "bg-[var(--desk-bg-color)]"
   const textColor = isDark ? "text-[rgba(214,221,209)]" : "text-[hsl(0,0%,50%)]"
 
   return (
-    <div className={`flex flex-1 font-mono ${bgColor}`}>
+    <div className={`flex flex-col min-h-screen font-mono ${bgColor}`}>
       {!showHelp && !showPreferences && (
-        <Editor
-          value={content}
-          onUpdate={saveContent}
-          preferences={preferences}
-          onCopy={(value: string) => showToast(`Copied: ${value}`)}
-        />
+        <div className="desk-container">
+          <div className="paper-container">
+            <Editor
+              value={content}
+              onUpdate={saveContent}
+              preferences={preferences}
+              onCopy={(value: string) => showToast(`Copied: ${value}`)}
+            />
+          </div>
+        </div>
       )}
       {showPreferences && (
         <PreferencesDialog

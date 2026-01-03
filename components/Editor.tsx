@@ -94,7 +94,6 @@ export function Editor({ value, onUpdate, preferences, onCopy }: EditorProps) {
       extensions={[
         drawSelection(),
         EditorState.allowMultipleSelections.of(true),
-        highlightActiveLine(),
         highlightSelectionMatches(),
         EditorView.lineWrapping,
         mathpadLanguage,

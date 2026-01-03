@@ -13,7 +13,7 @@ export const colors = {
   conversionKeyword: "hsl(150, 60%, 55%)", // Green for conversion keywords (to, in) - lighter for dark theme
   background: "hsl(220, 13%, 18%)",
   darkBackground: "hsl(216, 13.2%, 14.9%)",
-  highlightBackground: "hsl(218.6, 13.7%, 20%)",
+  highlightBackground: "transparent",
   tooltipBackground: "hsl(216.9, 10.9%, 23.3%)",
   selection: "hsl(221.1, 13.3%, 28%)",
   cursor: "hsl(220.2, 100%, 66.1%)",

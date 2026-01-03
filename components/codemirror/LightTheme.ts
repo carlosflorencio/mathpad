@@ -11,9 +11,9 @@ export const colors = {
   variable: "hsl(280, 70%, 50%)", // Purple/magenta for variables
   operator: "hsl(0, 0%, 50%)", // Gray for operators
   conversionKeyword: "hsl(150, 60%, 40%)", // Green for conversion keywords (to, in)
-  background: "hsl(0, 0%, 98%)",
+  background: "hsl(0, 0%, 100%)",
   darkBackground: "hsl(0, 0%, 95%)",
-  highlightBackground: "hsl(0, 0%, 100%)",
+  highlightBackground: "transparent",
   selection: "hsl(0, 0%, 90)",
   cursor: "#528bff",
 }
