@@ -218,7 +218,7 @@ export function tokenize(line: string): Token[] {
         } else if (c === " " && pos + 1 < line.length && /[a-zA-Z_]/.test(line[pos + 1])) {
           // Check if current identifier is a special keyword that shouldn't be extended
           const currentLower = identifier.toLowerCase()
-          if (currentLower === "of" || currentLower === "in") {
+          if (currentLower === "of" || currentLower === "in" || currentLower === "to") {
             // Don't extend special keywords with more words
             break
           }
@@ -228,8 +228,13 @@ export function tokenize(line: string): Token[] {
           if (nextWordMatch) {
             const nextWord = nextWordMatch[1]
             const nextLower = nextWord.toLowerCase()
-            // Break before special keywords (in, of) or format specifiers
-            if (nextLower === "of" || nextLower === "in" || isFormatSuffix(nextWord)) {
+            // Break before special keywords (in, of, to) or format specifiers
+            if (
+              nextLower === "of" ||
+              nextLower === "in" ||
+              nextLower === "to" ||
+              isFormatSuffix(nextWord)
+            ) {
               // Don't include space before special keywords
               break
             }
@@ -276,11 +281,11 @@ export function tokenize(line: string): Token[] {
         }
       }
 
-      // Check if it's the "in" keyword (but not if followed by =)
-      if (lowerIdentifier === "in" && !isAssignment) {
+      // Check if it's the "in" or "to" keyword (but not if followed by =)
+      if ((lowerIdentifier === "in" || lowerIdentifier === "to") && !isAssignment) {
         tokens.push({
           type: "keyword",
-          value: "in",
+          value: lowerIdentifier,
           position: start,
           length: identifier.length,
         })

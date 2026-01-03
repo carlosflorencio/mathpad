@@ -112,7 +112,8 @@ class Parser {
 
   /**
    * Parse formatted expression: expression in FORMAT
-   * Example: "5000 in K" or "100 in $"
+   * Parse conversion expression: expression to UNIT
+   * Example: "5000 in K" or "100 in $" or "100km to m"
    */
   private parseFormatted(): ASTNode {
     const expression = this.parseExpression()
@@ -128,6 +129,28 @@ class Parser {
             kind: "formatted",
             expression,
             format,
+            position: expression.position,
+            length:
+              this.tokens[this.position - 1].position +
+              this.tokens[this.position - 1].length -
+              expression.position,
+          }
+        }
+      }
+    }
+
+    // Check for "to UNIT" suffix (e.g., "100km to m", "1hr to min")
+    if (!this.isAtEnd() && this.current().type === "keyword" && this.current().value === "to") {
+      this.advance() // skip 'to'
+      // After "to", the unit might be tokenized as keyword or operator (e.g., "min" is an aggregate)
+      if (this.current().type === "keyword" || this.current().type === "operator") {
+        const targetUnit = this.current().value
+        if (isFormatSuffix(targetUnit)) {
+          this.advance() // skip target unit
+          return {
+            kind: "conversion",
+            expression,
+            targetUnit,
             position: expression.position,
             length:
               this.tokens[this.position - 1].position +

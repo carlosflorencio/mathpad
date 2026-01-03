@@ -1,15 +1,17 @@
-import { FormatAdapter, FormatResult } from "./base"
+import { FormatAdapter, FormatResult, UNIT_CATEGORIES } from "./base"
 
 /**
  * Feet format adapter
  * Displays numbers with ft suffix
- * Parses: 100ft, 100 ft, 100 foot, 100 feet
+ * Parses: ft, foot, feet (case-insensitive)
  */
 export class FeetFormat implements FormatAdapter {
   id = "ft"
   name = "Feet"
   description = "Format as feet (ft)"
+  unitCategory = UNIT_CATEGORIES.DISTANCE
   preserveInline = true
+  toBaseUnit = 0.3048 // 1 ft = 0.3048 m
 
   parseMultiplier(): number {
     return 1

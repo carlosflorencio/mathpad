@@ -6,7 +6,7 @@ describe("MeterFormat", () => {
 
   it("should have correct metadata", () => {
     expect(format.id).toBe("m")
-    expect(format.name).toBe("Meter")
+    expect(format.name).toBe("Meters")
     expect(format.description).toBe("Format as meters (m)")
   })
 

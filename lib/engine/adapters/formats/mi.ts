@@ -1,15 +1,17 @@
-import { FormatAdapter, FormatResult } from "./base"
+import { FormatAdapter, FormatResult, UNIT_CATEGORIES } from "./base"
 
 /**
  * Miles format adapter
  * Displays numbers with mi suffix
- * Parses: 100mi, 100 mi, 100 mile, 100 miles
+ * Parses: mi, mile, miles (case-insensitive)
  */
 export class MilesFormat implements FormatAdapter {
   id = "mi"
   name = "Miles"
   description = "Format as miles (mi)"
+  unitCategory = UNIT_CATEGORIES.DISTANCE
   preserveInline = true
+  toBaseUnit = 1609.34 // 1 mi = 1609.34 m
 
   parseMultiplier(): number {
     return 1

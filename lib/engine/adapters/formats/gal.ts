@@ -1,14 +1,16 @@
-import { FormatAdapter, FormatResult } from "./base"
+import { FormatAdapter, FormatResult, UNIT_CATEGORIES } from "./base"
 
 /**
  * Gallons format adapter
  * Displays numbers with gal suffix
- * Parses: 100gal, 100 gal, 100 gallon, 100 gallons
+ * Parses: gal, gallon, gallons (case-insensitive)
  */
 export class GallonsFormat implements FormatAdapter {
   id = "gal"
   name = "Gallons"
   description = "Format as gallons (gal)"
+  unitCategory = UNIT_CATEGORIES.VOLUME
+  toBaseUnit = 3.78541 // 1gal = 3.78541L (US gallon)
   preserveInline = true
 
   parseMultiplier(): number {

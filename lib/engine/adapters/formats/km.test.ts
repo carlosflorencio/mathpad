@@ -6,7 +6,7 @@ describe("KilometerFormat", () => {
 
   it("should have correct metadata", () => {
     expect(format.id).toBe("km")
-    expect(format.name).toBe("Kilometer")
+    expect(format.name).toBe("Kilometers")
     expect(format.description).toBe("Format as kilometers (km)")
   })
 

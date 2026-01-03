@@ -1,16 +1,18 @@
-import { FormatAdapter, FormatResult } from "./base"
+import { FormatAdapter, FormatResult, UNIT_CATEGORIES } from "./base"
 
 /**
  * Grams format adapter
  * Displays numbers with g suffix
- * Parses: 100g, 100 g, 100 gram, 100 grams
- * Note: Only lowercase 'g' to avoid confusion with other units
+ * Parses: g (lowercase only), gram, grams
+ * Note: Only lowercase 'g' to avoid future conflicts
  */
 export class GramsFormat implements FormatAdapter {
   id = "g"
   name = "Grams"
   description = "Format as grams (g)"
+  unitCategory = UNIT_CATEGORIES.WEIGHT
   preserveInline = true
+  toBaseUnit = 0.001 // 1 g = 0.001 kg
 
   parseMultiplier(): number {
     return 1

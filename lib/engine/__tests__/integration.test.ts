@@ -797,4 +797,138 @@ z = y * 2`
       expect(results[0]).toBe("20gal")
     })
   })
+
+  describe("Unit Type Validation - Incompatible Operations", () => {
+    it("should reject adding currency and time units", () => {
+      const results = computeResults("100$ + 10sec", prefs)
+      expect(results[0]).toBe("Error: Cannot add currency and time")
+    })
+
+    it("should reject adding currency and distance units", () => {
+      const results = computeResults("100$ + 10km", prefs)
+      expect(results[0]).toBe("Error: Cannot add currency and distance")
+    })
+
+    it("should reject subtracting time and distance units", () => {
+      const results = computeResults("10hr - 10km", prefs)
+      expect(results[0]).toBe("Error: Cannot subtract time and distance")
+    })
+
+    it("should reject multiplying weight and volume units", () => {
+      const results = computeResults("100kg * 10L", prefs)
+      expect(results[0]).toBe("Error: Cannot multiply weight and volume")
+    })
+
+    it("should reject dividing volume and weight units", () => {
+      const results = computeResults("100L / 10kg", prefs)
+      expect(results[0]).toBe("Error: Cannot divide volume and weight")
+    })
+
+    it("should reject adding distance and time units", () => {
+      const results = computeResults("100km + 30min", prefs)
+      expect(results[0]).toBe("Error: Cannot add distance and time")
+    })
+
+    it("should allow operations between same unit types", () => {
+      const results = computeResults("100$ + 50$", prefs)
+      expect(results[0]).toBe("$150")
+    })
+
+    it("should allow operations between units and plain numbers", () => {
+      const results = computeResults("100km + 50", prefs)
+      expect(results[0]).toBe("150km")
+    })
+
+    it("should allow operations with K/M/B formats (number category)", () => {
+      const results = computeResults("10k + 100$", prefs)
+      expect(results[0]).toBe("$10,100")
+    })
+  })
+
+  describe("Unit Conversions with 'to' Keyword", () => {
+    it("should convert kilometers to meters", () => {
+      const results = computeResults("100km to m", prefs)
+      expect(results[0]).toBe("100,000m")
+    })
+
+    it("should convert meters to kilometers", () => {
+      const results = computeResults("5000m to km", prefs)
+      expect(results[0]).toBe("5km")
+    })
+
+    it("should convert miles to meters", () => {
+      const results = computeResults("1mi to m", prefs)
+      expect(results[0]).toBe("1,609.34m")
+    })
+
+    it("should convert feet to meters", () => {
+      const results = computeResults("10ft to m", prefs)
+      expect(results[0]).toBe("3.05m")
+    })
+
+    it("should convert hours to minutes", () => {
+      const results = computeResults("1hr to min", prefs)
+      expect(results[0]).toBe("60min")
+    })
+
+    it("should convert seconds to minutes", () => {
+      const results = computeResults("90sec to min", prefs)
+      expect(results[0]).toBe("1.5min")
+    })
+
+    it("should convert minutes to seconds", () => {
+      const results = computeResults("2min to sec", prefs)
+      expect(results[0]).toBe("120sec")
+    })
+
+    it("should convert kilograms to grams", () => {
+      const results = computeResults("2kg to g", prefs)
+      expect(results[0]).toBe("2,000g")
+    })
+
+    it("should convert grams to kilograms", () => {
+      const results = computeResults("1000g to kg", prefs)
+      expect(results[0]).toBe("1kg")
+    })
+
+    it("should convert pounds to kilograms", () => {
+      const results = computeResults("10lb to kg", prefs)
+      expect(results[0]).toBe("4.54kg")
+    })
+
+    it("should convert liters to milliliters", () => {
+      const results = computeResults("2L to ml", prefs)
+      expect(results[0]).toBe("2,000ml")
+    })
+
+    it("should convert milliliters to liters", () => {
+      const results = computeResults("500ml to L", prefs)
+      expect(results[0]).toBe("0.5L")
+    })
+
+    it("should convert gallons to liters", () => {
+      const results = computeResults("1gal to L", prefs)
+      expect(results[0]).toBe("3.79L")
+    })
+
+    it("should reject conversion between incompatible categories", () => {
+      const results = computeResults("100km to sec", prefs)
+      expect(results[0]).toBe("Error: Cannot convert distance to time")
+    })
+
+    it("should reject conversion of numbers without units", () => {
+      const results = computeResults("100 to m", prefs)
+      expect(results[0]).toBe("Error: Cannot convert number without a unit")
+    })
+
+    it("should support conversion in expressions", () => {
+      const results = computeResults("(100km + 50km) to m", prefs)
+      expect(results[0]).toBe("150,000m")
+    })
+
+    it("should support conversion with variables", () => {
+      const results = computeResults("x = 5km\nx to m", prefs)
+      expect(results[1]).toBe("5,000m")
+    })
+  })
 })

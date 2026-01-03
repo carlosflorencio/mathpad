@@ -1,14 +1,16 @@
-import { FormatAdapter, FormatResult } from "./base"
+import { FormatAdapter, FormatResult, UNIT_CATEGORIES } from "./base"
 
 /**
  * Milliliters format adapter
  * Displays numbers with ml suffix
- * Parses: 100ml, 100 ml, 100 milliliter, 100 milliliters, 100 millilitre, 100 millilitres
+ * Parses: ml, milliliter, milliliters, millilitre, millilitres (case-insensitive)
  */
 export class MillilitersFormat implements FormatAdapter {
   id = "ml"
   name = "Milliliters"
   description = "Format as milliliters (ml)"
+  unitCategory = UNIT_CATEGORIES.VOLUME
+  toBaseUnit = 0.001 // 1ml = 0.001L
   preserveInline = true
 
   parseMultiplier(): number {

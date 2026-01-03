@@ -1,15 +1,17 @@
-import { FormatAdapter, FormatResult } from "./base"
+import { FormatAdapter, FormatResult, UNIT_CATEGORIES } from "./base"
 
 /**
  * Kilograms format adapter
  * Displays numbers with kg suffix
- * Parses: 100kg, 100 kg, 100 kilogram, 100 kilograms
+ * Parses: kg, kilogram, kilograms (case-insensitive)
  */
 export class KilogramsFormat implements FormatAdapter {
   id = "kg"
   name = "Kilograms"
   description = "Format as kilograms (kg)"
+  unitCategory = UNIT_CATEGORIES.WEIGHT
   preserveInline = true
+  toBaseUnit = 1 // Base unit for weight
 
   parseMultiplier(): number {
     return 1

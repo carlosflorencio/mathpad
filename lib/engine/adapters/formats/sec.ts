@@ -1,15 +1,17 @@
-import { FormatAdapter, FormatResult } from "./base"
+import { FormatAdapter, FormatResult, UNIT_CATEGORIES } from "./base"
 
 /**
  * Seconds format adapter
  * Displays numbers with sec suffix
- * Parses: 100sec, 100 sec, 100 second, 100 seconds
+ * Parses: sec, second, seconds, s (case-insensitive)
  */
 export class SecondsFormat implements FormatAdapter {
   id = "sec"
   name = "Seconds"
   description = "Format as seconds (sec)"
+  unitCategory = UNIT_CATEGORIES.TIME
   preserveInline = true
+  toBaseUnit = 1 // Base unit for time
 
   parseMultiplier(): number {
     return 1

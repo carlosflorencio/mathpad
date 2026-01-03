@@ -1,15 +1,17 @@
-import { FormatAdapter, FormatResult } from "./base"
+import { FormatAdapter, FormatResult, UNIT_CATEGORIES } from "./base"
 
 /**
  * Minutes format adapter
  * Displays numbers with min suffix
- * Parses: 100min, 100 min, 100 minute, 100 minutes
+ * Parses: min, minute, minutes (case-insensitive)
  */
 export class MinutesFormat implements FormatAdapter {
   id = "min"
   name = "Minutes"
   description = "Format as minutes (min)"
+  unitCategory = UNIT_CATEGORIES.TIME
   preserveInline = true
+  toBaseUnit = 60 // 1 min = 60 sec
 
   parseMultiplier(): number {
     return 1

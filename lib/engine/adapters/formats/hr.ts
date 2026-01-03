@@ -1,15 +1,17 @@
-import { FormatAdapter, FormatResult } from "./base"
+import { FormatAdapter, FormatResult, UNIT_CATEGORIES } from "./base"
 
 /**
  * Hours format adapter
  * Displays numbers with hr suffix
- * Parses: 2hr, 2 hr, 2h, 2 h, 2 hour, 2 hours
+ * Parses: hr, h, hour, hours (case-insensitive)
  */
 export class HoursFormat implements FormatAdapter {
   id = "hr"
   name = "Hours"
   description = "Format as hours (hr)"
+  unitCategory = UNIT_CATEGORIES.TIME
   preserveInline = true
+  toBaseUnit = 3600 // 1 hr = 3600 sec
 
   parseMultiplier(): number {
     return 1

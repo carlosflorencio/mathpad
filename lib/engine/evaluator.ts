@@ -55,6 +55,9 @@ export function evaluate(node: ASTNode, context: ExecutionContext): [EvalResult,
       case "formatted":
         return evaluateFormatted(node, context)
 
+      case "conversion":
+        return evaluateConversion(node, context)
+
       default:
         // TypeScript exhaustiveness check
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -264,6 +267,35 @@ function evaluateBinaryNumbers(
     }
   }
 
+  // Validate unit compatibility
+  if (left.format && right.format) {
+    const leftAdapter = formatRegistry.get(left.format)
+    const rightAdapter = formatRegistry.get(right.format)
+
+    if (leftAdapter && rightAdapter) {
+      const leftCategory = leftAdapter.unitCategory || "number"
+      const rightCategory = rightAdapter.unitCategory || "number"
+
+      // Check if units are incompatible
+      // "number" category is compatible with everything
+      if (
+        leftCategory !== rightCategory &&
+        leftCategory !== "number" &&
+        rightCategory !== "number"
+      ) {
+        return [
+          {
+            type: "error",
+            message: `Cannot ${getOperationName(op)} ${leftCategory} and ${rightCategory}`,
+            position: node.position,
+            length: node.length,
+          },
+          context,
+        ]
+      }
+    }
+  }
+
   try {
     const result = adapter.executeNumbers(left.value, right.value)
     // Inherit format from left operand if it has one, otherwise from right
@@ -279,6 +311,28 @@ function evaluateBinaryNumbers(
       },
       context,
     ]
+  }
+}
+
+/**
+ * Get human-readable operation name for error messages
+ */
+function getOperationName(op: string): string {
+  switch (op) {
+    case "+":
+      return "add"
+    case "-":
+      return "subtract"
+    case "*":
+      return "multiply"
+    case "/":
+      return "divide"
+    case "%":
+      return "modulo"
+    case "^":
+      return "exponentiate"
+    default:
+      return "operate on"
   }
 }
 
@@ -779,6 +833,167 @@ function evaluateFunction(
       {
         type: "error",
         message: error instanceof Error ? error.message : "Function evaluation error",
+        position: node.position,
+        length: node.length,
+      },
+      newContext,
+    ]
+  }
+}
+
+/**
+ * Evaluate unit conversion expression (e.g., 100km to m)
+ */
+function evaluateConversion(
+  node: ASTNode & { kind: "conversion" },
+  context: ExecutionContext
+): [EvalResult, ExecutionContext] {
+  // Evaluate the expression
+  const [exprResult, newContext] = evaluate(node.expression, context)
+
+  // Handle error results
+  if (exprResult.type === "error") {
+    return [exprResult, newContext]
+  }
+
+  // Handle empty results
+  if (exprResult.type === "empty") {
+    return [
+      {
+        type: "error",
+        message: "Cannot convert empty value",
+        position: node.position,
+        length: node.length,
+      },
+      newContext,
+    ]
+  }
+
+  // Only numbers can be converted (not percents)
+  if (exprResult.type !== "number") {
+    return [
+      {
+        type: "error",
+        message: "Can only convert numbers with units",
+        position: node.position,
+        length: node.length,
+      },
+      newContext,
+    ]
+  }
+
+  // Source must have a unit format
+  if (!exprResult.format) {
+    return [
+      {
+        type: "error",
+        message: "Cannot convert number without a unit",
+        position: node.position,
+        length: node.length,
+      },
+      newContext,
+    ]
+  }
+
+  // Get source and target format adapters
+  const sourceAdapter = formatRegistry.get(exprResult.format)
+  const targetAdapter = formatRegistry.get(node.targetUnit)
+
+  if (!sourceAdapter) {
+    return [
+      {
+        type: "error",
+        message: `Unknown source unit '${exprResult.format}'`,
+        position: node.position,
+        length: node.length,
+      },
+      newContext,
+    ]
+  }
+
+  if (!targetAdapter) {
+    return [
+      {
+        type: "error",
+        message: `Unknown target unit '${node.targetUnit}'`,
+        position: node.position,
+        length: node.length,
+      },
+      newContext,
+    ]
+  }
+
+  // Both units must have conversion factors defined
+  if (sourceAdapter.toBaseUnit === undefined) {
+    return [
+      {
+        type: "error",
+        message: `Unit '${exprResult.format}' does not support conversion`,
+        position: node.position,
+        length: node.length,
+      },
+      newContext,
+    ]
+  }
+
+  if (targetAdapter.toBaseUnit === undefined) {
+    return [
+      {
+        type: "error",
+        message: `Unit '${node.targetUnit}' does not support conversion`,
+        position: node.position,
+        length: node.length,
+      },
+      newContext,
+    ]
+  }
+
+  // Units must be in the same category
+  const sourceCategory = sourceAdapter.unitCategory
+  const targetCategory = targetAdapter.unitCategory
+
+  if (!sourceCategory || !targetCategory) {
+    return [
+      {
+        type: "error",
+        message: "Cannot convert between units without categories",
+        position: node.position,
+        length: node.length,
+      },
+      newContext,
+    ]
+  }
+
+  if (sourceCategory !== targetCategory) {
+    return [
+      {
+        type: "error",
+        message: `Cannot convert ${sourceCategory} to ${targetCategory}`,
+        position: node.position,
+        length: node.length,
+      },
+      newContext,
+    ]
+  }
+
+  // Perform conversion: value -> base unit -> target unit
+  try {
+    const valueInBaseUnit = exprResult.value.times(sourceAdapter.toBaseUnit)
+    const valueInTargetUnit = valueInBaseUnit.div(targetAdapter.toBaseUnit)
+
+    return [
+      {
+        type: "number",
+        value: valueInTargetUnit,
+        format: node.targetUnit,
+      },
+      newContext,
+    ]
+  } catch (error) {
+    return [
+      {
+        type: "error",
+        message: error instanceof Error ? error.message : "Conversion error",
         position: node.position,
         length: node.length,
       },

@@ -1,15 +1,17 @@
-import { FormatAdapter, FormatResult } from "./base"
+import { FormatAdapter, FormatResult, UNIT_CATEGORIES } from "./base"
 
 /**
- * Kilometer format adapter
+ * Kilometers format adapter
  * Displays numbers with km suffix
  * Parses: km, kilometer, kilometers (case-insensitive)
  */
 export class KilometerFormat implements FormatAdapter {
   id = "km"
-  name = "Kilometer"
+  name = "Kilometers"
   description = "Format as kilometers (km)"
+  unitCategory = UNIT_CATEGORIES.DISTANCE
   preserveInline = true
+  toBaseUnit = 1000 // 1 km = 1000 m
 
   parseMultiplier(): number {
     return 1

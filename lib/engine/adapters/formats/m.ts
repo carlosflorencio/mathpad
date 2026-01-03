@@ -1,16 +1,17 @@
-import { FormatAdapter, FormatResult } from "./base"
+import { FormatAdapter, FormatResult, UNIT_CATEGORIES } from "./base"
 
 /**
- * Meter format adapter
+ * Meters format adapter
  * Displays numbers with m suffix
- * Parses: m (lowercase only), meter, meters, metre, metres
- * Note: Uppercase M is reserved for millions
+ * Parses: m, meter, meters, metre, metres (case-insensitive)
  */
 export class MeterFormat implements FormatAdapter {
   id = "m"
-  name = "Meter"
+  name = "Meters"
   description = "Format as meters (m)"
+  unitCategory = UNIT_CATEGORIES.DISTANCE
   preserveInline = true
+  toBaseUnit = 1 // Base unit for distance
 
   parseMultiplier(): number {
     return 1

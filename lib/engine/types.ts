@@ -47,6 +47,7 @@ export type ASTNode =
   | PostfixOpNode
   | AssignmentNode
   | FormattedExpressionNode
+  | ConversionNode
   | AggregateNode
   | FractionNode
   | FunctionCallNode
@@ -111,6 +112,14 @@ export interface FormattedExpressionNode {
   kind: "formatted"
   expression: ASTNode
   format: FormatSuffix
+  position: number
+  length: number
+}
+
+export interface ConversionNode {
+  kind: "conversion"
+  expression: ASTNode
+  targetUnit: FormatSuffix
   position: number
   length: number
 }

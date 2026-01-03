@@ -10,6 +10,31 @@ export type FormatResult = {
 }
 
 /**
+ * Unit type categories for validation
+ * Prevents operations between incompatible units (e.g., 100$ + 10km)
+ */
+export type UnitCategory =
+  | "number" // Plain number formats (K, M, B) - compatible with everything
+  | "currency" // Money units ($, €)
+  | "distance" // Length units (km, m, mi, ft)
+  | "time" // Time units (min, sec, hr)
+  | "weight" // Mass units (kg, lb, g)
+  | "volume" // Volume units (L, ml, gal)
+
+/**
+ * Unit category constants - use these instead of string literals
+ * Provides type safety without needing "as const" everywhere
+ */
+export const UNIT_CATEGORIES = {
+  NUMBER: "number",
+  CURRENCY: "currency",
+  DISTANCE: "distance",
+  TIME: "time",
+  WEIGHT: "weight",
+  VOLUME: "volume",
+} as const
+
+/**
  * Base interface for format adapters
  * Handles both parsing (input) and formatting (output)
  */
@@ -22,6 +47,20 @@ export interface FormatAdapter {
 
   /** Description of what this format does */
   description: string
+
+  /**
+   * Unit category for type checking
+   * Used to prevent invalid operations between incompatible units
+   * Default: "number" (compatible with all units)
+   */
+  unitCategory?: UnitCategory
+
+  /**
+   * Conversion factor to base unit (for unit conversions)
+   * Example: km has toBaseUnit: 1000 (1 km = 1000 m, where m is the base)
+   * If undefined, this unit cannot be converted
+   */
+  toBaseUnit?: number
 
   /**
    * Whether this format should be preserved when used inline
