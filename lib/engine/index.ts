@@ -43,6 +43,47 @@ export function evaluateDocument(text: string, preferences: Preferences): LineEv
       continue
     }
 
+    // Check for multiline variable assignment: "variable ="
+    const multilineMatch = line.match(/^\s*(\w+)\s*=\s*$/)
+    if (multilineMatch && i + 1 < lines.length) {
+      const variableName = multilineMatch[1]
+      const nextLine = lines[i + 1]
+
+      // Check if next line is indented (starts with whitespace)
+      if (nextLine.match(/^\s+\S/)) {
+        // Store empty result for the assignment line
+        results.push({
+          lineNumber: i,
+          result: { type: "empty" },
+          formatted: "",
+          context,
+        })
+
+        // Move to next line and process the indented value
+        i++
+        const valueLine = nextLine.trim()
+        const tokens = tokenize(valueLine)
+        const ast = parse(tokens)
+        const [result, newContext] = evaluate(ast, context)
+
+        // Store the variable with the evaluated result
+        newContext.variables.set(variableName, result)
+
+        const formatted = formatResult(result, formatOptions)
+
+        results.push({
+          lineNumber: i,
+          result,
+          formatted,
+          context: newContext,
+        })
+
+        context = newContext
+        context.lineResults.push(result)
+        continue
+      }
+    }
+
     // Tokenize the line
     const tokens = tokenize(line)
 

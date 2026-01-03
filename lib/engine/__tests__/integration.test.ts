@@ -127,6 +127,43 @@ describe("Integration Tests", () => {
       expect(results[1]).toBe("20")
       expect(results[2]).toBe("20")
     })
+
+    it("should handle multiline variable assignment with number", () => {
+      const results = computeResults("variable2 =\n  1000\nvariable2", prefs)
+      expect(results[0]).toBe("")
+      expect(results[1]).toBe("1,000")
+      expect(results[2]).toBe("1,000")
+    })
+
+    it("should handle multiline variable with expression", () => {
+      const results = computeResults("result =\n  100 + 50\nresult * 2", prefs)
+      expect(results[0]).toBe("")
+      expect(results[1]).toBe("150")
+      expect(results[2]).toBe("300")
+    })
+
+    it("should handle multiline variable with tabs", () => {
+      const results = computeResults("price =\n\t500\nprice + 100", prefs)
+      expect(results[0]).toBe("")
+      expect(results[1]).toBe("500")
+      expect(results[2]).toBe("600")
+    })
+
+    it("should handle multiline variable with percentage", () => {
+      const results = computeResults("tax =\n  15%\ntax", prefs)
+      expect(results[0]).toBe("")
+      expect(results[1]).toBe("15%")
+      expect(results[2]).toBe("15%")
+    })
+
+    it("should handle multiple multiline variables", () => {
+      const results = computeResults("a =\n  100\nb =\n  200\na + b", prefs)
+      expect(results[0]).toBe("")
+      expect(results[1]).toBe("100")
+      expect(results[2]).toBe("")
+      expect(results[3]).toBe("200")
+      expect(results[4]).toBe("300")
+    })
   })
 
   describe("Aggregate Functions", () => {
