@@ -18,8 +18,8 @@ const mathpadLanguage = StreamLanguage.define({
       return "comment"
     }
 
-    // Numbers (including k, M, billion multipliers)
-    if (stream.match(/\d+\.?\d*[kKmMbillion]*/)) {
+    // Numbers (including k, M, B multipliers)
+    if (stream.match(/\d+\.?\d*[kKmMbB]*/)) {
       return "number"
     }
 

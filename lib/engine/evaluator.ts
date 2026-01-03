@@ -96,6 +96,9 @@ function evaluateNumber(
     } else if (numStr.endsWith("M")) {
       multiplier = 1000000
       numStr = numStr.slice(0, -1)
+    } else if (numStr.endsWith("B")) {
+      multiplier = 1000000000
+      numStr = numStr.slice(0, -1)
     }
 
     // Remove separators (spaces, commas, underscores, apostrophes)

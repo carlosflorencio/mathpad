@@ -23,6 +23,11 @@ describe("Tokenizer", () => {
       expect(tokens[0]).toMatchObject({ type: "number", value: "1.5M" })
     })
 
+    it("should tokenize numbers with B suffix", () => {
+      const tokens = tokenize("2.5B")
+      expect(tokens[0]).toMatchObject({ type: "number", value: "2.5B" })
+    })
+
     it("should tokenize numbers with separators", () => {
       const tokens = tokenize("1,000,000")
       expect(tokens[0]).toMatchObject({ type: "number", value: "1,000,000" })

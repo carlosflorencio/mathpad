@@ -84,8 +84,8 @@ export function tokenize(line: string): Token[] {
       // Trim trailing spaces
       numStr = numStr.trim()
 
-      // Check for suffix (k, M)
-      if (pos < line.length && /[kM]/.test(line[pos])) {
+      // Check for suffix (k, M, B)
+      if (pos < line.length && /[kMB]/.test(line[pos])) {
         numStr += line[pos]
         pos++
       }
