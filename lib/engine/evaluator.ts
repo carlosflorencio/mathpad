@@ -7,6 +7,7 @@ import {
   aggregateFunctionRegistry,
 } from "./adapters/registry"
 import { formatRegistry } from "./adapters/formats/registry"
+import { performUnitArithmetic } from "./unitArithmetic"
 
 // Configure Big.js for better precision
 Big.DP = 20 // Decimal places
@@ -328,10 +329,26 @@ function evaluateBinaryNumbers(
 
       // Check if units are incompatible
       // "number" category is compatible with everything
+      // For multiplication and division, allow unit arithmetic combinations
+      const isUnitArithmeticOperation = op === "*" || op === "/"
+      const isValidUnitArithmetic =
+        isUnitArithmeticOperation &&
+        // speed * time = distance or time * speed = distance
+        ((op === "*" &&
+          ((leftCategory === "speed" && rightCategory === "time") ||
+            (leftCategory === "time" && rightCategory === "speed"))) ||
+          // distance / speed = time
+          (op === "/" && leftCategory === "distance" && rightCategory === "speed") ||
+          // distance / time = speed
+          (op === "/" && leftCategory === "distance" && rightCategory === "time") ||
+          // Same category (always allowed)
+          leftCategory === rightCategory)
+
       if (
         leftCategory !== rightCategory &&
         leftCategory !== "number" &&
-        rightCategory !== "number"
+        rightCategory !== "number" &&
+        !isValidUnitArithmetic
       ) {
         return [
           {
@@ -348,6 +365,22 @@ function evaluateBinaryNumbers(
 
   try {
     const result = adapter.executeNumbers(left.value, right.value)
+
+    // Perform unit arithmetic for multiplication and division
+    if ((op === "*" || op === "/") && (left.format || right.format)) {
+      const unitResult = performUnitArithmetic(op, left.format, right.format)
+
+      // Apply conversion factor if needed
+      const finalResult = result.times(unitResult.conversionFactor)
+
+      // If unit arithmetic produced a new format, use it
+      // Otherwise, keep the original format (for same-unit operations like 10m * 2)
+      const finalFormat =
+        unitResult.format !== undefined ? unitResult.format : left.format || right.format
+
+      return [{ type: "number", value: finalResult, format: finalFormat }, context]
+    }
+
     // Inherit format from left operand if it has one, otherwise from right
     const format = left.format || right.format
     return [{ type: "number", value: result, format }, context]

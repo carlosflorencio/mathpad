@@ -1218,4 +1218,202 @@ z = y * 2`
       expect(results[0]).toBe("10")
     })
   })
+
+  describe("Unit Arithmetic / Dimensional Analysis", () => {
+    describe("Distance / Speed = Time", () => {
+      it("should calculate time from distance and speed (km/h)", () => {
+        const results = computeResults("100 km / 100 km/h", prefs)
+        expect(results[0]).toBe("1hr")
+      })
+
+      it("should calculate time from distance and speed (mph)", () => {
+        const results = computeResults("120 mi / 60 mph", prefs)
+        expect(results[0]).toBe("2hr")
+      })
+
+      it("should calculate time from distance and speed (m/s)", () => {
+        const results = computeResults("1000 m / 10 m/s", prefs)
+        expect(results[0]).toBe("100sec")
+      })
+
+      it("should handle fractional time results", () => {
+        const results = computeResults("50 km / 100 km/h", prefs)
+        expect(results[0]).toBe("0.5hr")
+      })
+
+      it("should work with variables", () => {
+        const results = computeResults(
+          "distance = 200 km\nspeed = 100 km/h\ndistance / speed",
+          prefs
+        )
+        expect(results[0]).toBe("200km")
+        expect(results[1]).toBe("100km/h")
+        expect(results[2]).toBe("2hr")
+      })
+    })
+
+    describe("Distance / Time = Speed", () => {
+      it("should calculate speed from distance and time (km/hr)", () => {
+        const results = computeResults("100 km / 1 hr", prefs)
+        expect(results[0]).toBe("100km/h")
+      })
+
+      it("should calculate speed from distance and time (mi/hr)", () => {
+        const results = computeResults("60 mi / 1 hr", prefs)
+        expect(results[0]).toBe("60mph")
+      })
+
+      it("should calculate speed from distance and time (m/sec)", () => {
+        const results = computeResults("100 m / 10 sec", prefs)
+        expect(results[0]).toBe("10m/s")
+      })
+
+      it("should handle fractional speed results", () => {
+        const results = computeResults("50 km / 2 hr", prefs)
+        expect(results[0]).toBe("25km/h")
+      })
+
+      it("should work with minutes converted to hours", () => {
+        const results = computeResults("30 km / 30 min", prefs)
+        expect(results[0]).toBe("60km/h")
+      })
+
+      it("should work with variables", () => {
+        const results = computeResults("d = 150 km\nt = 3 hr\nd / t", prefs)
+        expect(results[0]).toBe("150km")
+        expect(results[1]).toBe("3hr")
+        expect(results[2]).toBe("50km/h")
+      })
+    })
+
+    describe("Speed * Time = Distance", () => {
+      it("should calculate distance from speed and time (km/h)", () => {
+        const results = computeResults("100 km/h * 2 hr", prefs)
+        expect(results[0]).toBe("200km")
+      })
+
+      it("should calculate distance from speed and time (mph)", () => {
+        const results = computeResults("60 mph * 3 hr", prefs)
+        expect(results[0]).toBe("180mi")
+      })
+
+      it("should calculate distance from speed and time (m/s)", () => {
+        const results = computeResults("10 m/s * 100 sec", prefs)
+        expect(results[0]).toBe("1,000m")
+      })
+
+      it("should work in reverse order (time * speed)", () => {
+        const results = computeResults("2 hr * 100 km/h", prefs)
+        expect(results[0]).toBe("200km")
+      })
+
+      it("should handle fractional distance results", () => {
+        const results = computeResults("50 km/h * 0.5 hr", prefs)
+        expect(results[0]).toBe("25km")
+      })
+
+      it("should work with variables", () => {
+        const results = computeResults("s = 80 km/h\nt = 2.5 hr\ns * t", prefs)
+        expect(results[0]).toBe("80km/h")
+        expect(results[1]).toBe("2.5hr")
+        expect(results[2]).toBe("200km")
+      })
+    })
+
+    describe("Mixed Unit Conversions", () => {
+      it("should handle km/h with minutes", () => {
+        const results = computeResults("100 km/h * 30 min", prefs)
+        expect(results[0]).toBe("50km")
+      })
+
+      it("should handle mph with minutes", () => {
+        const results = computeResults("60 mph * 30 min", prefs)
+        expect(results[0]).toBe("30mi")
+      })
+
+      it("should handle m/s with minutes", () => {
+        const results = computeResults("10 m/s * 6 min", prefs)
+        expect(results[0]).toBe("3,600m")
+      })
+
+      it("should handle km with seconds (for speed calculation)", () => {
+        const results = computeResults("100 m / 10 sec", prefs)
+        expect(results[0]).toBe("10m/s")
+      })
+    })
+
+    describe("Non-Unit-Arithmetic Operations", () => {
+      it("should preserve format for simple multiplication with unitless value", () => {
+        const results = computeResults("100 m * 2", prefs)
+        expect(results[0]).toBe("200m")
+      })
+
+      it("should preserve format for simple division with unitless value", () => {
+        const results = computeResults("100 km / 2", prefs)
+        expect(results[0]).toBe("50km")
+      })
+
+      it("should add same-unit values normally", () => {
+        const results = computeResults("100 km + 50 km", prefs)
+        expect(results[0]).toBe("150km")
+      })
+
+      it("should subtract same-unit values normally", () => {
+        const results = computeResults("100 km - 30 km", prefs)
+        expect(results[0]).toBe("70km")
+      })
+
+      it("should preserve speed units in simple operations", () => {
+        const results = computeResults("100 km/h * 2", prefs)
+        expect(results[0]).toBe("200km/h")
+      })
+
+      it("should preserve time units in simple operations", () => {
+        const results = computeResults("2 hr + 1 hr", prefs)
+        expect(results[0]).toBe("3hr")
+      })
+    })
+
+    describe("Real-World Examples", () => {
+      it("should calculate trip time", () => {
+        const results = computeResults(
+          "Trip distance: 250 km\nAverage speed: 80 km/h\nTrip time: 250 km / 80 km/h",
+          prefs
+        )
+        expect(results[0]).toBe("250km")
+        expect(results[1]).toBe("80km/h")
+        expect(results[2]).toBe("3.13hr") // 3.125 hours rounded
+      })
+
+      it("should calculate average speed for a journey", () => {
+        const results = computeResults(
+          "Distance: 180 mi\nTime: 3 hr\nAverage speed: 180 mi / 3 hr",
+          prefs
+        )
+        expect(results[0]).toBe("180mi")
+        expect(results[1]).toBe("3hr")
+        expect(results[2]).toBe("60mph")
+      })
+
+      it("should calculate how far you can travel", () => {
+        const results = computeResults(
+          "Speed limit: 65 mph\nDriving time: 4 hr\nDistance covered: 65 mph * 4 hr",
+          prefs
+        )
+        expect(results[0]).toBe("65mph")
+        expect(results[1]).toBe("4hr")
+        expect(results[2]).toBe("260mi")
+      })
+
+      it("should handle sprint calculations", () => {
+        const results = computeResults(
+          "Sprint distance: 100 m\nTime: 10 sec\nSpeed: 100 m / 10 sec",
+          prefs
+        )
+        expect(results[0]).toBe("100m")
+        expect(results[1]).toBe("10sec")
+        expect(results[2]).toBe("10m/s")
+      })
+    })
+  })
 })
