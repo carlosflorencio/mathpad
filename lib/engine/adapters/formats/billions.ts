@@ -1,4 +1,4 @@
-import { FormatAdapter } from "./base"
+import { FormatAdapter, FormatResult } from "./base"
 
 /**
  * Billions (B) format adapter
@@ -14,7 +14,7 @@ export class BillionsFormat implements FormatAdapter {
     return 1000000000
   }
 
-  format() {
+  format(): FormatResult {
     return {
       divisor: 1000000000,
       suffix: "B",

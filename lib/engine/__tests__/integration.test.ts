@@ -580,4 +580,78 @@ z = y * 2`
       expect(results[2]).toBe("10K")
     })
   })
+
+  describe("Inline Formats - Currency", () => {
+    it("should parse inline dollar format without space", () => {
+      const results = computeResults("100$", prefs)
+      expect(results[0]).toBe("$100")
+    })
+
+    it("should parse inline dollar format with space", () => {
+      const results = computeResults("100 $", prefs)
+      expect(results[0]).toBe("$100")
+    })
+
+    it("should parse inline euro format without space", () => {
+      const results = computeResults("100€", prefs)
+      expect(results[0]).toBe("€100")
+    })
+
+    it("should parse inline euro format with space", () => {
+      const results = computeResults("100 €", prefs)
+      expect(results[0]).toBe("€100")
+    })
+
+    it("should propagate dollar format through calculations", () => {
+      const results = computeResults("100$ * 2", prefs)
+      expect(results[0]).toBe("$200")
+    })
+
+    it("should propagate euro format through calculations", () => {
+      const results = computeResults("50€ + 25€", prefs)
+      expect(results[0]).toBe("€75")
+    })
+
+    it("should handle dollar format in complex expressions", () => {
+      const results = computeResults("(100$ + 50$) * 2", prefs)
+      expect(results[0]).toBe("$300")
+    })
+  })
+
+  describe("Inline Formats - Units", () => {
+    it("should parse inline km format without space", () => {
+      const results = computeResults("100km", prefs)
+      expect(results[0]).toBe("100km")
+    })
+
+    it("should parse inline km format with space", () => {
+      const results = computeResults("100 km", prefs)
+      expect(results[0]).toBe("100km")
+    })
+
+    it("should parse inline m format without space", () => {
+      const results = computeResults("50m", prefs)
+      expect(results[0]).toBe("50m")
+    })
+
+    it("should parse inline m format with space", () => {
+      const results = computeResults("50 m", prefs)
+      expect(results[0]).toBe("50m")
+    })
+
+    it("should propagate km format through calculations", () => {
+      const results = computeResults("100km + 50km", prefs)
+      expect(results[0]).toBe("150km")
+    })
+
+    it("should propagate m format through calculations", () => {
+      const results = computeResults("10m * 3", prefs)
+      expect(results[0]).toBe("30m")
+    })
+
+    it("should handle unit format in complex expressions", () => {
+      const results = computeResults("(100km + 50km) / 2", prefs)
+      expect(results[0]).toBe("75km")
+    })
+  })
 })

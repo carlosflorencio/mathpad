@@ -92,24 +92,26 @@ function evaluateNumber(
   try {
     let numStr = node.value
     let multiplier = 1
+    let detectedFormat: string | undefined
 
-    // Handle suffixes using format registry
-    // Check if the last character(s) match a format suffix
-    for (const formatId of formatRegistry.getAllIds()) {
-      const parser = formatRegistry.findParser(numStr[numStr.length - 1])
-      if (parser) {
+    // Try to detect format suffix from the end of the string
+    // We need to check from longest to shortest to avoid matching 'm' when 'km' is present
+    const formatIds = formatRegistry.getAllIds().sort((a, b) => b.length - a.length)
+
+    for (const formatId of formatIds) {
+      // Extract the potential suffix from the end of numStr (same length as formatId)
+      const potentialSuffix = numStr.slice(-formatId.length)
+
+      // Check if this format can parse the potential suffix
+      const parser = formatRegistry.findParser(potentialSuffix)
+      if (parser && parser.adapter.id === formatId) {
         multiplier = parser.multiplier
-        numStr = numStr.slice(0, -1)
+        // Only preserve format if the adapter wants inline preservation
+        if (parser.adapter.preserveInline) {
+          detectedFormat = parser.adapter.id
+        }
+        numStr = numStr.slice(0, -formatId.length).trim()
         break
-      }
-    }
-
-    // Also check for lowercase 'k' which is commonly used
-    if (numStr.endsWith("k")) {
-      const parser = formatRegistry.findParser("k")
-      if (parser) {
-        multiplier = parser.multiplier
-        numStr = numStr.slice(0, -1)
       }
     }
 
@@ -117,7 +119,7 @@ function evaluateNumber(
     numStr = numStr.replace(/[\s,_']/g, "")
 
     const value = new Big(numStr).times(multiplier)
-    return [{ type: "number", value }, context]
+    return [{ type: "number", value, format: detectedFormat }, context]
   } catch {
     return [
       {

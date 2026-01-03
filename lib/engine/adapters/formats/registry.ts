@@ -2,6 +2,10 @@ import { FormatAdapter } from "./base"
 import { ThousandsFormat } from "./thousands"
 import { MillionsFormat } from "./millions"
 import { BillionsFormat } from "./billions"
+import { USDFormat } from "./usd"
+import { EURFormat } from "./eur"
+import { KilometerFormat } from "./km"
+import { MeterFormat } from "./m"
 
 /**
  * Registry for all format adapters
@@ -53,10 +57,18 @@ class FormatRegistry {
 // Create and populate the global registry
 export const formatRegistry = new FormatRegistry()
 
-// Register built-in formats
+// Register built-in number formats
 formatRegistry.register(new ThousandsFormat())
 formatRegistry.register(new MillionsFormat())
 formatRegistry.register(new BillionsFormat())
+
+// Register currency formats
+formatRegistry.register(new USDFormat())
+formatRegistry.register(new EURFormat())
+
+// Register unit formats
+formatRegistry.register(new KilometerFormat())
+formatRegistry.register(new MeterFormat())
 
 /**
  * Helper to check if a string is a valid registered format suffix

@@ -71,10 +71,57 @@ export function tokenize(line: string): Token[] {
       // Trim trailing spaces
       numStr = numStr.trim()
 
-      // Check for suffix (k, M, B)
-      if (pos < line.length && /[kMB]/.test(line[pos])) {
-        numStr += line[pos]
-        pos++
+      // Check for format suffix (k, M, B, $, €, km, m, etc.)
+      // This handles both immediate suffixes (100$) and suffixes with spaces (100 $)
+      let suffix = ""
+      let tempPos = pos
+
+      // Skip optional whitespace between number and suffix
+      while (tempPos < line.length && line[tempPos] === " ") {
+        tempPos++
+      }
+
+      // Try to match a format suffix
+      // We try from longest to shortest, and prefer exact case matches over case-insensitive
+      let matchedSuffixLength = 0
+      const remainingText = line.slice(tempPos)
+
+      // Sort format IDs by length (longest first)
+      const formatIds = formatRegistry.getAllIds().sort((a, b) => b.length - a.length)
+
+      // Group format IDs by length to handle same-length formats properly
+      const formatIdsByLength = new Map<number, string[]>()
+      for (const formatId of formatIds) {
+        const len = formatId.length
+        if (!formatIdsByLength.has(len)) {
+          formatIdsByLength.set(len, [])
+        }
+        formatIdsByLength.get(len)!.push(formatId)
+      }
+
+      // Try each length group, longest first
+      const lengths = Array.from(formatIdsByLength.keys()).sort((a, b) => b - a)
+      for (const len of lengths) {
+        const idsOfThisLength = formatIdsByLength.get(len)!
+        const candidate = remainingText.slice(0, len)
+
+        // Try to find a parser that can handle this candidate
+        const parser = formatRegistry.findParser(candidate)
+        if (parser) {
+          // Make sure it's not part of a longer identifier
+          const nextCharPos = tempPos + len
+          if (nextCharPos >= line.length || /[\s\+\-\*\/\%\^\(\)\=]/.test(line[nextCharPos])) {
+            matchedSuffixLength = len
+            break
+          }
+        }
+      }
+
+      if (matchedSuffixLength > 0) {
+        // Extract the actual suffix from the input (preserves case)
+        suffix = line.slice(tempPos, tempPos + matchedSuffixLength)
+        pos = tempPos + matchedSuffixLength
+        numStr += suffix
       }
 
       // Check for percentage - only if % is immediately after the number (no space)

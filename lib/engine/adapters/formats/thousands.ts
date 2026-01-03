@@ -1,4 +1,4 @@
-import { FormatAdapter } from "./base"
+import { FormatAdapter, FormatResult } from "./base"
 
 /**
  * Thousands (K) format adapter
@@ -14,7 +14,7 @@ export class ThousandsFormat implements FormatAdapter {
     return 1000
   }
 
-  format() {
+  format(): FormatResult {
     return {
       divisor: 1000,
       suffix: "K",
