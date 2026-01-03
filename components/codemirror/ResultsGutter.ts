@@ -109,6 +109,17 @@ const baseTheme = EditorView.baseTheme({
   ".cm-right-gutterElement:empty:hover": {
     backgroundColor: "transparent",
   },
+
+  ".cm-right-gutterElement.cm-separator-gutter": {
+    backgroundColor: "var(--separator-bg)",
+    borderTop: "1px solid var(--separator-border)",
+    borderBottom: "1px solid var(--separator-border)",
+    cursor: "default",
+  },
+
+  ".cm-right-gutterElement.cm-separator-gutter:hover": {
+    backgroundColor: "var(--separator-bg)",
+  },
 })
 
 const unfixGutters = Facet.define<boolean, boolean>({
@@ -448,7 +459,11 @@ export function rightGutter(
     lineMarker: (view, line) => {
       const lineNumber = view.state.doc.lineAt(line.from).number
       const result = results(lineNumber)
+      const lineText = view.state.doc.lineAt(line.from).text.trim()
+      const isSeparator = lineText.match(/^---+$/)
+
       return new (class extends RightGutterMarker {
+        elementClass = isSeparator ? "cm-separator-gutter" : ""
         toDOM() {
           const node = document.createTextNode(result)
           return node

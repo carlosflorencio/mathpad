@@ -19,6 +19,7 @@ const darkTheme = EditorView.theme(
     "&": {
       color: "rgba(214, 221, 209)",
       backgroundColor: colors.background,
+      "--cm-background": colors.background,
       "--separator-bg": "hsl(220, 13%, 22%)",
       "--separator-border": "hsl(220, 13%, 30%)",
       "--separator-text": "hsl(180, 14.9%, 46.1%)",
