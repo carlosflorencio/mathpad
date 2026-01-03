@@ -22,6 +22,10 @@ function configureCSSVars(preferences: Preferences): void {
     style.setProperty("--dialog-bg-color", isDark ? colors.background : colors.darkBackground)
     style.setProperty("--desk-bg-color", isDark ? colors.darkBackground : "#f8f9fa")
     style.setProperty("--cm-background", colors.background)
+    style.setProperty(
+      "--paper-shadow",
+      isDark ? "var(--paper-shadow-dark)" : "var(--paper-shadow-light)"
+    )
   }
 }
 

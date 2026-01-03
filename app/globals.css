@@ -11,8 +11,9 @@
   --text-color: rgb(227, 230, 232);
   --paper-width: 900px;
   --paper-margin: 16px;
-  --paper-shadow: 0 1px 1px 0 rgba(66, 66, 66, 0.08), 0 1px 3px 1px rgba(66, 66, 66, 0.16);
   --paper-shadow-light: 0 1px 1px 0 rgba(66, 66, 66, 0.08), 0 1px 3px 1px rgba(66, 66, 66, 0.16);
+  --paper-shadow-dark: 0 1px 2px 0 rgba(0, 0, 0, 0.15), 0 2px 4px 1px rgba(0, 0, 0, 0.18);
+  --paper-shadow: var(--paper-shadow-light);
 }
 
 html,
