@@ -3,10 +3,16 @@
 import { acceptCompletion, autocompletion, completionKeymap } from "@codemirror/autocomplete"
 import { defaultKeymap, history, historyKeymap, redo } from "@codemirror/commands"
 import { searchKeymap, highlightSelectionMatches } from "@codemirror/search"
-import { drawSelection, EditorView, highlightActiveLine, keymap } from "@codemirror/view"
+import { drawSelection, EditorView, keymap } from "@codemirror/view"
 import { EditorState } from "@codemirror/state"
 import { useRef } from "react"
-import { mathpadLanguage } from "./codemirror/MathpadLang"
+import {
+  mathpadLanguage,
+  contextsField,
+  setContextsEffect,
+  viewTracker,
+  initialContextsFacet,
+} from "./codemirror/MathpadLang"
 import { completions } from "./codemirror/Completions"
 import { dark } from "./codemirror/DarkTheme"
 import { light } from "./codemirror/LightTheme"
@@ -49,8 +55,18 @@ export function Editor({ value, onUpdate, preferences, onCopy }: EditorProps) {
   const resultsRef = useRef(results)
   resultsRef.current = results
 
-  // Extract error information
-  const errorsRef = useRef<ErrorInfo[]>([])
+  // Extract error information from initial evaluations
+  const initialErrors: ErrorInfo[] = evaluations
+    .filter((e) => e.result.type === "error")
+    .map((e) => ({
+      lineNumber: e.lineNumber,
+      position: (e.result as any).position,
+      length: (e.result as any).length,
+      message: (e.result as any).message,
+    }))
+
+  const errorsRef = useRef<ErrorInfo[]>(initialErrors)
+  errorsRef.current = initialErrors
 
   // Store onCopy in a ref so it doesn't cause extension recreation
   const onCopyRef = useRef(onCopy)
@@ -76,14 +92,39 @@ export function Editor({ value, onUpdate, preferences, onCopy }: EditorProps) {
     onUpdate(value)
   }
 
-  // Extension to update errors on every transaction
-  const errorUpdateExtension = EditorView.updateListener.of((update) => {
-    if (update.docChanged) {
-      // Dispatch error updates
+  // Track if we've dispatched initial errors
+  const hasDispatchedInitialErrorsRef = useRef(false)
+
+  // Extension to dispatch errors and contexts on document changes
+  const updateExtension = EditorView.updateListener.of((update) => {
+    // Dispatch initial errors on first mount (not a doc change)
+    if (!hasDispatchedInitialErrorsRef.current && !update.docChanged) {
+      hasDispatchedInitialErrorsRef.current = true
       update.view.dispatch({
-        effects: setErrorsEffect.of(errorsRef.current),
+        effects: [setErrorsEffect.of(errorsRef.current)],
       })
+      return
     }
+
+    // Dispatch context and error updates on doc changes (defer to avoid conflicts)
+    if (update.docChanged) {
+      // Build context map from evaluations
+      const contextMap = new Map()
+      evaluationsRef.current.forEach((evaluation) => {
+        contextMap.set(evaluation.lineNumber, evaluation.context)
+      })
+      setTimeout(() => {
+        update.view.dispatch({
+          effects: [setErrorsEffect.of(errorsRef.current), setContextsEffect.of(contextMap)],
+        })
+      }, 0)
+    }
+  })
+
+  // Build initial context map for syntax highlighting
+  const initialContexts = new Map()
+  evaluations.forEach((evaluation) => {
+    initialContexts.set(evaluation.lineNumber, evaluation.context)
   })
 
   return (
@@ -96,14 +137,17 @@ export function Editor({ value, onUpdate, preferences, onCopy }: EditorProps) {
         EditorState.allowMultipleSelections.of(true),
         highlightSelectionMatches(),
         EditorView.lineWrapping,
+        initialContextsFacet.of(initialContexts),
         mathpadLanguage,
+        contextsField,
+        viewTracker,
         rightGutter(
           (lineNumber) => resultsRef.current[lineNumber - 1],
           (value) => onCopyRef.current?.(value)
         ),
         errorDecorations(),
         separatorDecorationsExtension(),
-        errorUpdateExtension,
+        updateExtension,
         autocompletion({ override: [completions] }),
         preferences.theme === "dark" ? dark : light,
         history(),

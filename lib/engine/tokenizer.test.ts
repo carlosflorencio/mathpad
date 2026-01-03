@@ -1,5 +1,7 @@
 import { describe, it, expect } from "vitest"
-import { tokenize, extractVariables } from "../tokenizer"
+import { tokenize, extractVariables } from "./tokenizer"
+import { createContext } from "./types"
+import Big from "big.js"
 
 describe("Tokenizer", () => {
   describe("Numbers", () => {
@@ -250,6 +252,31 @@ describe("Tokenizer", () => {
       const tokens = tokenize("10 in the morning")
       const inToken = tokens.find((t) => t.value === "in")
       expect(inToken?.type).toBe("keyword")
+    })
+  })
+
+  describe("Context-aware tokenization", () => {
+    it("should skip undefined identifier when context is provided", () => {
+      const context = createContext()
+      context.variables.set("cal", { type: "number", value: new Big(2) })
+
+      const line = "sdfsdf cal + 2"
+      const tokens = tokenize(line, context)
+
+      // Should NOT include "sdfsdf" token since it's undefined
+      const identifierTokens = tokens.filter((t) => t.type === "identifier")
+      expect(identifierTokens.length).toBe(1) // Only "cal"
+      expect(identifierTokens[0].value).toBe("cal")
+    })
+
+    it("should include undefined identifier when no context is provided", () => {
+      const line = "sdfsdf cal + 2"
+      const tokens = tokenize(line) // No context
+
+      // Without context, multi-word identifiers are collected together
+      const identifierTokens = tokens.filter((t) => t.type === "identifier")
+      expect(identifierTokens.length).toBe(1)
+      expect(identifierTokens[0].value).toBe("sdfsdf cal")
     })
   })
 })

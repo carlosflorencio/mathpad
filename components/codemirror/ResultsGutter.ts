@@ -92,6 +92,10 @@ const baseTheme = EditorView.baseTheme({
     transition: "background-color 0.15s ease, opacity 0.15s ease",
     outline: "none",
     userSelect: "none",
+    whiteSpace: "pre-wrap",
+    wordWrap: "break-word",
+    overflowWrap: "break-word",
+    maxWidth: "300px",
   },
 
   ".cm-right-gutterElement:hover": {
@@ -462,10 +466,13 @@ export function rightGutter(
       const lineText = view.state.doc.lineAt(line.from).text.trim()
       const isSeparator = lineText.match(/^---+$/)
 
+      // Filter out error messages from gutter (they're shown in hover tooltips instead)
+      const displayResult = result.startsWith("Error:") ? "" : result
+
       return new (class extends RightGutterMarker {
         elementClass = isSeparator ? "cm-separator-gutter" : ""
         toDOM() {
-          const node = document.createTextNode(result)
+          const node = document.createTextNode(displayResult)
           return node
         }
       })()
@@ -479,8 +486,8 @@ export function rightGutter(
         const lineNumber = view.state.doc.lineAt(line.from).number
         const result = results(lineNumber)
 
-        // Don't do anything if result is empty
-        if (!result || result.trim() === "") {
+        // Don't do anything if result is empty or is an error
+        if (!result || result.trim() === "" || result.startsWith("Error:")) {
           return false
         }
 

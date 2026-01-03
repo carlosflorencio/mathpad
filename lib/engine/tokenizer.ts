@@ -1,8 +1,9 @@
-import { Token } from "./types"
+import { Token, ExecutionContext } from "./types"
 import {
   aggregateFunctionRegistry,
   binaryOperatorRegistry,
   unaryOperatorRegistry,
+  functionRegistry,
 } from "./adapters/registry"
 import { formatRegistry, isFormatSuffix } from "./adapters/formats/registry"
 
@@ -19,8 +20,10 @@ const AGGREGATE_KEYWORDS = aggregateFunctionRegistry.getAllKeywords()
 
 /**
  * Tokenize a line into tokens
+ * @param line - The line to tokenize
+ * @param context - Optional execution context for variable lookup (helps distinguish text from variables)
  */
-export function tokenize(line: string): Token[] {
+export function tokenize(line: string, context?: ExecutionContext): Token[] {
   const tokens: Token[] = []
   let pos = 0
 
@@ -43,6 +46,36 @@ export function tokenize(line: string): Token[] {
   // Skip leading whitespace
   while (pos < line.length && /\s/.test(line[pos])) {
     pos++
+  }
+
+  // Check if line contains any calculation elements
+  // Only parse lines that have numbers, operators, aggregate keywords, or identifiers - everything else is plain text
+  const remainingLine = line.substring(pos).trim()
+  if (remainingLine.length > 0) {
+    const hasNumbers = /\d/.test(remainingLine)
+    const hasOperators = /[\+\-\*\/\^\%\(\)=:]/.test(remainingLine)
+    const lowerLine = remainingLine.toLowerCase()
+    const hasAggregateKeyword = Array.from(AGGREGATE_KEYWORDS).some((keyword: string) =>
+      lowerLine.includes(keyword.toLowerCase())
+    )
+
+    // Check if it looks like a potential identifier/variable reference
+    // Allow if it starts with a letter and has 3 or fewer words (to distinguish from prose)
+    const wordCount = remainingLine.split(/\s+/).length
+    const startsWithLetter = /^[a-zA-Z_]/.test(remainingLine)
+    const looksLikeIdentifier = startsWithLetter && wordCount <= 3
+
+    // If no numbers, no operators, no aggregate keywords, and doesn't look like an identifier, treat as plain text
+    if (!hasNumbers && !hasOperators && !hasAggregateKeyword && !looksLikeIdentifier) {
+      // Return only EOF token (empty line)
+      tokens.push({
+        type: "eof",
+        value: "",
+        position: line.length,
+        length: 0,
+      })
+      return tokens
+    }
   }
 
   while (pos < line.length) {
@@ -220,6 +253,7 @@ export function tokenize(line: string): Token[] {
       // Collect identifier characters
       // Allow spaces only if they're between letters (for multi-word identifiers)
       // BUT: Stop at special keywords like "of" to prevent them from being part of multi-word identifiers
+      // ALSO: If we have a context, stop adding words if the current identifier isn't defined
       while (pos < line.length) {
         const c = line[pos]
         if (/[a-zA-Z0-9_]/.test(c)) {
@@ -247,6 +281,30 @@ export function tokenize(line: string): Token[] {
             ) {
               // Don't include space before special keywords
               break
+            }
+
+            // If we have a context and the current identifier is not defined,
+            // and the next word IS defined, stop here (don't extend with more words)
+            // This allows "text variable" to be parsed as text (skipped) followed by "variable"
+            // ALSO: If BOTH current and next are defined, stop here
+            // This prevents "a b" from being treated as one multi-word identifier
+            if (context) {
+              const currentTrimmed = identifier.trim()
+              const nextWordComplete = nextWord.trim()
+              const currentIsDefined =
+                context.variables.has(currentTrimmed) ||
+                AGGREGATE_KEYWORDS.has(currentTrimmed.toLowerCase()) ||
+                isFormatSuffix(currentTrimmed)
+              const nextIsDefined =
+                context.variables.has(nextWordComplete) ||
+                AGGREGATE_KEYWORDS.has(nextWordComplete.toLowerCase()) ||
+                isFormatSuffix(nextWordComplete)
+
+              // If current word is NOT defined but next word IS defined, stop here
+              // OR if BOTH are defined, stop here (two separate identifiers, not multi-word)
+              if ((!currentIsDefined && nextIsDefined) || (currentIsDefined && nextIsDefined)) {
+                break
+              }
             }
           }
 
@@ -294,7 +352,7 @@ export function tokenize(line: string): Token[] {
       // Check if it's the "in" or "to" keyword (but not if followed by =)
       // Determine if this is a conversion context by checking previous and next tokens
       if ((lowerIdentifier === "in" || lowerIdentifier === "to") && !isAssignment) {
-        // Check if this is a conversion: previous token should be a number/keyword,
+        // Check if this is a conversion: previous token should be a number/keyword/identifier,
         // and next token should be a keyword (format specifier)
         const prevToken = tokens.length > 0 ? tokens[tokens.length - 1] : null
 
@@ -306,15 +364,57 @@ export function tokenize(line: string): Token[] {
         const nextWordMatch = line.slice(peekPos).match(/^([a-zA-Z_]+)/)
         const nextWord = nextWordMatch ? nextWordMatch[1] : null
 
+        // Check if this is a conversion context: number/percent/identifier/paren + in/to + format
+        // For "in": number/percent + in + format (e.g., "100 in km", "50% in K")
+        // For "to": number/identifier/paren + to + format (e.g., "100km to m", "x to m", "(100+50) to m")
         const isConversionContext =
-          prevToken && prevToken.type === "number" && nextWord && isFormatSuffix(nextWord)
+          prevToken &&
+          ((lowerIdentifier === "in" &&
+            (prevToken.type === "number" || prevToken.type === "percent")) ||
+            (lowerIdentifier === "to" &&
+              (prevToken.type === "number" ||
+                prevToken.type === "identifier" ||
+                (prevToken.type === "paren" && prevToken.value === ")")))) &&
+          nextWord &&
+          isFormatSuffix(nextWord)
 
-        tokens.push({
-          type: isConversionContext ? "conversion" : "keyword",
-          value: lowerIdentifier,
-          position: start,
-          length: identifier.length,
-        })
+        // Check if this is an assignment context: identifier + in + format + =
+        // This handles "price in K = 100"
+        let isAssignmentContext = false
+        if (
+          lowerIdentifier === "in" &&
+          prevToken &&
+          prevToken.type === "identifier" &&
+          nextWord &&
+          isFormatSuffix(nextWord)
+        ) {
+          // Check if there's an "=" after the format
+          let afterFormatPos = peekPos + nextWord.length
+          while (afterFormatPos < line.length && /\s/.test(line[afterFormatPos])) {
+            afterFormatPos++
+          }
+          if (afterFormatPos < line.length && line[afterFormatPos] === "=") {
+            isAssignmentContext = true
+          }
+        }
+
+        if (isConversionContext || isAssignmentContext) {
+          tokens.push({
+            type: isConversionContext ? "conversion" : "keyword",
+            value: lowerIdentifier,
+            position: start,
+            length: identifier.length,
+          })
+        } else if (!context) {
+          // No context: keep as keyword for backward compatibility
+          tokens.push({
+            type: "keyword",
+            value: lowerIdentifier,
+            position: start,
+            length: identifier.length,
+          })
+        }
+        // else: We have context and it's NOT a conversion/assignment context, so skip this keyword (treat as prose)
       }
       // Check if it's an aggregate keyword (but not if followed by =)
       // These take priority over format specifiers to avoid conflicts (e.g., "min")
@@ -335,6 +435,51 @@ export function tokenize(line: string): Token[] {
           length: identifier.length,
         })
       } else {
+        // Regular identifier
+        // If we have a context, check if this identifier is defined or is a special keyword
+        // If not defined and not being assigned, skip it (treat as prose text)
+        // UNLESS it's followed by an operator (which means it's part of an expression and should error)
+        // OR preceded by "/" (which means it's part of a compound unit like "km/h")
+        if (context && !isAssignment) {
+          // Check if this identifier should be preserved as a token
+          const isSpecialKeyword =
+            lowerIdentifier === "of" || // percentage operator
+            lowerIdentifier === "prev" || // previous result reference
+            lowerIdentifier === "it" // previous result reference alias
+
+          const isDefined =
+            context.variables.has(identifier) ||
+            functionRegistry.has(identifier) || // Check if it's a function name
+            AGGREGATE_KEYWORDS.has(lowerIdentifier) || // Check if it's an aggregate keyword
+            isFormatSuffix(identifier) || // Check if it's a format suffix
+            isSpecialKeyword
+
+          if (!isDefined) {
+            // Check if the previous token was "/" (compound unit like "m/s")
+            const prevToken = tokens.length > 0 ? tokens[tokens.length - 1] : null
+            const isPrecededBySlash =
+              prevToken && prevToken.type === "operator" && prevToken.value === "/"
+
+            // Check if the next non-whitespace token is an operator
+            // If so, don't skip this identifier (it's part of an expression and should error)
+            let checkPos = pos
+            while (checkPos < line.length && /\s/.test(line[checkPos])) {
+              checkPos++
+            }
+            const nextChar = checkPos < line.length ? line[checkPos] : ""
+            const isFollowedByOperator =
+              nextChar && (OPERATORS.has(nextChar) || nextChar === "=" || nextChar === "%")
+
+            if (!isFollowedByOperator && !isPrecededBySlash) {
+              // Skip undefined identifiers that are not part of expressions or compound units
+              // This prevents them from being highlighted as variables
+              continue
+            }
+            // If followed by an operator or preceded by "/", fall through and create the token
+          }
+        }
+
+        // Either no context, or identifier is defined, or it's being assigned, or it's part of an expression/compound unit
         tokens.push({
           type: "identifier",
           value: identifier,

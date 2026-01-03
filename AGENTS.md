@@ -31,7 +31,7 @@ npm run lint && npm test && npm run format
 ### Adding a New Math Function
 
 1. Create adapter file: `lib/engine/adapters/functions/{name}.ts`
-2. Create test file: `lib/engine/adapters/functions/{name}.test.ts`
+2. Create test file as sibling: `lib/engine/adapters/functions/{name}.test.ts`
 3. Register in `lib/engine/adapters/registry.ts`
 4. Run lint and tests
 
@@ -60,14 +60,14 @@ export class LogFunction implements FunctionAdapter {
 ### Adding a New Operator
 
 1. Create adapter file: `lib/engine/adapters/operators/{name}.ts`
-2. Create test file: `lib/engine/adapters/operators/{name}.test.ts`
+2. Create test file as sibling: `lib/engine/adapters/operators/{name}.test.ts`
 3. Register in `lib/engine/adapters/registry.ts`
 4. Run lint and tests
 
 ### Adding a New Aggregate Function
 
 1. Create adapter file: `lib/engine/adapters/aggregates/{name}.ts`
-2. Create test file: `lib/engine/adapters/aggregates/{name}.test.ts`
+2. Create test file as sibling: `lib/engine/adapters/aggregates/{name}.test.ts`
 3. Update `AggregateFunctionName` type in `lib/engine/adapters/base.ts`
 4. Register in `lib/engine/adapters/registry.ts`
 5. Run lint and tests
@@ -86,6 +86,10 @@ export class LogFunction implements FunctionAdapter {
 - All features must have unit tests
 - Tests should cover happy path and edge cases
 - Use descriptive test names: `"should return error for negative input"`
+- **Test files must be siblings of their source files** (like Go conventions)
+  - Example: `tokenizer.ts` → `tokenizer.test.ts` (same directory)
+  - Do NOT use `__tests__/` directories
+  - Tests live alongside the code they test for better discoverability
 
 ### Code Style
 

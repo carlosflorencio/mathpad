@@ -5,6 +5,7 @@ import { formatResult, createFormatOptions } from "./formatter"
 import { createContext, LineEvaluation } from "./types"
 import { Preferences } from "../types"
 import { formatRegistry } from "./adapters/formats/registry"
+import { binaryOperatorRegistry } from "./adapters/registry"
 
 /**
  * Evaluate a complete document (multiple lines)
@@ -63,7 +64,7 @@ export function evaluateDocument(text: string, preferences: Preferences): LineEv
         // Move to next line and process the indented value
         i++
         const valueLine = nextLine.trim()
-        const tokens = tokenize(valueLine)
+        const tokens = tokenize(valueLine, context)
         const ast = parse(tokens)
         const [result, newContext] = evaluate(ast, context)
 
@@ -85,8 +86,28 @@ export function evaluateDocument(text: string, preferences: Preferences): LineEv
       }
     }
 
-    // Tokenize the line
-    const tokens = tokenize(line)
+    // Tokenize the line (pass context so tokenizer can distinguish defined variables from text)
+    const tokens = tokenize(line, context)
+
+    // Special case: Check if we have a number followed by a format keyword (e.g., "40k km")
+    // This should be treated as a unit conversion: "40k in km"
+    if (
+      tokens.length >= 3 &&
+      tokens[0].type === "number" &&
+      tokens[1].type === "keyword" &&
+      tokens[2].type === "eof"
+    ) {
+      const potentialFormat = tokens[1].value.toLowerCase()
+      if (formatRegistry.findParser(potentialFormat)) {
+        // Insert an "in" keyword to convert "40k km" to "40k in km"
+        tokens.splice(1, 0, {
+          type: "conversion",
+          value: "in",
+          position: tokens[1].position,
+          length: 0,
+        })
+      }
+    }
 
     // Parse into AST
     const ast = parse(tokens)
@@ -94,24 +115,69 @@ export function evaluateDocument(text: string, preferences: Preferences): LineEv
     // Evaluate the AST
     let [result, newContext] = evaluate(ast, context)
 
-    // Special case: If the result is an "undefined variable" error and the AST is just
-    // a standalone identifier, try to extract a calculable expression from the line
-    // This allows users to write descriptive text with numbers like:
-    // "Earth's circumference is around 40k km" -> extracts and calculates "40k km"
-    if (
-      result.type === "error" &&
-      result.message.includes("not defined") &&
-      ast.kind === "identifier"
-    ) {
-      // Try to find a number in the token stream and parse from there
-      const numberIndex = tokens.findIndex((t) => t.type === "number" || t.type === "percent")
-      if (numberIndex !== -1) {
-        // Found a number - try parsing from that point
-        let remainingTokens = tokens.slice(numberIndex)
+    // Special case: If the result is an "undefined variable" error, try to skip undefined identifiers
+    // and re-parse from a point that might have valid content
+    // This allows mixing prose with calculations like: "some text variable + 2"
+    // BUT: Only do this if the undefined variable is NOT followed by an operator (otherwise it's part of an expression)
+    if (result.type === "error" && result.message.includes("not defined")) {
+      // Extract the undefined variable name from the error message
+      const match = result.message.match(/Variable '(.+?)' not defined/)
+      const undefinedVar = match ? match[1] : null
 
-        // Check if the token after the number is a keyword that's a valid format
+      let shouldRetry = false
+      let retryIndex = -1
+
+      if (undefinedVar) {
+        // Find the position of the undefined variable in the token stream
+        const undefinedVarIndex = tokens.findIndex(
+          (t) => t.type === "identifier" && t.value === undefinedVar
+        )
+
+        if (undefinedVarIndex !== -1) {
+          // Check what comes after the undefined variable
+          const nextToken = tokens[undefinedVarIndex + 1]
+
+          // If the next token is an operator, this is part of an expression - DON'T retry
+          // Examples: "x + 10" should error (x is undefined and followed by +)
+          if (
+            nextToken &&
+            nextToken.type === "operator" &&
+            binaryOperatorRegistry.has(nextToken.value)
+          ) {
+            shouldRetry = false
+          } else {
+            // The undefined variable is standalone or followed by another identifier/number
+            // This looks like prose followed by a calculation
+            // Examples: "some text cal + 2" should parse as cal + 2
+            shouldRetry = true
+
+            // Look for the next token that could start a valid expression
+            for (let i = undefinedVarIndex + 1; i < tokens.length; i++) {
+              const token = tokens[i]
+              if (token.type === "number" || token.type === "percent") {
+                retryIndex = i
+                break
+              } else if (token.type === "identifier") {
+                // Check if this identifier is defined
+                if (context.variables.has(token.value)) {
+                  retryIndex = i
+                  break
+                }
+                // If not defined, keep looking
+              } else if (token.type === "eof") {
+                break
+              }
+            }
+          }
+        }
+      }
+
+      // If we should retry and found a valid retry point, try parsing from there
+      if (shouldRetry && retryIndex !== -1) {
+        let remainingTokens = tokens.slice(retryIndex)
+
+        // Check if the token after a number is a keyword that's a valid format
         // This handles cases like "40k km" where we want to treat "km" as a format
-        // Note: format identifiers are tokenized as "keyword" type
         if (
           remainingTokens.length >= 2 &&
           remainingTokens[0].type === "number" &&
@@ -149,10 +215,11 @@ export function evaluateDocument(text: string, preferences: Preferences): LineEv
           // Still failed, treat as empty
           result = { type: "empty" }
         }
-      } else {
-        // No number found, treat as empty (plain text comment)
+      } else if (shouldRetry && retryIndex === -1) {
+        // Should retry but no valid retry point found, treat as empty (plain text comment)
         result = { type: "empty" }
       }
+      // else: Don't retry (undefined variable is part of expression), keep the error
     }
 
     // Format the result

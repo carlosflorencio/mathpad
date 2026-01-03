@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { computeResults } from "../index"
+import { computeResults } from "./index"
 import { defaultPreferences } from "@/lib/types"
 
 describe("Integration Tests", () => {
@@ -1226,6 +1226,78 @@ z = y * 2`
       // Should parse "10 to 20" where "to" is a keyword for conversion
       // Since conversion requires units, this will fail and just show "10"
       expect(results[0]).toBe("10")
+    })
+
+    it("should ignore text before defined variables", () => {
+      const results = computeResults("price = 100\nsome random text price * 2", prefs)
+      expect(results[0]).toBe("100") // price = 100
+      expect(results[1]).toBe("200") // text is ignored, only "price * 2" is evaluated
+    })
+
+    it("should handle single word of text before variable", () => {
+      const results = computeResults("cal = 2\nsdfsdf cal + 2", prefs)
+      expect(results[0]).toBe("2") // cal = 2
+      expect(results[1]).toBe("4") // "sdfsdf" is ignored, "cal + 2" = 4
+    })
+
+    it("should handle paragraphs of text with variables embedded", () => {
+      const results = computeResults(
+        "distance = 100\nThis is a paragraph about distance traveled over time\ndistance * 2",
+        prefs
+      )
+      expect(results[0]).toBe("100") // distance = 100
+      expect(results[1]).toBe("") // pure text, no calculation
+      expect(results[2]).toBe("200") // distance * 2
+    })
+
+    it("should handle semi-variable-matching text", () => {
+      const results = computeResults("price = 50\nthe price is right price + 10", prefs)
+      expect(results[0]).toBe("50") // price = 50
+      expect(results[1]).toBe("60") // "the price is right" ignored, "price + 10" = 60
+    })
+
+    it("should handle text that contains partial variable names", () => {
+      const results = computeResults("amount = 25\namount of money amount * 4", prefs)
+      expect(results[0]).toBe("25") // amount = 25
+      // "amount of money amount * 4":
+      // - "amount" (defined), "of" (keyword), "money" (skipped - undefined), "amount" (defined), "*", "4"
+      // - Parser sees "amount of" which is invalid (of requires a percentage on the left)
+      // - Parser returns just "amount", evaluator returns 25
+      // Note: The fallback logic doesn't apply here because there's no "undefined variable" error
+      expect(results[1]).toBe("25")
+    })
+
+    it("should still require operators between variables", () => {
+      const results = computeResults("a = 5\nb = 10\na b", prefs)
+      expect(results[0]).toBe("5") // a = 5
+      expect(results[1]).toBe("10") // b = 10
+      // "a b": both are defined, so both are tokenized
+      // "b" is followed by EOF, not an operator, so it gets tokenized
+      // Parser sees "a" then "b" (two identifiers in a row), returns just "a"
+      // Evaluator returns a = 5
+      expect(results[2]).toBe("5")
+    })
+
+    it("should handle multiple variables with surrounding text", () => {
+      const results = computeResults("x = 10\ny = 20\nsome text x + another text y", prefs)
+      expect(results[0]).toBe("10") // x = 10
+      expect(results[1]).toBe("20") // y = 20
+      // "some text x + another text y":
+      // - "some" and "text" are skipped (undefined)
+      // - "x + another text y": "x", "+", skip "another" and "text", then "y"
+      // - Results in "x + y" = 30
+      expect(results[2]).toBe("30")
+    })
+
+    it("should still require operators between variables", () => {
+      const results = computeResults("a = 5\nb = 10\na b", prefs)
+      expect(results[0]).toBe("5") // a = 5
+      expect(results[1]).toBe("10") // b = 10
+      // "a b": "a" is tokenized, "b" is tokenized (both defined)
+      // Parser sees two identifiers in a row, which is invalid
+      // Parser returns just the first identifier
+      // Then evaluator returns a = 5
+      expect(results[2]).toBe("5")
     })
   })
 

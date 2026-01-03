@@ -2,10 +2,91 @@
 // This eliminates duplicate regex logic and ensures highlighting matches parsing
 
 import { StreamLanguage } from "@codemirror/language"
+import { StateField, StateEffect, Facet } from "@codemirror/state"
+import { ViewPlugin, ViewUpdate, EditorView } from "@codemirror/view"
 import { tokenize } from "@/lib/engine/tokenizer"
-import { Token } from "@/lib/engine/types"
+import { Token, ExecutionContext } from "@/lib/engine/types"
 import { formatRegistry } from "@/lib/engine/adapters/formats/registry"
 import { UNIT_CATEGORIES } from "@/lib/engine/adapters/formats/base"
+
+/**
+ * StateEffect to update execution contexts for all lines
+ */
+export const setContextsEffect = StateEffect.define<Map<number, ExecutionContext>>()
+
+/**
+ * Facet for providing initial contexts when creating the editor state
+ */
+export const initialContextsFacet = Facet.define<
+  Map<number, ExecutionContext>,
+  Map<number, ExecutionContext>
+>({
+  combine(values) {
+    // Return the first provided map, or an empty map if none provided
+    return values[0] || new Map()
+  },
+})
+
+/**
+ * StateField that stores execution context for each line (0-based line numbers)
+ * This allows the syntax highlighter to know which variables are defined
+ */
+export const contextsField = StateField.define<Map<number, ExecutionContext>>({
+  create(state) {
+    // Try to get initial contexts from facet
+    return state.facet(initialContextsFacet) || new Map()
+  },
+  update(contexts, tr) {
+    for (const effect of tr.effects) {
+      if (effect.is(setContextsEffect)) {
+        return effect.value
+      }
+    }
+    return contexts
+  },
+})
+
+/**
+ * Get the execution context for a given line number from the editor state
+ * Returns the context from the PREVIOUS line (to know what variables are defined before this line)
+ */
+function getContextForLine(
+  view: EditorView | undefined,
+  lineNumber: number
+): ExecutionContext | undefined {
+  if (!view) return undefined
+  const contexts = view.state.field(contextsField, false)
+  if (!contexts) return undefined
+
+  // Get context from the previous line (line numbers are 1-based in the map, 0-based here)
+  // If we're on line 0, there's no previous context
+  if (lineNumber === 0) return undefined
+
+  return contexts.get(lineNumber - 1)
+}
+
+// Store the current EditorView so the language can access contexts
+// This is a workaround since StreamLanguage doesn't provide access to the editor state
+let currentView: EditorView | undefined = undefined
+
+/**
+ * Plugin to track the current EditorView for the language tokenizer
+ */
+export const viewTracker = ViewPlugin.fromClass(
+  class {
+    constructor(view: EditorView) {
+      currentView = view
+    }
+
+    update(update: ViewUpdate) {
+      currentView = update.view
+    }
+
+    destroy() {
+      currentView = undefined
+    }
+  }
+)
 
 /**
  * Map engine token types to CodeMirror highlight tags
@@ -121,6 +202,7 @@ const mathpadLanguage = StreamLanguage.define({
       tokens: [] as Token[],
       currentTokenIndex: 0,
       lineText: "",
+      lineNumber: 0, // Track current line number (0-based)
       colonIndex: -1,
       inUnitPart: false,
       currentToken: null as Token | null,
@@ -132,6 +214,11 @@ const mathpadLanguage = StreamLanguage.define({
   token(stream, state) {
     // New line - tokenize the entire line using engine tokenizer
     if (stream.sol()) {
+      // Increment line number when we see a new line (after the first line)
+      if (state.lineText !== "") {
+        state.lineNumber++
+      }
+
       state.lineText = stream.string
       state.currentTokenIndex = 0
       state.colonIndex = -1
@@ -161,9 +248,12 @@ const mathpadLanguage = StreamLanguage.define({
         }
       }
 
+      // Get execution context for this line (from previous line's evaluation)
+      const context = getContextForLine(currentView, state.lineNumber)
+
       // Tokenize the expression part (after label if present)
       try {
-        state.tokens = tokenize(state.lineText)
+        state.tokens = tokenize(state.lineText, context)
 
         // Analyze tokens to determine if line has assignments or operators
         state.hasAssignment = state.tokens.some((t) => t.type === "assign")
