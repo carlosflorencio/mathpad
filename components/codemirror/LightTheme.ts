@@ -18,6 +18,9 @@ const lightTheme = EditorView.theme(
     "&": {
       color: "hsl(0, 0%, 50%)",
       backgroundColor: colors.background,
+      "--separator-bg": "hsl(0, 0%, 94%)",
+      "--separator-border": "hsl(0, 0%, 80%)",
+      "--separator-text": "hsl(0, 0%, 40%)",
     },
     ".cm-content": {
       caretColor: colors.cursor,

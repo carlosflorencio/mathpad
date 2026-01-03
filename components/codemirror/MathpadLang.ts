@@ -12,6 +12,11 @@ const mathpadLanguage = StreamLanguage.define({
   },
 
   token(stream, state) {
+    // Separator (---)
+    if (stream.match(/^---+$/)) {
+      return "separator"
+    }
+
     // Comments
     if (stream.match("#")) {
       stream.skipToEnd()

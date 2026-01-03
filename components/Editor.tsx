@@ -12,6 +12,7 @@ import { dark } from "./codemirror/DarkTheme"
 import { light } from "./codemirror/LightTheme"
 import { rightGutter } from "./codemirror/ResultsGutter"
 import { errorDecorations, setErrorsEffect, ErrorInfo } from "./codemirror/ErrorDecorations"
+import { separatorDecorationsExtension } from "./codemirror/SeparatorDecorations"
 import { CodeMirror } from "./codemirror/CodeMirror"
 import { Preferences } from "@/lib/types"
 import { evaluateDocument, LineEvaluation } from "@/lib/engine"
@@ -102,6 +103,7 @@ export function Editor({ value, onUpdate, preferences, onCopy }: EditorProps) {
           (value) => onCopyRef.current?.(value)
         ),
         errorDecorations(),
+        separatorDecorationsExtension(),
         errorUpdateExtension,
         autocompletion({ override: [completions] }),
         preferences.theme === "dark" ? dark : light,
