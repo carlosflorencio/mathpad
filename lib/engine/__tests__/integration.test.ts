@@ -58,6 +58,11 @@ describe("Integration Tests", () => {
       expect(results[0]).toBe("1,500,000")
     })
 
+    it("should handle B suffix", () => {
+      const results = computeResults("1B + 500M", prefs)
+      expect(results[0]).toBe("1,500,000,000")
+    })
+
     it("should handle numbers with separators", () => {
       const results = computeResults("1,000 + 2,000", prefs)
       expect(results[0]).toBe("3,000")
@@ -288,6 +293,88 @@ net = salary - tax`
     it("should handle multiple empty lines", () => {
       const results = computeResults("\n\n10\n\n", prefs)
       expect(results[2]).toBe("10")
+    })
+
+    it("should handle comment lines", () => {
+      const results = computeResults("10\n# This is a comment\n20", prefs)
+      expect(results[0]).toBe("10")
+      expect(results[1]).toBe("")
+      expect(results[2]).toBe("20")
+    })
+
+    it("should handle multiple comment lines", () => {
+      const results = computeResults("# Header\n10\n# Middle\n20\n# Footer", prefs)
+      expect(results[0]).toBe("")
+      expect(results[1]).toBe("10")
+      expect(results[2]).toBe("")
+      expect(results[3]).toBe("20")
+      expect(results[4]).toBe("")
+    })
+
+    it("should ignore comments in aggregate functions", () => {
+      const results = computeResults("10\n# comment\n20\nsum", prefs)
+      expect(results[0]).toBe("10")
+      expect(results[1]).toBe("")
+      expect(results[2]).toBe("20")
+      expect(results[3]).toBe("30")
+    })
+  })
+
+  describe("Separators", () => {
+    it("should reset context after separator", () => {
+      const results = computeResults("x = 10\n---\nx + 5", prefs)
+      expect(results[0]).toBe("10")
+      expect(results[1]).toBe("")
+      expect(results[2]).toContain("Error") // x is not defined after separator
+    })
+
+    it("should reset aggregates after separator", () => {
+      const results = computeResults("10\n20\nsum\n---\n30\n40\nsum", prefs)
+      expect(results[0]).toBe("10")
+      expect(results[1]).toBe("20")
+      expect(results[2]).toBe("30") // sum of 10 + 20
+      expect(results[3]).toBe("")
+      expect(results[4]).toBe("30")
+      expect(results[5]).toBe("40")
+      expect(results[6]).toBe("70") // sum of 30 + 40 (not including previous)
+    })
+
+    it("should handle multiple separators", () => {
+      const results = computeResults("x = 1\n---\nx = 2\n---\nx = 3", prefs)
+      expect(results[0]).toBe("1")
+      expect(results[1]).toBe("")
+      expect(results[2]).toBe("2")
+      expect(results[3]).toBe("")
+      expect(results[4]).toBe("3")
+    })
+
+    it("should handle separator with spaces", () => {
+      const results = computeResults("10\n  ---  \n20", prefs)
+      expect(results[0]).toBe("10")
+      expect(results[1]).toBe("")
+      expect(results[2]).toBe("20")
+    })
+
+    it("should handle complex scenario with comments and separators", () => {
+      const input = `# Invoice 1
+item1 = 100
+item2 = 200
+subtotal = sum
+---
+# Invoice 2
+item1 = 50
+item2 = 75
+subtotal = sum`
+      const results = computeResults(input, prefs)
+      expect(results[0]).toBe("") // comment
+      expect(results[1]).toBe("100")
+      expect(results[2]).toBe("200")
+      expect(results[3]).toBe("300") // sum
+      expect(results[4]).toBe("") // separator
+      expect(results[5]).toBe("") // comment
+      expect(results[6]).toBe("50")
+      expect(results[7]).toBe("75")
+      expect(results[8]).toBe("125") // sum (new context)
     })
   })
 

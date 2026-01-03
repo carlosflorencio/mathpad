@@ -19,6 +19,30 @@ export function evaluateDocument(text: string, preferences: Preferences): LineEv
     const line = lines[i]
     context.currentLine = i
 
+    // Check for separator - reset context
+    if (line.trim() === "---") {
+      results.push({
+        lineNumber: i,
+        result: { type: "empty" },
+        formatted: "",
+        context,
+      })
+      // Reset context for new calculation section
+      context = createContext()
+      continue
+    }
+
+    // Check for comment - skip line but show as empty
+    if (line.trim().startsWith("#")) {
+      results.push({
+        lineNumber: i,
+        result: { type: "empty" },
+        formatted: "",
+        context,
+      })
+      continue
+    }
+
     // Tokenize the line
     const tokens = tokenize(line)
 
