@@ -1,8 +1,9 @@
 "use client"
 
 import { useCallback, useEffect, useState, useRef } from "react"
-import { useNotes } from "@/lib/use-notes"
-import { Preferences, ShareData } from "@/lib/types"
+import { useNotes } from "@/hooks/notes/useNotes"
+import { Preferences } from "@/lib/preferences/Preferences"
+import { ShareData } from "@/lib/notes/types"
 import { Editor } from "./Editor"
 import { Help } from "./Help"
 import { PreferencesDialog } from "./PreferencesDialog"

@@ -1,9 +1,9 @@
 import { describe, it, expect } from "vitest"
 import { computeResults } from "./index"
-import { defaultPreferences } from "@/lib/types"
+import { Preferences } from "@/lib/preferences/Preferences"
 
 describe("Integration Tests", () => {
-  const prefs = { ...defaultPreferences, decimalPlaces: 2 }
+  const prefs = Preferences.default().withDecimalPlaces(2)
 
   describe("Basic Arithmetic", () => {
     it("should evaluate simple addition", () => {
@@ -417,8 +417,8 @@ subtotal = sum`
 
   describe("Formatting Options", () => {
     it("should respect decimal places", () => {
-      const prefs1 = { ...defaultPreferences, decimalPlaces: 0 }
-      const prefs2 = { ...defaultPreferences, decimalPlaces: 4 }
+      const prefs1 = Preferences.default().withDecimalPlaces(0)
+      const prefs2 = Preferences.default().withDecimalPlaces(4)
 
       const results1 = computeResults("1 / 3", prefs1)
       const results2 = computeResults("1 / 3", prefs2)
@@ -428,8 +428,8 @@ subtotal = sum`
     })
 
     it("should respect thousands separator", () => {
-      const prefsComma = { ...defaultPreferences, thousandsSeparator: "," as const }
-      const prefsSpace = { ...defaultPreferences, thousandsSeparator: " " as const }
+      const prefsComma = Preferences.default().withThousandsSeparator(",")
+      const prefsSpace = Preferences.default().withThousandsSeparator(" ")
 
       const results1 = computeResults("1000000", prefsComma)
       const results2 = computeResults("1000000", prefsSpace)
@@ -439,12 +439,10 @@ subtotal = sum`
     })
 
     it("should respect decimal separator", () => {
-      const prefsComma = {
-        ...defaultPreferences,
-        decimalSeparator: "," as const,
-        thousandsSeparator: "." as const,
-        decimalPlaces: 2,
-      }
+      const prefsComma = Preferences.default()
+        .withDecimalSeparator(",")
+        .withThousandsSeparator(".")
+        .withDecimalPlaces(2)
 
       const results = computeResults("1000.5", prefsComma)
       // Note: showTrailingZeros is false by default, so "1.000,5" is correct

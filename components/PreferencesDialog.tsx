@@ -1,7 +1,9 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Preferences, Theme } from "@/lib/types"
+import { Preferences } from "@/lib/preferences/Preferences"
+
+type Theme = "dark" | "light"
 
 interface PreferencesDialogProps {
   preferences: Preferences
@@ -17,13 +19,14 @@ export function PreferencesDialog({ preferences, save, close }: PreferencesDialo
   const [thousandsSeparator, setThousandsSeparator] = useState(preferences.thousandsSeparator)
 
   useEffect(() => {
-    save({
+    const updated = new Preferences(
       fontSize,
       decimalPlaces,
-      theme,
       decimalSeparator,
       thousandsSeparator,
-    })
+      theme
+    )
+    save(updated)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fontSize, decimalPlaces, theme, thousandsSeparator, decimalSeparator])
 
