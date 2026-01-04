@@ -41,9 +41,9 @@ describe("NotesService", () => {
   })
 
   describe("createNewNote", () => {
-    it("should create note with unique name", () => {
+    it("should create note with unique name", async () => {
       const collection = new NoteCollection([])
-      const result = service.createNewNote(collection)
+      const result = await service.createNewNote(collection)
 
       expect(result.ok).toBe(true)
       if (result.ok) {
@@ -52,14 +52,14 @@ describe("NotesService", () => {
       }
     })
 
-    it("should increment name for subsequent notes", () => {
+    it("should increment name for subsequent notes", async () => {
       const collection = new NoteCollection([])
 
-      const result1 = service.createNewNote(collection)
+      const result1 = await service.createNewNote(collection)
       expect(result1.ok).toBe(true)
       if (!result1.ok) return
 
-      const result2 = service.createNewNote(result1.value.collection)
+      const result2 = await service.createNewNote(result1.value.collection)
       expect(result2.ok).toBe(true)
       if (!result2.ok) return
 
@@ -67,9 +67,9 @@ describe("NotesService", () => {
       expect(result2.value.note.name).toBe("Untitled 2")
     })
 
-    it("should save to repository", () => {
+    it("should save to repository", async () => {
       const collection = new NoteCollection([])
-      const result = service.createNewNote(collection)
+      const result = await service.createNewNote(collection)
 
       expect(result.ok).toBe(true)
 
@@ -82,12 +82,12 @@ describe("NotesService", () => {
   })
 
   describe("deleteNote", () => {
-    it("should delete note and switch to next", () => {
+    it("should delete note and switch to next", async () => {
       const note1 = Note.create("Note 1")
       const note2 = Note.create("Note 2")
       const collection = new NoteCollection([note1, note2])
 
-      const result = service.deleteNote(note1.id, note1.id, collection)
+      const result = await service.deleteNote(note1.id, note1.id, collection)
 
       expect(result.ok).toBe(true)
       if (result.ok) {
@@ -96,11 +96,11 @@ describe("NotesService", () => {
       }
     })
 
-    it("should create new note when deleting last one", () => {
+    it("should create new note when deleting last one", async () => {
       const note = Note.create("Only Note")
       const collection = new NoteCollection([note])
 
-      const result = service.deleteNote(note.id, note.id, collection)
+      const result = await service.deleteNote(note.id, note.id, collection)
 
       expect(result.ok).toBe(true)
       if (result.ok) {
@@ -109,12 +109,12 @@ describe("NotesService", () => {
       }
     })
 
-    it("should not change active note when deleting non-active note", () => {
+    it("should not change active note when deleting non-active note", async () => {
       const note1 = Note.create("Note 1")
       const note2 = Note.create("Note 2")
       const collection = new NoteCollection([note1, note2])
 
-      const result = service.deleteNote(note2.id, note1.id, collection)
+      const result = await service.deleteNote(note2.id, note1.id, collection)
 
       expect(result.ok).toBe(true)
       if (result.ok) {
@@ -125,11 +125,11 @@ describe("NotesService", () => {
   })
 
   describe("renameNote", () => {
-    it("should rename note and update timestamp", () => {
+    it("should rename note and update timestamp", async () => {
       const note = Note.create("Old Name")
       const collection = new NoteCollection([note])
 
-      const result = service.renameNote(note.id, "New Name", collection)
+      const result = await service.renameNote(note.id, "New Name", collection)
 
       expect(result.ok).toBe(true)
       if (result.ok) {
@@ -139,9 +139,9 @@ describe("NotesService", () => {
       }
     })
 
-    it("should return error when note not found", () => {
+    it("should return error when note not found", async () => {
       const collection = new NoteCollection([])
-      const result = service.renameNote("non-existent", "New Name", collection)
+      const result = await service.renameNote("non-existent", "New Name", collection)
 
       expect(result.ok).toBe(false)
       if (!result.ok) {
@@ -177,11 +177,11 @@ describe("NotesService", () => {
   })
 
   describe("saveNote", () => {
-    it("should touch note and update timestamp", () => {
+    it("should touch note and update timestamp", async () => {
       const note = Note.create("Test")
       const collection = new NoteCollection([note])
 
-      const result = service.saveNote(note.id, collection)
+      const result = await service.saveNote(note.id, collection)
 
       expect(result.ok).toBe(true)
       if (result.ok) {
@@ -190,9 +190,9 @@ describe("NotesService", () => {
       }
     })
 
-    it("should return error when note not found", () => {
+    it("should return error when note not found", async () => {
       const collection = new NoteCollection([])
-      const result = service.saveNote("non-existent", collection)
+      const result = await service.saveNote("non-existent", collection)
 
       expect(result.ok).toBe(false)
       if (!result.ok) {

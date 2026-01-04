@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState, useRef } from "react"
 import { useNotes } from "@/hooks/notes/useNotes"
 import { Preferences } from "@/lib/preferences/Preferences"
 import { ShareData } from "@/lib/notes/types"
+import { FileSystemNoteRepository } from "@/lib/notes/FileSystemNoteRepository"
 import { Editor } from "./Editor"
 import { Help } from "./Help"
 import { PreferencesDialog } from "./PreferencesDialog"
@@ -55,6 +56,14 @@ export function App() {
     shareNote,
     importSharedNote,
     savePreferences,
+    // Folder sync
+    folderName,
+    isFolderMapped,
+    openFolder,
+    closeFolder,
+    pendingDeletions,
+    confirmDeletions,
+    cancelDeletions,
   } = useNotes()
 
   const [showPreferences, setShowPreferences] = useState(false)
@@ -62,6 +71,7 @@ export function App() {
   const [showMenu, setShowMenu] = useState(false)
   const [showNotesMenu, setShowNotesMenu] = useState(false)
   const [showManageNotes, setShowManageNotes] = useState(false)
+  const [showFolderSyncHelp, setShowFolderSyncHelp] = useState(false)
   const [renamingNoteId, setRenamingNoteId] = useState<string | null>(null)
   const [renamingInModal, setRenamingInModal] = useState(false)
   const [renameValue, setRenameValue] = useState("")
@@ -118,6 +128,7 @@ export function App() {
     setShowMenu(false)
     setShowNotesMenu(false)
     setShowManageNotes(false)
+    setShowFolderSyncHelp(false)
   }, [])
 
   useEffect(() => {
@@ -158,6 +169,33 @@ export function App() {
       showToast("Link copied to clipboard")
     }
   }, [shareNote, showToast])
+
+  const handleOpenFolder = useCallback(async () => {
+    try {
+      await openFolder()
+      showToast("Folder opened successfully")
+    } catch (error) {
+      console.error("Error opening folder:", error)
+      showToast("Failed to open folder")
+    }
+  }, [openFolder, showToast])
+
+  const handleCloseFolder = useCallback(async () => {
+    try {
+      await closeFolder()
+      showToast("Folder closed")
+    } catch (error) {
+      console.error("Error closing folder:", error)
+    }
+  }, [closeFolder, showToast])
+
+  const isFileSystemSupported = FileSystemNoteRepository.isSupported()
+
+  const handleShowFolderInOS = useCallback(() => {
+    // The File System Access API doesn't provide a way to open the folder in the OS
+    // We can only inform the user of the folder name
+    showToast(`Syncing with: ${folderName}`)
+  }, [folderName, showToast])
 
   const handleDeleteNote = useCallback(
     (noteId: string) => {
@@ -267,9 +305,12 @@ export function App() {
         </div>
       </div>
 
-      {(showPreferences || showHelp || conflictData || showManageNotes) && (
-        <div className="modal-backdrop" onClick={closeDialogs} />
-      )}
+      {(showPreferences ||
+        showHelp ||
+        conflictData ||
+        showManageNotes ||
+        showFolderSyncHelp ||
+        pendingDeletions.length > 0) && <div className="modal-backdrop" onClick={closeDialogs} />}
 
       {showPreferences && (
         <PreferencesDialog
@@ -306,6 +347,43 @@ export function App() {
               className="px-4 py-2 text-[var(--text-color)] hover:bg-[var(--bg-button-hover)] rounded"
             >
               Replace
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* External Deletion Confirmation Dialog */}
+      {pendingDeletions.length > 0 && (
+        <div className="modal">
+          <h2 className="text-lg mb-4">Notes Deleted Externally</h2>
+          <p className="mb-4">
+            {pendingDeletions.length} note(s) were deleted from the synced folder:
+          </p>
+          <ul className="mb-4 space-y-1 max-h-48 overflow-y-auto">
+            {pendingDeletions.map((note) => (
+              <li key={note.id} className="text-[var(--text-muted)]">
+                • {note.name}
+              </li>
+            ))}
+          </ul>
+          <div className="flex gap-2 justify-end">
+            <button
+              onClick={() => {
+                cancelDeletions()
+                showToast("Deleted notes will be restored to folder")
+              }}
+              className="px-4 py-2 text-[var(--text-color)] hover:bg-[var(--bg-button-hover)] rounded"
+            >
+              Keep in App
+            </button>
+            <button
+              onClick={() => {
+                confirmDeletions()
+                showToast("Deleted notes removed from app")
+              }}
+              className="px-4 py-2 text-red-500 hover:bg-[var(--bg-button-hover)] rounded"
+            >
+              Remove from App
             </button>
           </div>
         </div>
@@ -451,6 +529,84 @@ export function App() {
         </div>
       )}
 
+      {/* Folder Sync Help Dialog */}
+      {showFolderSyncHelp && (
+        <div className="modal" style={{ maxWidth: "750px", maxHeight: "90vh", overflowY: "auto" }}>
+          <h2 className="text-lg mb-4">Folder Sync</h2>
+          <div className="space-y-4 text-[var(--text-color)]">
+            <div>
+              <h3 className="font-semibold mb-2">What is Folder Sync?</h3>
+              <p className="text-sm text-[var(--text-muted)]">
+                Sync your notes with a folder on your computer. Notes are saved as{" "}
+                <code className="px-1 py-0.5 bg-[var(--bg-input)] rounded">.json</code> files and
+                automatically kept in sync.
+              </p>
+            </div>
+
+            <div>
+              <h3 className="font-semibold mb-2">How it works</h3>
+              <ul className="text-sm text-[var(--text-muted)] space-y-2 list-disc list-inside">
+                <li>
+                  <strong>Choose a folder:</strong> Click &quot;Open Folder&quot; to select where
+                  notes should be saved
+                </li>
+                <li>
+                  <strong>Auto-sync:</strong> Changes sync automatically every 10 seconds and when
+                  you switch back to the app
+                </li>
+                <li>
+                  <strong>Edit anywhere:</strong> Open and edit the .json files with any text editor
+                </li>
+                <li>
+                  <strong>Always in the app:</strong> Notes are always saved in your browser first,
+                  so the app works offline
+                </li>
+              </ul>
+            </div>
+
+            <div>
+              <h3 className="font-semibold mb-2">File Format</h3>
+              <p className="text-sm text-[var(--text-muted)] mb-2">
+                Each note is saved as{" "}
+                <code className="px-1 py-0.5 bg-[var(--bg-input)] rounded">note-name.json</code>:
+              </p>
+              <pre className="text-xs bg-[var(--bg-input)] p-3 rounded overflow-x-auto">
+                {`{
+  "version": "1.0",
+  "id": "...",
+  "name": "My Note",
+  "content": "note content..."
+}`}
+              </pre>
+            </div>
+
+            <div>
+              <h3 className="font-semibold mb-2">External Changes</h3>
+              <p className="text-sm text-[var(--text-muted)]">
+                If you edit or delete files outside the app, MathPad will detect changes and ask you
+                what to do. When conflicts occur, the newest version (by timestamp) wins.
+              </p>
+            </div>
+
+            <div className="bg-[var(--bg-input)] p-3 rounded">
+              <p className="text-sm text-[var(--text-muted)]">
+                <strong>Browser support:</strong> This feature requires Chrome 86+, Edge 86+, or
+                Safari 15.2+. Firefox is not currently supported.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex justify-end mt-4">
+            <button
+              onClick={() => setShowFolderSyncHelp(false)}
+              className="px-4 py-2 text-[var(--text-color)] hover:bg-[var(--bg-button-hover)] rounded"
+            >
+              Got it
+            </button>
+          </div>
+        </div>
+      )}
+
       <ToastContainer toasts={toasts} onRemove={removeToast} />
 
       {/* Top Left Menu & Share & Note Name */}
@@ -536,6 +692,74 @@ export function App() {
               <div className="border-t border-[var(--ui-border-color)] my-1"></div>
 
               <div
+                className="dropdown-item flex justify-between items-center"
+                style={{
+                  opacity: isFileSystemSupported ? 1 : 0.5,
+                  cursor: isFileSystemSupported ? "pointer" : "not-allowed",
+                }}
+              >
+                <span
+                  onClick={
+                    isFileSystemSupported
+                      ? () => {
+                          handleOpenFolder()
+                          setShowMenu(false)
+                        }
+                      : undefined
+                  }
+                  className="flex-1"
+                  title={
+                    !isFileSystemSupported
+                      ? "File System API not supported in this browser"
+                      : undefined
+                  }
+                >
+                  {isFolderMapped ? "Change Folder" : "Open Folder"}
+                </span>
+                {isFileSystemSupported && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setShowFolderSyncHelp(true)
+                      setShowMenu(false)
+                    }}
+                    className="ml-2 px-1.5 py-1 text-[var(--text-muted)] hover:text-[var(--text-color)] border border-[var(--ui-border-color)] rounded cursor-pointer hover:border-[var(--text-muted)] transition-colors"
+                    title="Learn about folder sync"
+                  >
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <circle cx="12" cy="12" r="10"></circle>
+                      <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+                      <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                    </svg>
+                  </button>
+                )}
+              </div>
+
+              {isFolderMapped && (
+                <div
+                  className="dropdown-item"
+                  onClick={() => {
+                    handleCloseFolder()
+                    setShowMenu(false)
+                  }}
+                  title="Stop syncing with folder. Notes will remain in the app."
+                >
+                  Close Folder
+                </div>
+              )}
+
+              <div className="border-t border-[var(--ui-border-color)] my-1"></div>
+
+              <div
                 className="dropdown-item"
                 onClick={() => {
                   setShowPreferences(true)
@@ -585,8 +809,33 @@ export function App() {
           </svg>
         </button>
 
-        {/* Note Name - right after share button */}
+        {/* Folder and Note Name - unified display */}
         <div className="hidden md:flex items-center gap-2 px-3 py-1 text-[var(--text-color)] bg-[var(--bg-dropdown)] rounded">
+          {isFolderMapped && folderName && (
+            <>
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="text-[var(--text-muted)]"
+              >
+                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+              </svg>
+              <span
+                onClick={handleShowFolderInOS}
+                className="cursor-pointer hover:opacity-70 text-[var(--text-muted)]"
+                title={`Syncing with: ${folderName}`}
+              >
+                {folderName}
+              </span>
+              <span className="text-[var(--text-muted)]">›</span>
+            </>
+          )}
           {renamingNoteId === activeNote.id && !renamingInModal ? (
             <input
               type="text"

@@ -1,24 +1,24 @@
 import { Note } from "./Note"
 import { NoteCollection } from "./NoteCollection"
-import { LocalStorageNoteRepository } from "./LocalStorageNoteRepository"
+import { NoteRepository } from "./NoteRepository"
 import { Result } from "../result"
 
 export class NotesService {
-  constructor(private repository: LocalStorageNoteRepository) {}
+  constructor(private repository: NoteRepository) {}
 
-  createNewNote(
+  async createNewNote(
     collection: NoteCollection
-  ): Result<{ note: Note; collection: NoteCollection }, string> {
+  ): Promise<Result<{ note: Note; collection: NoteCollection }, string>> {
     const name = collection.generateUniqueName()
     const note = Note.create(name, "")
     const newCollection = collection.add(note)
 
-    const saveResult = this.repository.saveAll(newCollection)
+    const saveResult = await this.repository.saveAll(newCollection)
     if (!saveResult.ok) {
       return saveResult
     }
 
-    const saveActiveResult = this.repository.saveActiveNoteId(note.id)
+    const saveActiveResult = await this.repository.saveActiveNoteId(note.id)
     if (!saveActiveResult.ok) {
       return saveActiveResult
     }
@@ -26,15 +26,15 @@ export class NotesService {
     return { ok: true, value: { note, collection: newCollection } }
   }
 
-  switchToNote(noteId: string): Result<void, string> {
-    return this.repository.saveActiveNoteId(noteId)
+  async switchToNote(noteId: string): Promise<Result<void, string>> {
+    return await this.repository.saveActiveNoteId(noteId)
   }
 
-  deleteNote(
+  async deleteNote(
     noteId: string,
     activeNoteId: string | null,
     collection: NoteCollection
-  ): Result<{ collection: NoteCollection; newActiveNoteId: string | null }, string> {
+  ): Promise<Result<{ collection: NoteCollection; newActiveNoteId: string | null }, string>> {
     let newCollection = collection.remove(noteId)
     let newActiveNoteId = activeNoteId
 
@@ -50,13 +50,13 @@ export class NotesService {
       }
     }
 
-    const saveResult = this.repository.saveAll(newCollection)
+    const saveResult = await this.repository.saveAll(newCollection)
     if (!saveResult.ok) {
       return saveResult
     }
 
     if (newActiveNoteId) {
-      const saveActiveResult = this.repository.saveActiveNoteId(newActiveNoteId)
+      const saveActiveResult = await this.repository.saveActiveNoteId(newActiveNoteId)
       if (!saveActiveResult.ok) {
         return saveActiveResult
       }
@@ -65,11 +65,11 @@ export class NotesService {
     return { ok: true, value: { collection: newCollection, newActiveNoteId } }
   }
 
-  renameNote(
+  async renameNote(
     noteId: string,
     newName: string,
     collection: NoteCollection
-  ): Result<NoteCollection, string> {
+  ): Promise<Result<NoteCollection, string>> {
     const note = collection.findById(noteId)
     if (!note) {
       return { ok: false, error: `Note not found: ${noteId}` }
@@ -78,7 +78,7 @@ export class NotesService {
     const renamedNote = note.rename(newName)
     const newCollection = collection.update(renamedNote)
 
-    const saveResult = this.repository.saveAll(newCollection)
+    const saveResult = await this.repository.saveAll(newCollection)
     if (!saveResult.ok) {
       return saveResult
     }
@@ -100,7 +100,10 @@ export class NotesService {
     return { ok: true, value: collection.update(updatedNote) }
   }
 
-  saveNote(noteId: string, collection: NoteCollection): Result<NoteCollection, string> {
+  async saveNote(
+    noteId: string,
+    collection: NoteCollection
+  ): Promise<Result<NoteCollection, string>> {
     const note = collection.findById(noteId)
     if (!note) {
       return { ok: false, error: `Note not found: ${noteId}` }
@@ -109,7 +112,7 @@ export class NotesService {
     const touchedNote = note.touch()
     const newCollection = collection.update(touchedNote)
 
-    const saveResult = this.repository.saveAll(newCollection)
+    const saveResult = await this.repository.saveAll(newCollection)
     if (!saveResult.ok) {
       return saveResult
     }

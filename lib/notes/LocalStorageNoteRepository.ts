@@ -1,5 +1,6 @@
 import { Note } from "./Note"
 import { NoteCollection } from "./NoteCollection"
+import { NoteRepository } from "./NoteRepository"
 import { Result } from "../result"
 
 const NOTES_KEY = "mathpad-notes"
@@ -7,9 +8,8 @@ const ACTIVE_NOTE_ID_KEY = "mathpad-active-note-id"
 
 /**
  * Repository implementation using browser localStorage.
- * Future: Create FileSystemNoteRepository for File System Access API
  */
-export class LocalStorageNoteRepository {
+export class LocalStorageNoteRepository implements NoteRepository {
   loadAll(): Result<NoteCollection, string> {
     if (typeof window === "undefined") {
       return { ok: true, value: new NoteCollection([]) }
