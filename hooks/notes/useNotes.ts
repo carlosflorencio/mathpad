@@ -21,26 +21,48 @@ export function useNotes() {
   const [activeNoteId, setActiveNoteId] = useState<string | null>(null)
   const [preferences, setPreferences] = useState<Preferences>(Preferences.default())
   const [isLoaded, setIsLoaded] = useState(false)
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
 
-  const autoSaveTimerRef = useRef<NodeJS.Timeout | undefined>(undefined)
   const lastSavedContentRef = useRef<string>("")
+  const autoSaveTimerRef = useRef<NodeJS.Timeout | undefined>(undefined)
+  const collectionRef = useRef<NoteCollection>(collection)
+
+  // Keep ref in sync with state
+  useEffect(() => {
+    collectionRef.current = collection
+  }, [collection])
 
   const activeNote = collection.findById(activeNoteId || "")
 
-  // Save function
+  // Save function (for manual save via Cmd+S if needed)
   const save = useCallback(() => {
-    if (!activeNote) return
+    if (!activeNoteId) return
 
-    const result = notesService.saveNote(activeNote.id, collection)
+    // Use current collection from ref to avoid stale closure
+    const currentCollection = collectionRef.current
+    const currentNote = currentCollection.findById(activeNoteId)
+    if (!currentNote) return
+
+    const result = notesService.saveNote(activeNoteId, currentCollection)
     if (result.ok) {
       setCollection(result.value)
-      lastSavedContentRef.current = activeNote.content
-      setHasUnsavedChanges(false)
+      lastSavedContentRef.current = currentNote.content
     } else {
       console.error("Failed to save note:", result.error)
     }
-  }, [activeNote, collection])
+  }, [activeNoteId])
+
+  // Debounced save function (called from updateContent)
+  const scheduleSave = useCallback(() => {
+    // Clear existing timer
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current)
+    }
+
+    // Schedule new save
+    autoSaveTimerRef.current = setTimeout(() => {
+      save()
+    }, 500)
+  }, [save])
 
   // Initialize on mount
   useEffect(() => {
@@ -49,6 +71,7 @@ export function useNotes() {
     // Load preferences
     const prefsResult = preferencesRepository.load()
     if (prefsResult.ok) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setPreferences(prefsResult.value)
     } else {
       console.error("Failed to load preferences:", prefsResult.error)
@@ -141,38 +164,6 @@ export function useNotes() {
     setIsLoaded(true)
   }, [])
 
-  // Auto-save every 10 seconds
-  useEffect(() => {
-    if (!isLoaded || !activeNote) return
-
-    if (autoSaveTimerRef.current) {
-      clearTimeout(autoSaveTimerRef.current)
-    }
-
-    if (activeNote.content !== lastSavedContentRef.current) {
-      autoSaveTimerRef.current = setTimeout(() => {
-        save()
-      }, 10000)
-    }
-
-    return () => {
-      if (autoSaveTimerRef.current) {
-        clearTimeout(autoSaveTimerRef.current)
-      }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeNote?.content, isLoaded, save])
-
-  // Track unsaved changes
-  useEffect(() => {
-    if (!activeNote) {
-      setHasUnsavedChanges(false)
-      return
-    }
-    setHasUnsavedChanges(activeNote.content !== lastSavedContentRef.current)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeNote?.content])
-
   // Create new note
   const createNewNote = useCallback(() => {
     const result = notesService.createNewNote(collection)
@@ -188,6 +179,11 @@ export function useNotes() {
   // Switch note
   const switchNote = useCallback(
     (noteId: string) => {
+      // Clear any pending auto-save
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current)
+      }
+
       if (activeNote && activeNote.content !== lastSavedContentRef.current) {
         save()
       }
@@ -223,31 +219,32 @@ export function useNotes() {
   )
 
   // Rename note
-  const renameNote = useCallback(
-    (noteId: string, newName: string) => {
-      const result = notesService.renameNote(noteId, newName, collection)
-      if (result.ok) {
-        setCollection(result.value)
-      } else {
-        console.error("Failed to rename note:", result.error)
-      }
-    },
-    [collection]
-  )
+  const renameNote = useCallback((noteId: string, newName: string) => {
+    const result = notesService.renameNote(noteId, newName, collectionRef.current)
+    if (result.ok) {
+      setCollection(result.value)
+    } else {
+      console.error("Failed to rename note:", result.error)
+    }
+  }, [])
 
   // Update content
   const updateContent = useCallback(
     (content: string) => {
       if (!activeNote) return
 
-      const result = notesService.updateNoteContent(activeNote.id, content, collection)
+      const result = notesService.updateNoteContent(activeNote.id, content, collectionRef.current)
       if (result.ok) {
         setCollection(result.value)
+        // Schedule debounced save (only if content actually changed)
+        if (content !== lastSavedContentRef.current) {
+          scheduleSave()
+        }
       } else {
         console.error("Failed to update content:", result.error)
       }
     },
-    [activeNote, collection]
+    [activeNote, scheduleSave]
   )
 
   // Share note
@@ -302,25 +299,11 @@ export function useNotes() {
     return () => window.removeEventListener("keydown", handleKeyDown)
   }, [save])
 
-  // Warn before closing with unsaved changes
-  useEffect(() => {
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (hasUnsavedChanges) {
-        e.preventDefault()
-        e.returnValue = ""
-      }
-    }
-
-    window.addEventListener("beforeunload", handleBeforeUnload)
-    return () => window.removeEventListener("beforeunload", handleBeforeUnload)
-  }, [hasUnsavedChanges])
-
   return {
     notes: collection.all,
     activeNote,
     preferences,
     isLoaded,
-    hasUnsavedChanges,
     createNote: createNewNote,
     switchNote,
     deleteNote,

@@ -113,5 +113,27 @@ describe("ShareService", () => {
       expect(result.value.note.id).not.toBe(original.id)
       expect(result.value.collection.count).toBe(2)
     })
+
+    it("should keep original name when importing new note", () => {
+      const existingNote = Note.create("Existing", "some content")
+      const collection = new NoteCollection([existingNote])
+
+      const sharedData = {
+        id: "different-id",
+        n: "Shared Note",
+        c: "shared content",
+        v: "1" as const,
+      }
+
+      const result = service.importSharedNote(sharedData, collection, "keep-both")
+
+      expect(result.ok).toBe(true)
+      if (!result.ok) return
+
+      // Should keep original name (no "Copy of" prefix) since note doesn't exist
+      expect(result.value.note.name).toBe("Shared Note")
+      expect(result.value.note.content).toBe("shared content")
+      expect(result.value.collection.count).toBe(2)
+    })
   })
 })

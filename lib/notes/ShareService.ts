@@ -89,7 +89,11 @@ export class ShareService {
         }
       } else {
         // Keep both - create new note
-        const name = `Copy of ${sharedData.n || "Untitled"}`
+        // Check if a note with this ID already exists
+        const existingNote = collection.findById(sharedData.id)
+        const name = existingNote
+          ? `Copy of ${sharedData.n || "Untitled"}`
+          : sharedData.n || "Untitled"
         const newNote = Note.create(name, sharedData.c)
         return {
           ok: true,

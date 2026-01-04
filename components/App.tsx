@@ -47,7 +47,6 @@ export function App() {
     activeNote,
     preferences,
     isLoaded,
-    hasUnsavedChanges,
     createNote,
     switchNote,
     deleteNote,
@@ -603,16 +602,13 @@ export function App() {
               style={{ width: "200px" }}
             />
           ) : (
-            <>
-              <span
-                onClick={() => startRename(activeNote.id, activeNote.name)}
-                className="cursor-pointer hover:opacity-70"
-                title="Click to rename"
-              >
-                {activeNote.name}
-              </span>
-              {hasUnsavedChanges && <span className="text-yellow-500">•</span>}
-            </>
+            <span
+              onClick={() => startRename(activeNote.id, activeNote.name)}
+              className="cursor-pointer hover:opacity-70"
+              title="Click to rename"
+            >
+              {activeNote.name}
+            </span>
           )}
         </div>
       </div>
