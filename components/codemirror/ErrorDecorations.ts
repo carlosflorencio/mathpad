@@ -62,12 +62,14 @@ const errorDecorationsField = StateField.define<DecorationSet>({
           const from = line.from + error.position
           const to = from + error.length
 
-          // Add underline decoration
-          marks.push(
-            Decoration.mark({
-              class: "cm-error-underline",
-            }).range(from, to)
-          )
+          // Add underline decoration (only if length > 0)
+          if (error.length > 0) {
+            marks.push(
+              Decoration.mark({
+                class: "cm-error-underline",
+              }).range(from, to)
+            )
+          }
 
           // Add inline error message widget at the end of the line
           marks.push(

@@ -211,10 +211,10 @@ function evaluatePreviousResult(
     ]
   }
 
-  // Find the last non-empty result
+  // Find the last non-empty, non-error result
   for (let i = context.lineResults.length - 1; i >= 0; i--) {
     const result = context.lineResults[i]
-    if (result.type !== "empty") {
+    if (result.type !== "empty" && result.type !== "error") {
       return [result, context]
     }
   }
