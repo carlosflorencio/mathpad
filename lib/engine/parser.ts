@@ -70,17 +70,13 @@ class Parser {
 
     // Check if line starts with a binary operator
     // If so, treat it as: previousResult <operator> <expression>
-    // To avoid conflicts with unary operators, we only treat it as operator-prefix
-    // if there's whitespace after the operator (e.g., "- 5" vs "-5")
     const firstToken = this.current()
     const nextToken = this.peek()
-    const hasWhitespaceAfterOperator =
-      nextToken.type !== "eof" && firstToken.position + firstToken.length < nextToken.position
 
     if (
       firstToken.type === "operator" &&
       binaryOperatorRegistry.has(firstToken.value) &&
-      hasWhitespaceAfterOperator
+      nextToken.type !== "eof"
     ) {
       const operator = firstToken.value as "+" | "-" | "*" | "/" | "%" | "^"
       const operatorPosition = firstToken.position

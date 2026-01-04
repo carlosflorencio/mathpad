@@ -1129,6 +1129,45 @@ z = y * 2`
       expect(results[0]).toBe("100km")
       expect(results[1]).toBe("100,000m")
     })
+
+    it("should use previous result with operator prefix without space (+1)", () => {
+      const results = computeResults("2 + 3\n+1\n+1\n+1", prefs)
+      expect(results[0]).toBe("5")
+      expect(results[1]).toBe("6")
+      expect(results[2]).toBe("7")
+      expect(results[3]).toBe("8")
+    })
+
+    it("should use previous result with operator prefix without space (*2)", () => {
+      const results = computeResults("5\n*2\n*2", prefs)
+      expect(results[0]).toBe("5")
+      expect(results[1]).toBe("10")
+      expect(results[2]).toBe("20")
+    })
+
+    it("should use previous result with operator prefix without space (-10)", () => {
+      const results = computeResults("100\n-10\n-5", prefs)
+      expect(results[0]).toBe("100")
+      expect(results[1]).toBe("90")
+      expect(results[2]).toBe("85")
+    })
+
+    it("should not propagate errors to subsequent operator-prefix lines", () => {
+      const results = computeResults("a + 3\n+3\n+2", prefs)
+      expect(results[0]).toContain("Error")
+      expect(results[0]).toContain("Variable 'a' not defined")
+      expect(results[1]).toContain("Error")
+      expect(results[1]).toContain("No previous result available")
+      expect(results[2]).toContain("Error")
+      expect(results[2]).toContain("No previous result available")
+    })
+
+    it("should use previous result after a valid line following an error", () => {
+      const results = computeResults("a + 3\n10\n+5", prefs)
+      expect(results[0]).toContain("Error")
+      expect(results[1]).toBe("10")
+      expect(results[2]).toBe("15")
+    })
   })
 
   describe("Labels", () => {

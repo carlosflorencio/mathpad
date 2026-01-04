@@ -2,7 +2,7 @@ import { tokenize } from "./tokenizer"
 import { parse } from "./parser"
 import { evaluate } from "./evaluator"
 import { formatResult, createFormatOptions } from "./formatter"
-import { createContext, LineEvaluation } from "./types"
+import { createContext, LineEvaluation, ASTNode } from "./types"
 import { Preferences } from "../types"
 import { formatRegistry } from "./adapters/formats/registry"
 import { binaryOperatorRegistry } from "./adapters/registry"
@@ -220,6 +220,80 @@ export function evaluateDocument(text: string, preferences: Preferences): LineEv
         result = { type: "empty" }
       }
       // else: Don't retry (undefined variable is part of expression), keep the error
+    }
+
+    // Special case: If the result is a "No previous result available" error on the FIRST line
+    // that starts with an operator (like "+5" or "-5" WITHOUT space), try to parse it as a unary expression
+    // This allows "-5" to work on the first line, while "+ 5" (with space) will still error as expected
+    if (
+      result.type === "error" &&
+      result.message === "No previous result available" &&
+      context.lineResults.length === 0 && // Only on first line (no previous results yet)
+      i === 0 // AND we're truly on the first line, not after a separator
+    ) {
+      const firstToken = tokens[0]
+      // Check if line starts with + or - operator
+      if (
+        firstToken.type === "operator" &&
+        (firstToken.value === "+" || firstToken.value === "-")
+      ) {
+        // Check if there's a number or another operator after (for cases like "+5", "-50%", or "--5")
+        const nextToken = tokens[1]
+        // Also check that there's NO whitespace between the operator and the next token
+        const hasNoWhitespace = nextToken && firstToken.position + firstToken.length === nextToken.position
+
+        if (
+          nextToken &&
+          hasNoWhitespace &&
+          (nextToken.type === "number" ||
+            nextToken.type === "percent" ||
+            (nextToken.type === "operator" && (nextToken.value === "+" || nextToken.value === "-")))
+        ) {
+          // This looks like it could be a unary expression like "+5", "-50%", or "--5" (no space)
+          // For cases like "--5", we need to handle nested unary operators
+          // Build the operand by recursively parsing remaining tokens as unary
+          const buildUnaryOperand = (remainingTokens: typeof tokens): ASTNode => {
+            const first = remainingTokens[0]
+            const second = remainingTokens[1]
+
+            // If first token is an operator, recursively build unary
+            if (
+              first &&
+              first.type === "operator" &&
+              (first.value === "+" || first.value === "-") &&
+              second &&
+              first.position + first.length === second.position // no whitespace
+            ) {
+              return {
+                kind: "unary",
+                operator: first.value as "+" | "-",
+                operand: buildUnaryOperand(remainingTokens.slice(1)),
+                position: first.position,
+                length:
+                  remainingTokens[remainingTokens.length - 2].position +
+                  remainingTokens[remainingTokens.length - 2].length -
+                  first.position,
+              }
+            }
+
+            // Otherwise, parse normally
+            return parse(remainingTokens)
+          }
+
+          const unaryAst: ASTNode = {
+            kind: "unary",
+            operator: firstToken.value as "+" | "-",
+            operand: buildUnaryOperand(tokens.slice(1)),
+            position: firstToken.position,
+            length: tokens[tokens.length - 2].position + tokens[tokens.length - 2].length - firstToken.position,
+          }
+          const [unaryResult, unaryContext] = evaluate(unaryAst, context)
+          if (unaryResult.type !== "error") {
+            result = unaryResult
+            newContext = unaryContext
+          }
+        }
+      }
     }
 
     // Format the result
