@@ -132,16 +132,6 @@ function tokenTypeToTag(token: Token, state: any): string | null {
       return "number"
 
     case "identifier":
-      // Check if it's a special keyword like "prev", "previous", "it"
-      const lowerValue = token.value.toLowerCase()
-      const isSpecialKeyword =
-        lowerValue === "prev" || lowerValue === "previous" || lowerValue === "it"
-
-      // Special keywords should be highlighted like operators (same as aggregate functions)
-      if (isSpecialKeyword) {
-        return "operator"
-      }
-
       // Check if it's a math function
       const mathFuncs = new Set([
         "abs",
@@ -180,6 +170,10 @@ function tokenTypeToTag(token: Token, state: any): string | null {
         return "variableName"
       }
       return null
+
+    case "previousResult":
+      // "prev" and "previous" keywords - highlight like operators (same as aggregate functions)
+      return "operator"
 
     case "keyword":
       // Highlight format specifiers (units, currencies, K/M/B, etc.) as "unit" (blue)

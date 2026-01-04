@@ -440,6 +440,17 @@ class Parser {
       return node
     }
 
+    // Previous result references (prev, previous)
+    if (current.type === "previousResult") {
+      const node: ASTNode = {
+        kind: "previousResult",
+        position: current.position,
+        length: current.length,
+      }
+      this.advance()
+      return node
+    }
+
     // Aggregate functions (sum, avg, min, max, count)
     if (
       current.type === "operator" &&

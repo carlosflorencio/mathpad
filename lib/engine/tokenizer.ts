@@ -366,7 +366,7 @@ export function tokenize(line: string, context?: ExecutionContext): Token[] {
 
         // Check if this is a conversion context: number/percent/identifier/paren + in/to + format
         // For "in": number/percent + in + format (e.g., "100 in km", "50% in K")
-        // For "to": number/identifier/paren + to + format (e.g., "100km to m", "x to m", "(100+50) to m")
+        // For "to": number/identifier/paren/previousResult + to + format (e.g., "100km to m", "x to m", "(100+50) to m", "prev to m")
         const isConversionContext =
           prevToken &&
           ((lowerIdentifier === "in" &&
@@ -374,6 +374,7 @@ export function tokenize(line: string, context?: ExecutionContext): Token[] {
             (lowerIdentifier === "to" &&
               (prevToken.type === "number" ||
                 prevToken.type === "identifier" ||
+                prevToken.type === "previousResult" ||
                 (prevToken.type === "paren" && prevToken.value === ")")))) &&
           nextWord &&
           isFormatSuffix(nextWord)
@@ -435,6 +436,21 @@ export function tokenize(line: string, context?: ExecutionContext): Token[] {
           length: identifier.length,
         })
       } else {
+        // Check if this is a "previous result" keyword (prev, previous)
+        // These should always be recognized, regardless of context
+        const isPreviousResultKeyword = lowerIdentifier === "prev" || lowerIdentifier === "previous"
+
+        if (isPreviousResultKeyword && !isAssignment) {
+          // Emit a previousResult token
+          tokens.push({
+            type: "previousResult",
+            value: identifier,
+            position: start,
+            length: identifier.length,
+          })
+          continue
+        }
+
         // Regular identifier
         // If we have a context, check if this identifier is defined or is a special keyword
         // If not defined and not being assigned, skip it (treat as prose text)
@@ -442,10 +458,7 @@ export function tokenize(line: string, context?: ExecutionContext): Token[] {
         // OR preceded by "/" (which means it's part of a compound unit like "km/h")
         if (context && !isAssignment) {
           // Check if this identifier should be preserved as a token
-          const isSpecialKeyword =
-            lowerIdentifier === "of" || // percentage operator
-            lowerIdentifier === "prev" || // previous result reference
-            lowerIdentifier === "it" // previous result reference alias
+          const isSpecialKeyword = lowerIdentifier === "of" // percentage operator
 
           const isDefined =
             context.variables.has(identifier) ||

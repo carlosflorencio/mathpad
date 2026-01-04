@@ -26,6 +26,7 @@ export type TokenType =
   | "assign"
   | "keyword"
   | "conversion" // Special token type for "to" and "in" when used for conversions
+  | "previousResult" // Special token type for "prev", "previous" keywords
   | "eof"
 
 export interface Token {

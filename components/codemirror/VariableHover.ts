@@ -66,7 +66,7 @@ export function variableHoverExtension(preferences: Preferences) {
       let varValue = null
 
       // Check if this is "prev" or "previous" - these reference the last result
-      if (lowerText === "prev" || lowerText === "previous" || lowerText === "it") {
+      if (lowerText === "prev" || lowerText === "previous") {
         // Find the last non-empty result from lineResults
         if (context.lineResults.length > 0) {
           for (let i = context.lineResults.length - 1; i >= 0; i--) {
