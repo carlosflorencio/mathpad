@@ -5,7 +5,7 @@ import { defaultKeymap, history, historyKeymap, redo } from "@codemirror/command
 import { searchKeymap, highlightSelectionMatches } from "@codemirror/search"
 import { drawSelection, EditorView, keymap } from "@codemirror/view"
 import { EditorState } from "@codemirror/state"
-import { useRef, useEffect, useMemo } from "react"
+import { useRef, useEffect, useMemo, memo } from "react"
 import {
   mathpadLanguage,
   contextsField,
@@ -50,26 +50,31 @@ function textToEvaluations(text: string, preferences: Preferences): LineEvaluati
   }
 }
 
-export function Editor({ value, onUpdate, preferences, onCopy }: EditorProps) {
-  const evaluations = textToEvaluations(value, preferences)
+function EditorComponent({ value, onUpdate, preferences, onCopy }: EditorProps) {
+  // Memoize evaluations to avoid re-computing when props haven't changed
+  const evaluations = useMemo(() => textToEvaluations(value, preferences), [value, preferences])
   const evaluationsRef = useRef(evaluations)
 
   // Extract formatted results for the gutter
-  const results = evaluations.map((e) => e.formatted)
+  const results = useMemo(() => evaluations.map((e) => e.formatted), [evaluations])
   const resultsRef = useRef(results)
 
   // Extract error information from initial evaluations
-  const initialErrors: ErrorInfo[] = evaluations
-    .filter((e) => e.result.type === "error")
-    .map((e) => {
-      const errorResult = e.result as ErrorResult
-      return {
-        lineNumber: e.lineNumber,
-        position: errorResult.position,
-        length: errorResult.length,
-        message: errorResult.message,
-      }
-    })
+  const initialErrors: ErrorInfo[] = useMemo(
+    () =>
+      evaluations
+        .filter((e) => e.result.type === "error")
+        .map((e) => {
+          const errorResult = e.result as ErrorResult
+          return {
+            lineNumber: e.lineNumber,
+            position: errorResult.position,
+            length: errorResult.length,
+            message: errorResult.message,
+          }
+        }),
+    [evaluations]
+  )
 
   const errorsRef = useRef<ErrorInfo[]>(initialErrors)
 
@@ -85,25 +90,8 @@ export function Editor({ value, onUpdate, preferences, onCopy }: EditorProps) {
   })
 
   const onChange = (value: string) => {
-    const newEvaluations = textToEvaluations(value, preferences)
-    evaluationsRef.current = newEvaluations
-    resultsRef.current = newEvaluations.map((e) => e.formatted)
-
-    // Extract error decorations
-    const newErrors: ErrorInfo[] = newEvaluations
-      .filter((e) => e.result.type === "error")
-      .map((e) => {
-        const errorResult = e.result as ErrorResult
-        return {
-          lineNumber: e.lineNumber,
-          position: errorResult.position,
-          length: errorResult.length,
-          message: errorResult.message,
-        }
-      })
-
-    errorsRef.current = newErrors
-
+    // Don't re-evaluate here - let React's useMemo handle it on next render
+    // This eliminates the double evaluation!
     onUpdate(value)
   }
 
@@ -113,6 +101,7 @@ export function Editor({ value, onUpdate, preferences, onCopy }: EditorProps) {
   // Extension to dispatch errors and contexts on document changes
   const updateExtension = useMemo(
     () =>
+      // The ref is only accessed during CodeMirror callbacks, not during render
       // eslint-disable-next-line react-hooks/refs
       EditorView.updateListener.of((update) => {
         // Dispatch initial errors on first mount (not a doc change)
@@ -151,6 +140,7 @@ export function Editor({ value, onUpdate, preferences, onCopy }: EditorProps) {
   const gutterExtension = useMemo(
     () =>
       rightGutter(
+        // Refs are only accessed during CodeMirror callbacks, not during render
         // eslint-disable-next-line react-hooks/refs
         (lineNumber) => resultsRef.current[lineNumber - 1],
         // eslint-disable-next-line react-hooks/refs
@@ -166,6 +156,16 @@ export function Editor({ value, onUpdate, preferences, onCopy }: EditorProps) {
     initialContexts.set(evaluation.lineNumber, evaluation.context)
     initialResults.set(evaluation.lineNumber, evaluation.result)
   })
+
+  // Memoize variable hover extension to avoid recreation
+  // Preferences is an immutable class, so we can safely depend on the instance
+  const hoverExtension = useMemo(() => variableHoverExtension(preferences), [preferences])
+
+  // Memoize theme to avoid recreation
+  const themeExtension = useMemo(
+    () => (preferences.theme === "dark" ? dark : light),
+    [preferences.theme]
+  )
 
   return (
     <CodeMirror
@@ -187,10 +187,10 @@ export function Editor({ value, onUpdate, preferences, onCopy }: EditorProps) {
         errorDecorations(),
         separatorDecorationsExtension(),
         aggregateDecorationsExtension(),
-        variableHoverExtension(preferences),
+        hoverExtension,
         updateExtension,
         autocompletion({ override: [completions] }),
-        preferences.theme === "dark" ? dark : light,
+        themeExtension,
         history(),
         keymap.of([
           ...defaultKeymap,
@@ -204,3 +204,6 @@ export function Editor({ value, onUpdate, preferences, onCopy }: EditorProps) {
     />
   )
 }
+
+// Memoize the entire Editor component to prevent re-renders when props haven't changed
+export const Editor = memo(EditorComponent)

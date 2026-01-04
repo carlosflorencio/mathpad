@@ -463,7 +463,8 @@ export function rightGutter(
       const isSeparator = lineText.match(/^---+$/)
 
       // Filter out error messages from gutter (they're shown in hover tooltips instead)
-      const displayResult = result.startsWith("Error:") ? "" : result
+      // Handle undefined results gracefully
+      const displayResult = result?.startsWith("Error:") ? "" : result || ""
 
       return new (class extends RightGutterMarker {
         elementClass = isSeparator ? "cm-separator-gutter" : ""
