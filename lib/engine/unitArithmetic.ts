@@ -252,7 +252,6 @@ function distanceTimeToSpeed(
   }
 
   // Convert to base units for the target speed
-  const speedAdapter = formatRegistry.get(speedUnit)
   const speedToDistance: Record<string, string> = {
     "km/h": "km",
     "m/s": "m",

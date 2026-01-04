@@ -53,6 +53,12 @@ export function App() {
     }
   }, [isLoaded, preferences])
 
+  const closeDialogs = useCallback(() => {
+    setShowPreferences(false)
+    setShowHelp(false)
+    setShowMenu(false)
+  }, [])
+
   useEffect(() => {
     const handleKeyUp = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
@@ -62,13 +68,7 @@ export function App() {
 
     window.addEventListener("keyup", handleKeyUp)
     return () => window.removeEventListener("keyup", handleKeyUp)
-  }, [])
-
-  const closeDialogs = () => {
-    setShowPreferences(false)
-    setShowHelp(false)
-    setShowMenu(false)
-  }
+  }, [closeDialogs])
 
   const handleSavePreferences = useCallback(
     (prefs: Preferences) => {

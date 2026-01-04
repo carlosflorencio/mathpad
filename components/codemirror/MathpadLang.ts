@@ -121,9 +121,24 @@ export const viewTracker = ViewPlugin.fromClass(
 )
 
 /**
+ * State type for the StreamLanguage tokenizer
+ */
+interface MathpadLanguageState {
+  tokens: Token[]
+  currentTokenIndex: number
+  lineText: string
+  lineNumber: number
+  colonIndex: number
+  inUnitPart: boolean
+  currentToken: Token | null
+  hasAssignment: boolean
+  hasOperators: boolean
+}
+
+/**
  * Map engine token types to CodeMirror highlight tags
  */
-function tokenTypeToTag(token: Token, state: any): string | null {
+function tokenTypeToTag(token: Token, state: MathpadLanguageState): string | null {
   switch (token.type) {
     case "number":
       return "number"

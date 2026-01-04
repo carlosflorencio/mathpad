@@ -17,13 +17,8 @@ export function CodeMirror({
   ...props
 }: CodeMirrorProps) {
   const valueRef = useRef(valueProp)
-  valueRef.current = valueProp
-
   const onChangeRef = useRef(onChangeProp)
-  onChangeRef.current = onChangeProp
-
   const extensionsRef = useRef<Extension>(extensions)
-
   const editorParentElRef = useRef<HTMLDivElement | null>(null)
 
   const editorRef = useRef<null | {
@@ -31,6 +26,12 @@ export function CodeMirror({
   }>(null)
 
   const changeHandlerRef = useRef<null | ((newValue: string) => boolean)>(null)
+
+  // Update refs after render to avoid setting refs during render
+  useEffect(() => {
+    valueRef.current = valueProp
+    onChangeRef.current = onChangeProp
+  })
 
   useEffect(() => {
     if (editorParentElRef.current !== null) {

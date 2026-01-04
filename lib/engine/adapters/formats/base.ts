@@ -1,5 +1,3 @@
-import Big from "big.js"
-
 /**
  * Result type for format() method
  */
