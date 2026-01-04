@@ -3,13 +3,7 @@
 
 import { RangeCursor, RangeSet, RangeValue } from "@codemirror/state"
 import { Extension, Facet, MapMode } from "@codemirror/state"
-import {
-  BlockInfo,
-  BlockType,
-  EditorView,
-  ViewPlugin,
-  ViewUpdate,
-} from "@codemirror/view"
+import { BlockInfo, BlockType, EditorView, ViewPlugin, ViewUpdate } from "@codemirror/view"
 
 abstract class RightGutterMarker extends RangeValue {
   compare(other: RightGutterMarker) {

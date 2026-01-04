@@ -5,6 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Development Commands
 
 ### Running the Application
+
 ```bash
 npm install          # Install dependencies
 npm run dev          # Start development server (http://localhost:3000)
@@ -13,6 +14,7 @@ npm start            # Run production server
 ```
 
 ### Code Quality
+
 ```bash
 npm run lint         # Run ESLint
 npm run format       # Format code with Prettier
@@ -20,6 +22,7 @@ npm run format:check # Check formatting without writing
 ```
 
 ### Testing
+
 ```bash
 npm test             # Run all tests once
 npm run test:watch   # Run tests in watch mode
@@ -32,6 +35,7 @@ npm test -- -t "should handle operator prefix"
 ```
 
 ### Pre-Commit Workflow
+
 ```bash
 npm run lint && npm test && npm run format
 ```
@@ -47,6 +51,7 @@ The engine uses a **three-phase pipeline** to evaluate mathematical expressions:
 3. **Evaluator** (`evaluator.ts`) → Evaluates AST to produce results
 
 Key files:
+
 - `index.ts` - Public API: `evaluateDocument()`, `computeResults()`
 - `formatter.ts` - Number formatting with locale support
 - `types.ts` - Type definitions for tokens, AST nodes, results
@@ -96,6 +101,7 @@ Custom extensions for the editor:
 ### Adding a Math Function
 
 1. Create `lib/engine/adapters/functions/myfunction.ts`:
+
 ```typescript
 import Big from "big.js"
 import { FunctionAdapter } from "../base"
@@ -118,6 +124,7 @@ export class MyFunction implements FunctionAdapter {
 2. Create test file `lib/engine/adapters/functions/myfunction.test.ts` as a sibling
 
 3. Register in `lib/engine/adapters/registry.ts`:
+
 ```typescript
 import { MyFunction } from "./functions/myfunction"
 functionRegistry.register(new MyFunction())
@@ -128,6 +135,7 @@ functionRegistry.register(new MyFunction())
 ### Adding a Binary Operator
 
 Similar to functions, but implements `BinaryOperatorAdapter`:
+
 - Must specify `symbol` (e.g., `"+"`)
 - Has `executeNumbers()`, `executePercents()`, etc. for different operand types
 - Registered in `binaryOperatorRegistry`
@@ -154,6 +162,7 @@ See existing adapters for examples.
 ### Big.js for Precision
 
 All calculations use `big.js` to avoid IEEE 754 floating-point errors:
+
 - `0.1 + 0.2` = `0.3` (not `0.30000000000004`)
 - Critical for financial calculations
 - All numeric operations should use `Big` type, not JavaScript `number`
@@ -161,6 +170,7 @@ All calculations use `big.js` to avoid IEEE 754 floating-point errors:
 ### Operator-Prefix Syntax
 
 Lines starting with operators (e.g., `+1`, `*2`) operate on the previous result:
+
 ```
 100
 +10    → 110 (previous result + 10)
@@ -168,11 +178,13 @@ Lines starting with operators (e.g., `+1`, `*2`) operate on the previous result:
 ```
 
 **Parser logic** (`parser.ts:71-108`):
+
 - Checks if first token is a binary operator
 - Creates implicit `previousResult` AST node with `position: 0, length: 0`
 - No whitespace requirement (both `+1` and `+ 1` work)
 
 **Special case for first line** (`index.ts:225-297`):
+
 - If line starts with `+` or `-` WITHOUT space and there's no previous result, treat as unary
 - Example: `-5` on first line → `-5` (unary negation, not error)
 - Example: `+ 2` on first line → Error (has space, expects previous result)
@@ -180,6 +192,7 @@ Lines starting with operators (e.g., `+1`, `*2`) operate on the previous result:
 ### Error Decoration Edge Case
 
 `ErrorDecorations.ts:65-72` checks `error.length > 0` before creating underline decorations because:
+
 - Operator-prefix creates implicit `previousResult` nodes with `length: 0`
 - CodeMirror requires `from !== to` for mark decorations
 - Inline error messages still display even without underlines

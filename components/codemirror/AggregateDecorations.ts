@@ -2,6 +2,52 @@ import { ViewPlugin, Decoration, DecorationSet, EditorView, ViewUpdate } from "@
 import { RangeSetBuilder } from "@codemirror/state"
 import { aggregateFunctionRegistry } from "../../lib/engine/adapters/registry"
 import { contextsField } from "./MathpadLang"
+import { AggregateFunctionName } from "../../lib/engine/adapters/base"
+
+/**
+ * Helper function to find the position of an aggregate keyword in a line
+ */
+function findAggregateKeywordPosition(
+  line: string,
+  keywordRegex: RegExp
+): { start: number; end: number } | null {
+  const match = line.match(keywordRegex)
+  if (!match || match.index === undefined) return null
+
+  return {
+    start: match.index,
+    end: match.index + match[1].length,
+  }
+}
+
+/**
+ * Generate dynamic border styling for multiple aggregate borders
+ * Creates non-overlapping 3px borders stacked horizontally on the right edge
+ * Returns a style string with background-based borders
+ */
+function generateAggregateBorderStyle(aggregateTypes: AggregateFunctionName[]): string {
+  if (aggregateTypes.length === 0) return ""
+  if (aggregateTypes.length === 1) return "" // Single border handled by CSS
+
+  const totalWidth = aggregateTypes.length * 3
+
+  // Build a linear-gradient with hard stops for each color stripe
+  // Each stripe is 3px wide
+  const gradientStops: string[] = []
+
+  aggregateTypes.forEach((aggType, index) => {
+    const startPercent = ((index * 3) / totalWidth) * 100
+    const endPercent = (((index + 1) * 3) / totalWidth) * 100
+    gradientStops.push(
+      `var(--aggregate-${aggType}-color) ${startPercent}%`,
+      `var(--aggregate-${aggType}-color) ${endPercent}%`
+    )
+  })
+
+  const gradient = `linear-gradient(to right, ${gradientStops.join(", ")})`
+
+  return `background: ${gradient} right / ${totalWidth}px 100% no-repeat; padding-right: ${totalWidth}px;`
+}
 
 /**
  * ViewPlugin to add visual indicators on lines that are included in aggregate functions.
@@ -36,6 +82,7 @@ const aggregateDecorations = ViewPlugin.fromClass(
 
       // Build maps of line numbers
       const aggregateLines = new Set<number>()
+      const aggregateLineTypes = new Map<number, AggregateFunctionName>()
       const separatorLines = new Set<number>()
 
       for (const { from, to } of view.visibleRanges) {
@@ -56,7 +103,15 @@ const aggregateDecorations = ViewPlugin.fromClass(
 
           // Check if line contains an aggregate function
           if (trimmed && !trimmed.startsWith("#") && this.aggregateKeywords.test(trimmed)) {
-            aggregateLines.add(lineNumber)
+            const match = trimmed.match(this.aggregateKeywords)
+            if (match) {
+              const keyword = match[1]
+              const aggregateType = aggregateFunctionRegistry.mapKeywordToName(keyword)
+              if (aggregateType) {
+                aggregateLines.add(lineNumber)
+                aggregateLineTypes.set(lineNumber, aggregateType)
+              }
+            }
           }
 
           pos += line.length + 1 // +1 for newline
@@ -77,23 +132,81 @@ const aggregateDecorations = ViewPlugin.fromClass(
           // Check if this line is an aggregate function
           const isAggregateLine = aggregateLines.has(lineNumber)
 
-          // Always highlight aggregate function lines
+          // For aggregate keyword lines: add their own border PLUS borders for all aggregates ahead
           if (isAggregateLine) {
-            builder.add(
-              pos,
-              pos,
-              Decoration.line({
-                attributes: {
-                  class: "cm-aggregate-line",
-                },
-              })
-            )
+            const aggregateType = aggregateLineTypes.get(lineNumber)
+            if (aggregateType) {
+              // Look ahead to find ALL aggregates AFTER this line (not including itself)
+              const aggregateTypesAhead: AggregateFunctionName[] = []
+              for (const aggLine of aggregateLines) {
+                if (aggLine > lineNumber) {
+                  // Check if there's a separator between this line and the aggregate
+                  let hasSeparatorBetween = false
+                  for (const sepLine of separatorLines) {
+                    if (sepLine > lineNumber && sepLine < aggLine) {
+                      hasSeparatorBetween = true
+                      break
+                    }
+                  }
+
+                  // Only count aggregate if no separator between
+                  if (!hasSeparatorBetween) {
+                    const aggType = aggregateLineTypes.get(aggLine)
+                    if (aggType) {
+                      aggregateTypesAhead.push(aggType)
+                    }
+                  }
+                }
+              }
+
+              // Combine: this aggregate's own type + aggregates ahead
+              // Put current aggregate first, then aggregates ahead
+              const aggregateTypesForThisLine = [aggregateType, ...aggregateTypesAhead]
+
+              // Generate dynamic border style for multiple borders
+              const borderStyle = generateAggregateBorderStyle(aggregateTypesForThisLine)
+
+              // Apply borders using inline style for dynamic borders
+              if (aggregateTypesForThisLine.length === 1) {
+                // Single aggregate - use CSS class
+                builder.add(
+                  pos,
+                  pos,
+                  Decoration.line({
+                    attributes: {
+                      class: `cm-aggregate-line-${aggregateType}`,
+                    },
+                  })
+                )
+              } else {
+                // Multiple aggregates - use inline style with gradient
+                builder.add(
+                  pos,
+                  pos,
+                  Decoration.line({
+                    attributes: {
+                      style: borderStyle,
+                    },
+                  })
+                )
+              }
+
+              // Add keyword underline decoration AFTER line decorations
+              const keywordPos = findAggregateKeywordPosition(line, this.aggregateKeywords)
+              if (keywordPos) {
+                builder.add(
+                  pos + keywordPos.start,
+                  pos + keywordPos.end,
+                  Decoration.mark({ class: `cm-aggregate-keyword-${aggregateType}` })
+                )
+              }
+            }
           }
           // For non-aggregate lines: check if they have results and feed into an aggregate
           else if (context && context.lineResults.length > 0 && !separatorLines.has(lineNumber)) {
-            // Look ahead to see if there's an aggregate on a future line IN THE SAME CONTEXT
+            // Look ahead to find ALL aggregates on future lines IN THE SAME CONTEXT
             // (i.e., before any separator)
-            let hasAggregateAhead = false
+            const aggregateTypesAhead: AggregateFunctionName[] = []
             for (const aggLine of aggregateLines) {
               if (aggLine > lineNumber) {
                 // Check if there's a separator between this line and the aggregate
@@ -107,23 +220,42 @@ const aggregateDecorations = ViewPlugin.fromClass(
 
                 // Only count aggregate if no separator between
                 if (!hasSeparatorBetween) {
-                  hasAggregateAhead = true
-                  break
+                  const aggregateType = aggregateLineTypes.get(aggLine)
+                  if (aggregateType) {
+                    aggregateTypesAhead.push(aggregateType)
+                  }
                 }
               }
             }
 
-            // Highlight lines that feed values into an aggregate
-            if (hasAggregateAhead) {
-              builder.add(
-                pos,
-                pos,
-                Decoration.line({
-                  attributes: {
-                    class: "cm-aggregate-line",
-                  },
-                })
-              )
+            // Highlight lines that feed values into aggregates
+            if (aggregateTypesAhead.length > 0) {
+              // Generate dynamic border style for multiple borders
+              const borderStyle = generateAggregateBorderStyle(aggregateTypesAhead)
+
+              if (aggregateTypesAhead.length === 1) {
+                // Single aggregate - use CSS class
+                builder.add(
+                  pos,
+                  pos,
+                  Decoration.line({
+                    attributes: {
+                      class: `cm-aggregate-line-${aggregateTypesAhead[0]}`,
+                    },
+                  })
+                )
+              } else {
+                // Multiple aggregates - use inline style with gradient
+                builder.add(
+                  pos,
+                  pos,
+                  Decoration.line({
+                    attributes: {
+                      style: borderStyle,
+                    },
+                  })
+                )
+              }
             }
           }
 
@@ -150,8 +282,57 @@ export function aggregateDecorationsExtension() {
  * Theme styling for aggregate indicators
  */
 const aggregateTheme = EditorView.baseTheme({
-  ".cm-aggregate-line": {
-    borderRight: "3px solid rgb(100, 149, 237)",
+  // Single aggregate borders
+  ".cm-aggregate-line-sum": {
+    borderRight: "3px solid var(--aggregate-sum-color)",
     paddingRight: "3px",
+  },
+  ".cm-aggregate-line-avg": {
+    borderRight: "3px solid var(--aggregate-avg-color)",
+    paddingRight: "3px",
+  },
+  ".cm-aggregate-line-min": {
+    borderRight: "3px solid var(--aggregate-min-color)",
+    paddingRight: "3px",
+  },
+  ".cm-aggregate-line-max": {
+    borderRight: "3px solid var(--aggregate-max-color)",
+    paddingRight: "3px",
+  },
+  ".cm-aggregate-line-count": {
+    borderRight: "3px solid var(--aggregate-count-color)",
+    paddingRight: "3px",
+  },
+
+  // Keyword underlines
+  ".cm-aggregate-keyword-sum": {
+    textDecoration: "underline",
+    textDecorationColor: "var(--aggregate-sum-color)",
+    textDecorationThickness: "2px",
+    textUnderlineOffset: "3px",
+  },
+  ".cm-aggregate-keyword-avg": {
+    textDecoration: "underline",
+    textDecorationColor: "var(--aggregate-avg-color)",
+    textDecorationThickness: "2px",
+    textUnderlineOffset: "3px",
+  },
+  ".cm-aggregate-keyword-min": {
+    textDecoration: "underline",
+    textDecorationColor: "var(--aggregate-min-color)",
+    textDecorationThickness: "2px",
+    textUnderlineOffset: "3px",
+  },
+  ".cm-aggregate-keyword-max": {
+    textDecoration: "underline",
+    textDecorationColor: "var(--aggregate-max-color)",
+    textDecorationThickness: "2px",
+    textUnderlineOffset: "3px",
+  },
+  ".cm-aggregate-keyword-count": {
+    textDecoration: "underline",
+    textDecorationColor: "var(--aggregate-count-color)",
+    textDecorationThickness: "2px",
+    textUnderlineOffset: "3px",
   },
 })

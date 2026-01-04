@@ -11,6 +11,11 @@ export const colors = {
   variable: "hsl(280, 70%, 50%)", // Purple/magenta for variables
   operator: "hsl(0, 0%, 50%)", // Gray for operators
   conversionKeyword: "hsl(150, 60%, 40%)", // Green for conversion keywords (to, in)
+  aggregateSum: "hsl(0, 100%, 50%)", // Red for sum
+  aggregateAvg: "hsl(30, 100%, 45%)", // Orange for avg
+  aggregateMin: "hsl(60, 80%, 40%)", // Yellow for min
+  aggregateMax: "hsl(120, 80%, 35%)", // Green for max
+  aggregateCount: "hsl(240, 100%, 40%)", // Blue for count
   background: "hsl(0, 0%, 100%)",
   darkBackground: "hsl(0, 0%, 95%)",
   highlightBackground: "transparent",
@@ -27,6 +32,11 @@ const lightTheme = EditorView.theme(
       "--separator-bg": "hsl(0, 0%, 94%)",
       "--separator-border": "hsl(0, 0%, 80%)",
       "--separator-text": "hsl(0, 0%, 40%)",
+      "--aggregate-sum-color": colors.aggregateSum,
+      "--aggregate-avg-color": colors.aggregateAvg,
+      "--aggregate-min-color": colors.aggregateMin,
+      "--aggregate-max-color": colors.aggregateMax,
+      "--aggregate-count-color": colors.aggregateCount,
     },
     ".cm-content": {
       caretColor: colors.cursor,

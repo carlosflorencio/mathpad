@@ -240,7 +240,8 @@ export function evaluateDocument(text: string, preferences: Preferences): LineEv
         // Check if there's a number or another operator after (for cases like "+5", "-50%", or "--5")
         const nextToken = tokens[1]
         // Also check that there's NO whitespace between the operator and the next token
-        const hasNoWhitespace = nextToken && firstToken.position + firstToken.length === nextToken.position
+        const hasNoWhitespace =
+          nextToken && firstToken.position + firstToken.length === nextToken.position
 
         if (
           nextToken &&
@@ -285,7 +286,10 @@ export function evaluateDocument(text: string, preferences: Preferences): LineEv
             operator: firstToken.value as "+" | "-",
             operand: buildUnaryOperand(tokens.slice(1)),
             position: firstToken.position,
-            length: tokens[tokens.length - 2].position + tokens[tokens.length - 2].length - firstToken.position,
+            length:
+              tokens[tokens.length - 2].position +
+              tokens[tokens.length - 2].length -
+              firstToken.position,
           }
           const [unaryResult, unaryContext] = evaluate(unaryAst, context)
           if (unaryResult.type !== "error") {
