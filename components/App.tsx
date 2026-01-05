@@ -17,6 +17,7 @@ import { ConflictResolutionModal } from "./modals/ConflictResolutionModal"
 import { ExternalDeletionModal } from "./modals/ExternalDeletionModal"
 import { ManageNotesModal } from "./modals/ManageNotesModal"
 import { ShareModal } from "./modals/ShareModal"
+import { MenuIcon, ShareIcon, HelpIcon, FolderIcon, PlusIcon, QuestionIcon } from "./icons"
 import { QuickActionPalette, Action } from "./QuickActionPalette"
 import { useKeyBindings } from "@/hooks/useKeyBindings"
 import * as darkTheme from "./codemirror/DarkTheme"
@@ -153,15 +154,16 @@ export function App() {
 
   const closeDialogs = useCallback(() => {
     setShowPreferences(false)
-    setShowHelpMenu(false)
     setShowKeybindingsModal(false)
     setShowSyntaxModal(false)
     setShowAboutModal(false)
     setShowMenu(false)
+    setShowHelpMenu(false)
     setShowNotesMenu(false)
     setShowManageNotes(false)
     setShowFolderSyncHelp(false)
     setShowQuickActions(false)
+    setShowShareModal(false)
   }, [])
 
   useEffect(() => {
@@ -204,20 +206,7 @@ export function App() {
       id: "new-note",
       label: "New Note",
       description: "Create a new note",
-      icon: (
-        <svg
-          width="16"
-          height="16"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <path d="M12 5v14M5 12h14" />
-        </svg>
-      ),
+      icon: <PlusIcon />,
       handler: () => {
         createNote()
         showToast("New note created")
@@ -416,12 +405,6 @@ export function App() {
 
   const isFileSystemSupported = FileSystemNoteRepository.isSupported()
 
-  const handleShowFolderInOS = useCallback(() => {
-    // The File System Access API doesn't provide a way to open the folder in the OS
-    // We can only inform the user of the folder name
-    showToast(`Syncing with: ${folderName}`)
-  }, [folderName, showToast])
-
   const startRename = useCallback((noteId: string, currentName: string) => {
     renameBlurEnabledRef.current = false
     setRenamingNoteId(noteId)
@@ -515,7 +498,6 @@ export function App() {
         showKeybindingsModal ||
         showSyntaxModal ||
         showAboutModal ||
-        conflictData ||
         showManageNotes ||
         showFolderSyncHelp ||
         showShareModal ||
@@ -586,255 +568,33 @@ export function App() {
 
       <ToastContainer toasts={toasts} onRemove={removeToast} />
 
-      {/* Top Left Menu & Share & Note Name */}
-      <div className="fixed top-4 left-4 flex gap-2 items-center select-none">
+      {/* Desktop: Top Left Menu & Share & Note Name */}
+      <div className="fixed top-4 left-4 hidden md:flex gap-2 items-center select-none">
         <div className="relative">
           <button title="Menu" className="icon-button" onClick={() => setShowMenu(!showMenu)}>
-            <svg
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <line x1="3" y1="12" x2="21" y2="12"></line>
-              <line x1="3" y1="6" x2="21" y2="6"></line>
-              <line x1="3" y1="18" x2="21" y2="18"></line>
-            </svg>
+            <MenuIcon />
           </button>
-
-          {showMenu && (
-            <div className="dropdown-menu">
-              <div
-                className="dropdown-item"
-                onClick={() => {
-                  createNote()
-                  setShowMenu(false)
-                  showToast("New note created")
-                }}
-              >
-                New Note
-              </div>
-
-              <div
-                className="relative"
-                ref={notesMenuRef}
-                onMouseEnter={handleNotesMenuHover}
-                onMouseLeave={handleNotesMenuLeave}
-              >
-                <div className="dropdown-item flex justify-between items-center">
-                  <span>Notes</span>
-                  <span className="ml-2">▸</span>
-                </div>
-
-                {showNotesMenu && (
-                  <div
-                    className="dropdown-menu"
-                    style={{ left: "100%", top: 0, minWidth: "250px" }}
-                    onMouseEnter={handleNotesMenuHover}
-                    onMouseLeave={handleNotesMenuLeave}
-                  >
-                    {notes.map((note) => (
-                      <div
-                        key={note.id}
-                        className="dropdown-item"
-                        onClick={() => {
-                          switchNote(note.id)
-                          setShowMenu(false)
-                          setShowNotesMenu(false)
-                        }}
-                      >
-                        {note.id === activeNote.id && "• "}
-                        {note.name}
-                      </div>
-                    ))}
-                    <div className="border-t border-[var(--ui-border-color)] my-1"></div>
-                    <div
-                      className="dropdown-item"
-                      onClick={() => {
-                        setShowManageNotes(true)
-                        setShowMenu(false)
-                        setShowNotesMenu(false)
-                      }}
-                    >
-                      Manage Notes
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <div className="border-t border-[var(--ui-border-color)] my-1"></div>
-
-              <div
-                className="dropdown-item flex justify-between items-center"
-                style={{
-                  opacity: isFileSystemSupported ? 1 : 0.5,
-                  cursor: isFileSystemSupported ? "pointer" : "not-allowed",
-                }}
-              >
-                <span
-                  onClick={
-                    isFileSystemSupported
-                      ? () => {
-                          handleOpenFolder()
-                          setShowMenu(false)
-                        }
-                      : undefined
-                  }
-                  className="flex-1"
-                  title={
-                    !isFileSystemSupported
-                      ? "File System API not supported in this browser"
-                      : undefined
-                  }
-                >
-                  {isFolderMapped ? "Change Folder" : "Open Folder"}
-                </span>
-                {isFileSystemSupported && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      setShowFolderSyncHelp(true)
-                      setShowMenu(false)
-                    }}
-                    className="ml-2 px-1.5 py-1 text-[var(--text-muted)] hover:text-[var(--text-color)] border border-[var(--ui-border-color)] rounded cursor-pointer hover:border-[var(--text-muted)] transition-colors"
-                    title="Learn about folder sync"
-                  >
-                    <svg
-                      width="14"
-                      height="14"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <circle cx="12" cy="12" r="10"></circle>
-                      <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
-                      <line x1="12" y1="17" x2="12.01" y2="17"></line>
-                    </svg>
-                  </button>
-                )}
-              </div>
-
-              {isFolderMapped && (
-                <div
-                  className="dropdown-item flex justify-between items-center"
-                  title="Stop syncing with folder. Notes will remain in the app."
-                >
-                  <span
-                    onClick={() => {
-                      handleCloseFolder()
-                      setShowMenu(false)
-                    }}
-                    className="flex-1"
-                  >
-                    Close Folder
-                  </span>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      setShowFolderSyncHelp(true)
-                      setShowMenu(false)
-                    }}
-                    className="ml-2 px-1.5 py-1 text-[var(--text-muted)] hover:text-[var(--text-color)] border border-[var(--ui-border-color)] rounded cursor-pointer hover:border-[var(--text-muted)] transition-colors"
-                    title="Learn about folder sync"
-                  >
-                    <svg
-                      width="14"
-                      height="14"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <circle cx="12" cy="12" r="10"></circle>
-                      <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
-                      <line x1="12" y1="17" x2="12.01" y2="17"></line>
-                    </svg>
-                  </button>
-                </div>
-              )}
-
-              <div className="border-t border-[var(--ui-border-color)] my-1"></div>
-
-              <div
-                className="dropdown-item"
-                onClick={() => {
-                  setShowPreferences(true)
-                  setShowMenu(false)
-                }}
-              >
-                Preferences
-              </div>
-
-              <div
-                className="dropdown-item md:hidden"
-                onClick={() => {
-                  handleShare()
-                  setShowMenu(false)
-                }}
-              >
-                Share
-              </div>
-
-              <div
-                className="dropdown-item md:hidden"
-                onClick={() => {
-                  setShowHelpMenu(true)
-                  setShowMenu(false)
-                }}
-              >
-                Help
-              </div>
-            </div>
-          )}
         </div>
 
         <button title="Share" className="hidden md:flex icon-button" onClick={handleShare}>
-          <svg
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path>
-            <polyline points="16 6 12 2 8 6"></polyline>
-            <line x1="12" y1="2" x2="12" y2="15"></line>
-          </svg>
+          <ShareIcon />
         </button>
 
         {/* Folder and Note Name - unified display */}
-        <div className="hidden md:flex items-center gap-2 px-3 py-1 text-[var(--text-color)] bg-[var(--bg-dropdown)] rounded">
+        <div
+          className="hidden md:flex items-center gap-2 text-[var(--text-color)] bg-[var(--bg-dropdown)] rounded"
+          style={{
+            padding: "var(--ui-button-padding)",
+            minHeight: "calc(var(--ui-button-size) + 2 * var(--ui-button-padding))",
+          }}
+        >
           {isFolderMapped && folderName && (
             <>
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="text-[var(--text-muted)]"
-              >
-                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
-              </svg>
+              <FolderIcon />
               <span
-                onClick={handleShowFolderInOS}
+                onClick={() => setShowManageNotes(true)}
                 className="cursor-pointer hover:opacity-70 text-[var(--text-muted)]"
-                title={`Syncing with: ${folderName}`}
+                title="Click to manage notes"
               >
                 {folderName}
               </span>
@@ -867,39 +627,200 @@ export function App() {
         </div>
       </div>
 
-      {/* Bottom Right Help/Docs */}
+      {/* Mobile: Bottom Right Menu Button */}
+      <div className="fixed bottom-4 right-4 md:hidden select-none">
+        <button
+          title="Menu"
+          className="icon-button rounded-full"
+          onClick={() => setShowMenu(!showMenu)}
+        >
+          <MenuIcon />
+        </button>
+      </div>
+
+      {/* Desktop: Bottom Right Help/Docs */}
       <div className="fixed bottom-4 right-4 hidden md:block select-none">
         <button
           title="Help & Documentation"
           className="icon-button rounded-full"
           onClick={() => setShowHelpMenu(true)}
         >
-          <svg
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <circle cx="12" cy="12" r="10"></circle>
-            <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
-            <line x1="12" y1="17" x2="12.01" y2="17"></line>
-          </svg>
+          <HelpIcon />
         </button>
-
-        {showHelpMenu && (
-          <HelpMenu
-            onClose={() => setShowHelpMenu(false)}
-            onSelectKeybindings={() => setShowKeybindingsModal(true)}
-            onSelectSyntax={() => setShowSyntaxModal(true)}
-            onSelectFolderSync={() => setShowFolderSyncHelp(true)}
-            onSelectAbout={() => setShowAboutModal(true)}
-          />
-        )}
       </div>
+
+      {/* Help Menu - works for both mobile and desktop */}
+      {showHelpMenu && (
+        <HelpMenu
+          onClose={() => setShowHelpMenu(false)}
+          onSelectKeybindings={() => setShowKeybindingsModal(true)}
+          onSelectSyntax={() => setShowSyntaxModal(true)}
+          onSelectFolderSync={() => setShowFolderSyncHelp(true)}
+          onSelectAbout={() => setShowAboutModal(true)}
+        />
+      )}
+
+      {/* Shared Menu Dropdown - positioned for mobile (above button) or desktop (below button) */}
+      {showMenu && (
+        <div className="dropdown-menu mobile-menu fixed right-4 md:top-16 md:left-4 md:right-auto">
+          <div
+            className="dropdown-item"
+            onClick={() => {
+              createNote()
+              setShowMenu(false)
+              showToast("New note created")
+            }}
+          >
+            New Note
+          </div>
+
+          <div
+            className="relative"
+            ref={notesMenuRef}
+            onMouseEnter={handleNotesMenuHover}
+            onMouseLeave={handleNotesMenuLeave}
+          >
+            <div className="dropdown-item flex justify-between items-center">
+              <span>Notes</span>
+              <span className="ml-2">▸</span>
+            </div>
+
+            {showNotesMenu && (
+              <div
+                className="dropdown-menu"
+                style={{ left: "100%", top: 0, minWidth: "250px" }}
+                onMouseEnter={handleNotesMenuHover}
+                onMouseLeave={handleNotesMenuLeave}
+              >
+                {notes.map((note) => (
+                  <div
+                    key={note.id}
+                    className="dropdown-item"
+                    onClick={() => {
+                      switchNote(note.id)
+                      setShowMenu(false)
+                      setShowNotesMenu(false)
+                    }}
+                  >
+                    {note.id === activeNote.id && "• "}
+                    {note.name}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div
+            className="dropdown-item"
+            onClick={() => {
+              setShowManageNotes(true)
+              setShowMenu(false)
+            }}
+          >
+            Manage Notes
+          </div>
+
+          <div className="border-t border-[var(--ui-border-color)] my-1"></div>
+
+          <div
+            className="dropdown-item flex justify-between items-center"
+            style={{
+              opacity: isFileSystemSupported ? 1 : 0.5,
+              cursor: isFileSystemSupported ? "pointer" : "not-allowed",
+            }}
+          >
+            <span
+              onClick={
+                isFileSystemSupported
+                  ? () => {
+                      handleOpenFolder()
+                      setShowMenu(false)
+                    }
+                  : undefined
+              }
+              className="flex-1"
+              title={
+                !isFileSystemSupported ? "File System API not supported in this browser" : undefined
+              }
+            >
+              {isFolderMapped ? "Change Folder" : "Open Folder"}
+            </span>
+            {isFileSystemSupported && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setShowFolderSyncHelp(true)
+                  setShowMenu(false)
+                }}
+                className="ml-2 px-1.5 py-1 text-[var(--text-muted)] hover:text-[var(--text-color)] border border-[var(--ui-border-color)] rounded cursor-pointer hover:border-[var(--text-muted)] transition-colors"
+                title="Learn about folder sync"
+              >
+                <QuestionIcon />
+              </button>
+            )}
+          </div>
+
+          {isFolderMapped && (
+            <div
+              className="dropdown-item flex justify-between items-center"
+              title="Stop syncing with folder. Notes will remain in the app."
+            >
+              <span
+                onClick={() => {
+                  handleCloseFolder()
+                  setShowMenu(false)
+                }}
+                className="flex-1"
+              >
+                Close Folder
+              </span>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setShowFolderSyncHelp(true)
+                  setShowMenu(false)
+                }}
+                className="ml-2 px-1.5 py-1 text-[var(--text-muted)] hover:text-[var(--text-color)] border border-[var(--ui-border-color)] rounded cursor-pointer hover:border-[var(--text-muted)] transition-colors"
+                title="Learn about folder sync"
+              >
+                <QuestionIcon />
+              </button>
+            </div>
+          )}
+
+          <div className="border-t border-[var(--ui-border-color)] my-1"></div>
+
+          <div
+            className="dropdown-item"
+            onClick={() => {
+              setShowPreferences(true)
+              setShowMenu(false)
+            }}
+          >
+            Preferences
+          </div>
+
+          <div
+            className="dropdown-item md:hidden"
+            onClick={() => {
+              handleShare()
+              setShowMenu(false)
+            }}
+          >
+            Share
+          </div>
+
+          <div
+            className="dropdown-item md:hidden"
+            onClick={() => {
+              setShowHelpMenu(true)
+              setShowMenu(false)
+            }}
+          >
+            Help
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -373,7 +373,14 @@ export function useNotes() {
       if (result.ok) {
         setFolderName(result.value)
         setIsFolderMapped(true)
-        // Trigger initial sync
+
+        // Immediately sync all existing local storage notes to filesystem
+        const currentCollection = collectionRef.current
+        if (currentCollection.count > 0) {
+          await fileSystemRepo.saveAll(currentCollection)
+        }
+
+        // Trigger initial sync to check for any external changes
         await syncWithFolder()
       } else {
         console.error("Failed to open folder:", result.error)

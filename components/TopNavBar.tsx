@@ -50,15 +50,8 @@ export function TopNavBar({
     <div className="flex items-center justify-between py-4 px-6 border-b border-[var(--ui-border-color)]">
       {/* Left: Menu */}
       <div className="relative select-none">
-        <button
-          title="Menu"
-          className="icon-button rounded"
-          onClick={onMenuToggle}
-          style={{ padding: "0.5rem 0.75rem" }}
-        >
+        <button title="Menu" className="icon-button rounded" onClick={onMenuToggle}>
           <svg
-            width="20"
-            height="20"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
@@ -107,7 +100,13 @@ export function TopNavBar({
       {/* Center: Note Title */}
       <div className="flex items-center gap-2 min-w-0">
         {isFolderMapped && folderName && (
-          <span className="text-sm text-[var(--text-muted)] truncate">{folderName} /</span>
+          <span
+            className="text-sm text-[var(--text-muted)] truncate cursor-pointer hover:opacity-70"
+            onClick={onManageNotesClick}
+            title="Click to manage notes"
+          >
+            {folderName} /
+          </span>
         )}
         {isRenaming ? (
           <input
@@ -131,6 +130,19 @@ export function TopNavBar({
           >
             {activeNote.name}
           </span>
+        )}
+      </div>
+
+      {/* Right: Manage Notes (when no folder) */}
+      <div className="flex items-center gap-2">
+        {!isFolderMapped && (
+          <button
+            title="Manage Notes"
+            className="icon-button rounded text-sm"
+            onClick={onManageNotesClick}
+          >
+            Manage Notes
+          </button>
         )}
       </div>
     </div>

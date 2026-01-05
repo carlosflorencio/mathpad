@@ -241,6 +241,25 @@ export class FileSystemNoteRepository implements NoteRepository {
 
       this.fileHandles.set(note.id, fileHandle)
 
+      // Check if file content has changed before writing
+      try {
+        const file = await fileHandle.getFile()
+        const existingContent = await file.text()
+        const existingData = JSON.parse(existingContent) as FileFormat
+
+        // Only write if content or name has changed
+        if (
+          existingData.name === note.name &&
+          existingData.content === note.content &&
+          existingData.id === note.id
+        ) {
+          // No changes, skip writing
+          return { ok: true, value: undefined }
+        }
+      } catch {
+        // File doesn't exist or couldn't be read, proceed with writing
+      }
+
       // Write to file
       const writable = await fileHandle.createWritable()
       await writable.write(JSON.stringify(fileFormat, null, 2))

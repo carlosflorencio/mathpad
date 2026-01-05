@@ -1,5 +1,6 @@
 import { Note } from "@/lib/notes/Note"
 import { useCallback, useRef, useState } from "react"
+import { AlertIcon, TrashIcon } from "@/components/icons"
 
 interface ManageNotesModalProps {
   notes: Note[]
@@ -98,38 +99,7 @@ export function ManageNotesModal({
                       className="px-2 py-1 text-[var(--text-muted)] hover:text-red-500 border border-[var(--ui-border-color)] rounded cursor-pointer hover:border-red-500"
                       title={deleteConfirmId === note.id ? "Click again to confirm" : "Delete"}
                     >
-                      {deleteConfirmId === note.id ? (
-                        <svg
-                          width="16"
-                          height="16"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        >
-                          <circle cx="12" cy="12" r="10"></circle>
-                          <line x1="12" y1="8" x2="12" y2="12"></line>
-                          <line x1="12" y1="16" x2="12.01" y2="16"></line>
-                        </svg>
-                      ) : (
-                        <svg
-                          width="16"
-                          height="16"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        >
-                          <polyline points="3 6 5 6 21 6"></polyline>
-                          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                          <line x1="10" y1="11" x2="10" y2="17"></line>
-                          <line x1="14" y1="11" x2="14" y2="17"></line>
-                        </svg>
-                      )}
+                      {deleteConfirmId === note.id ? <AlertIcon /> : <TrashIcon />}
                     </button>
                   )}
                 </>
@@ -152,38 +122,7 @@ export function ManageNotesModal({
                       className="px-2 py-1 text-[var(--text-muted)] hover:text-red-500 border border-[var(--ui-border-color)] rounded cursor-pointer hover:border-red-500"
                       title={deleteConfirmId === note.id ? "Click again to confirm" : "Delete"}
                     >
-                      {deleteConfirmId === note.id ? (
-                        <svg
-                          width="16"
-                          height="16"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        >
-                          <circle cx="12" cy="12" r="10"></circle>
-                          <line x1="12" y1="8" x2="12" y2="12"></line>
-                          <line x1="12" y1="16" x2="12.01" y2="16"></line>
-                        </svg>
-                      ) : (
-                        <svg
-                          width="16"
-                          height="16"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        >
-                          <polyline points="3 6 5 6 21 6"></polyline>
-                          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                          <line x1="10" y1="11" x2="10" y2="17"></line>
-                          <line x1="14" y1="11" x2="14" y2="17"></line>
-                        </svg>
-                      )}
+                      {deleteConfirmId === note.id ? <AlertIcon /> : <TrashIcon />}
                     </button>
                   )}
                 </>
