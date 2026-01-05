@@ -4,7 +4,7 @@ interface AboutModalProps {
 
 export function AboutModal({ onClose }: AboutModalProps) {
   return (
-    <div className="modal" style={{ maxWidth: "500px" }}>
+    <div className="modal">
       <h2 className="text-lg mb-4">About MathPad</h2>
 
       <div className="space-y-4 text-[var(--text-color)]">

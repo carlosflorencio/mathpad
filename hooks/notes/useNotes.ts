@@ -46,10 +46,15 @@ export function useNotes() {
   const save = useCallback(async () => {
     if (!activeNoteId) return
 
-    // Use current collection from ref to avoid stale closure
+    // Get the latest content from editorContentRef in App, or use current collection
     const currentCollection = collectionRef.current
     const currentNote = currentCollection.findById(activeNoteId)
     if (!currentNote) return
+
+    // Only save if content has actually changed
+    if (currentNote.content === lastSavedContentRef.current) {
+      return
+    }
 
     try {
       const result = await notesService.saveNote(activeNoteId, currentCollection)
@@ -74,7 +79,7 @@ export function useNotes() {
     // Schedule new save
     autoSaveTimerRef.current = setTimeout(() => {
       save()
-    }, 500)
+    }, 200)
   }, [save])
 
   // Initialize on mount
@@ -260,20 +265,24 @@ export function useNotes() {
   // Update content
   const updateContent = useCallback(
     (content: string) => {
-      if (!activeNote) return
+      if (!activeNoteId) return
 
-      const result = notesService.updateNoteContent(activeNote.id, content, collection)
-      if (result.ok) {
-        setCollection(result.value)
-        // Schedule debounced save (only if content actually changed)
-        if (content !== lastSavedContentRef.current) {
-          scheduleSave()
+      // Use functional form of setState to always get latest collection
+      setCollection((currentCollection) => {
+        const result = notesService.updateNoteContent(activeNoteId, content, currentCollection)
+        if (result.ok) {
+          // Schedule debounced save (only if content actually changed)
+          if (content !== lastSavedContentRef.current) {
+            scheduleSave()
+          }
+          return result.value
+        } else {
+          console.error("Failed to update content:", result.error)
+          return currentCollection
         }
-      } else {
-        console.error("Failed to update content:", result.error)
-      }
+      })
     },
-    [activeNote, collection, scheduleSave]
+    [activeNoteId, scheduleSave]
   )
 
   // Share note

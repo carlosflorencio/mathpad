@@ -64,10 +64,10 @@ export function KeybindingsModal({ onClose }: KeybindingsModalProps) {
   }))
 
   return (
-    <div className="modal" style={{ maxWidth: "600px" }}>
+    <div className="modal">
       <h2 className="text-lg mb-4">Keyboard Shortcuts</h2>
 
-      <div className="space-y-6" style={{ maxHeight: "80vh", overflowY: "auto" }}>
+      <div className="space-y-6">
         {groupedBindings.map(
           ({ category, bindings }) =>
             bindings.length > 0 && (

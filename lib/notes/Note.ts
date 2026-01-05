@@ -58,10 +58,6 @@ export class Note {
     }
     return (hash >>> 0).toString(16).padStart(8, "0")
   }
-
-  toSanitizedFilename(): string {
-    return this._name.replace(/[/\\:*?"<>|]/g, "-").trim()
-  }
 }
 
 /**

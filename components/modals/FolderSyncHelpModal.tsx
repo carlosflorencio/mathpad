@@ -4,7 +4,7 @@ interface FolderSyncHelpModalProps {
 
 export function FolderSyncHelpModal({ onClose }: FolderSyncHelpModalProps) {
   return (
-    <div className="modal" style={{ maxWidth: "750px", maxHeight: "90vh", overflowY: "auto" }}>
+    <div className="modal">
       <h2 className="text-lg mb-4">Folder Sync</h2>
       <div className="space-y-4 text-[var(--text-color)]">
         <div>

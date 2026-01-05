@@ -226,7 +226,7 @@ export class FileSystemNoteRepository implements NoteRepository {
     }
 
     try {
-      const filename = this.getUniqueFilename(note)
+      const filename = `${note.id.slice(0, 8)}.json`
       const fileFormat: FileFormat = {
         version: "1.0",
         id: note.id,
@@ -235,27 +235,11 @@ export class FileSystemNoteRepository implements NoteRepository {
       }
 
       // Get or create file handle
-      let fileHandle: FileSystemFileHandle | undefined = this.fileHandles.get(note.id)
+      const fileHandle =
+        this.fileHandles.get(note.id) ||
+        (await this.folderHandle.getFileHandle(filename, { create: true }))
 
-      // Check if filename changed (note was renamed)
-      if (fileHandle) {
-        const oldFilename = fileHandle.name
-        if (oldFilename !== filename) {
-          // Delete old file
-          try {
-            await this.folderHandle.removeEntry(oldFilename)
-          } catch (error) {
-            console.warn(`Failed to delete old file: ${oldFilename}`, error)
-          }
-          fileHandle = undefined
-        }
-      }
-
-      // Create new file handle if needed
-      if (!fileHandle) {
-        fileHandle = await this.folderHandle.getFileHandle(filename, { create: true })
-        this.fileHandles.set(note.id, fileHandle)
-      }
+      this.fileHandles.set(note.id, fileHandle)
 
       // Write to file
       const writable = await fileHandle.createWritable()
@@ -284,6 +268,14 @@ export class FileSystemNoteRepository implements NoteRepository {
       if (fileHandle) {
         await this.folderHandle.removeEntry(fileHandle.name)
         this.fileHandles.delete(noteId)
+      } else {
+        // Try to delete by UUID filename directly
+        const filename = `${noteId.slice(0, 8)}.json`
+        try {
+          await this.folderHandle.removeEntry(filename)
+        } catch {
+          // File might not exist, that's okay
+        }
       }
       return { ok: true, value: undefined }
     } catch (error) {
@@ -292,26 +284,6 @@ export class FileSystemNoteRepository implements NoteRepository {
         error: `Failed to delete note: ${error instanceof Error ? error.message : String(error)}`,
       }
     }
-  }
-
-  /**
-   * Generate unique filename for a note
-   * If collision detected, append UUID suffix
-   */
-  private getUniqueFilename(note: Note): string {
-    const sanitized = note.toSanitizedFilename()
-    let filename = `${sanitized}.json`
-
-    // Check for collision with other notes
-    for (const [otherId, handle] of this.fileHandles.entries()) {
-      if (otherId !== note.id && handle.name === filename) {
-        // Collision detected, append UUID suffix
-        filename = `${sanitized}-${note.id.slice(0, 8)}.json`
-        break
-      }
-    }
-
-    return filename
   }
 
   /**

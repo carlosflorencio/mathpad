@@ -1,6 +1,6 @@
 "use client"
 
-import { EditorState, Extension, Transaction } from "@codemirror/state"
+import { EditorState, Extension } from "@codemirror/state"
 import { EditorView } from "@codemirror/view"
 import { useEffect, useRef } from "react"
 
@@ -40,26 +40,18 @@ export function CodeMirror({
         doc: valueRef.current,
         extensions: [
           EditorView.theme({
-            "&": { alignSelf: "stretch", flex: "1 0 auto" },
+            "&": { height: "100%", flex: "1 1 auto", display: "flex", flexDirection: "column" },
+            ".cm-scroller": { flex: "1 1 auto" },
           }),
           extensionsRef.current,
-          EditorState.transactionExtender.of((tr: Transaction) => {
-            const editorView = view
-            if (editorView !== undefined) {
-              const prevDoc = editorView.state.doc.toString()
-              const nextDoc = tr.newDoc.toString()
-              if (prevDoc === nextDoc) {
-                return tr
-              } else {
-                changeHandlerRef.current = (newValue: string) => {
-                  changeHandlerRef.current = null
-                  return newValue === nextDoc
-                }
-                onChangeRef.current?.(nextDoc)
-                return null
+          EditorView.updateListener.of((update) => {
+            if (update.docChanged) {
+              const nextDoc = update.state.doc.toString()
+              changeHandlerRef.current = (newValue: string) => {
+                changeHandlerRef.current = null
+                return newValue === nextDoc
               }
-            } else {
-              return null
+              onChangeRef.current?.(nextDoc)
             }
           }),
         ],
@@ -85,18 +77,35 @@ export function CodeMirror({
     const changeHandler = changeHandlerRef.current
     const handledChange = changeHandler?.(valueProp)
     if (handledChange !== true && editorRef.current !== null) {
-      editorRef.current.view.dispatch(
-        editorRef.current.view.state.update({
-          changes: {
-            from: 0,
-            to: editorRef.current.view.state.doc.toString().length,
-            insert: valueProp,
-          },
-          filter: false,
-        })
-      )
+      // Only update if the content actually differs from what's in the editor
+      const currentContent = editorRef.current.view.state.doc.toString()
+      if (currentContent !== valueProp) {
+        editorRef.current.view.dispatch(
+          editorRef.current.view.state.update({
+            changes: {
+              from: 0,
+              to: currentContent.length,
+              insert: valueProp,
+            },
+            filter: false,
+          })
+        )
+      }
     }
   }, [valueProp])
 
-  return <div {...props} ref={editorParentElRef} />
+  return (
+    <div
+      {...props}
+      ref={editorParentElRef}
+      style={{ display: "flex", flexDirection: "column", flex: 1, ...props.style }}
+      onClick={(e) => {
+        // Focus the editor when clicking anywhere in the container
+        if (editorRef.current && !editorRef.current.view.hasFocus) {
+          editorRef.current.view.focus()
+        }
+        props.onClick?.(e)
+      }}
+    />
+  )
 }

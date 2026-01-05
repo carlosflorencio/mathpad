@@ -4,7 +4,7 @@ interface EditorSyntaxModalProps {
 
 export function EditorSyntaxModal({ onClose }: EditorSyntaxModalProps) {
   return (
-    <div className="modal" style={{ maxWidth: "750px", maxHeight: "90vh", overflowY: "auto" }}>
+    <div className="modal">
       <h2 className="text-lg mb-4">Editor Syntax Guide</h2>
 
       <div className="space-y-6 text-[var(--text-color)]">

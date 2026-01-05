@@ -65,7 +65,7 @@ export function ManageNotesModal({
   )
 
   return (
-    <div className="modal" style={{ maxWidth: "500px" }}>
+    <div className="modal">
       <h2 className="text-lg mb-4">Manage Notes</h2>
       <div className="space-y-2 mb-4 max-h-96 overflow-y-auto">
         {notes.map((note) => {

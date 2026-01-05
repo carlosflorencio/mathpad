@@ -93,6 +93,21 @@ export function App() {
   const [toasts, setToasts] = useState<Array<{ id: number; message: string }>>([])
   const [conflictData, setConflictData] = useState<ShareData | null>(null)
 
+  // Track the content we're currently editing to prevent stale updates
+  const [editorContent, setEditorContent] = useState(activeNote?.content || "")
+  const editorContentRef = useRef(editorContent)
+  const activeNoteIdRef = useRef(activeNote?.id)
+
+  // Update editor content ONLY when active note ID changes (switching notes)
+  // Do NOT update when content changes (that would cause data loss during typing)
+  useEffect(() => {
+    if (activeNote && activeNote.id !== activeNoteIdRef.current) {
+      setEditorContent(activeNote.content)
+      editorContentRef.current = activeNote.content
+      activeNoteIdRef.current = activeNote.id
+    }
+  }, [activeNote?.id, activeNote?.content])
+
   const menuTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined)
   const notesMenuRef = useRef<HTMLDivElement>(null)
   const renameBlurEnabledRef = useRef(false)
@@ -483,8 +498,13 @@ export function App() {
       <div className="desk-container">
         <div className="paper-container">
           <Editor
-            value={activeNote.content}
-            onUpdate={updateContent}
+            value={editorContent}
+            onUpdate={(content) => {
+              // Don't update editorContent state here to avoid re-renders
+              // Only update the ref for tracking
+              editorContentRef.current = content
+              updateContent(content)
+            }}
             preferences={preferences}
             onCopy={(value: string) => showToast(`Copied: ${value}`)}
           />

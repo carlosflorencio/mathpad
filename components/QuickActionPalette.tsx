@@ -142,7 +142,7 @@ export function QuickActionPalette({
   return (
     <>
       <div className="modal-backdrop" onClick={onClose} />
-      <div className="modal" style={{ maxWidth: "600px", padding: "0" }}>
+      <div className="modal" style={{ padding: "0" }}>
         <div className="p-4 border-b border-[var(--ui-border-color)]">
           <input
             ref={inputRef}

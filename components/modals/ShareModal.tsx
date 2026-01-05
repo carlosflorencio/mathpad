@@ -21,7 +21,7 @@ export function ShareModal({ url, onClose }: ShareModalProps) {
   }
 
   return (
-    <div className="modal" style={{ maxWidth: "500px" }}>
+    <div className="modal">
       <h2 className="text-lg mb-4">Share Note</h2>
 
       <p className="text-sm text-[var(--text-muted)] mb-4">

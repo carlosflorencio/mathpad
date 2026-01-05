@@ -90,8 +90,7 @@ function EditorComponent({ value, onUpdate, preferences, onCopy }: EditorProps) 
   })
 
   const onChange = (value: string) => {
-    // Don't re-evaluate here - let React's useMemo handle it on next render
-    // This eliminates the double evaluation!
+    // Update immediately for typing responsiveness
     onUpdate(value)
   }
 

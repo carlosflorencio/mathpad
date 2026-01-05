@@ -41,13 +41,6 @@ describe("Note", () => {
     })
   })
 
-  describe("toSanitizedFilename", () => {
-    it("should replace invalid filesystem characters", () => {
-      const note = Note.create('Test/File:Name*?"<>|', "")
-      expect(note.toSanitizedFilename()).toBe("Test-File-Name------")
-    })
-  })
-
   describe("computeContentHash", () => {
     it("should compute consistent hash for same content", () => {
       const note1 = Note.create("Test", "hello world")
