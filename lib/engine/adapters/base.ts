@@ -61,12 +61,12 @@ export interface FunctionAdapter {
   validate?(value: Big): string | null
 
   /**
-   * Execute the function on a date value
-   * @param value The input date
+   * Execute the function on a date value (or no argument for date constructors)
+   * @param value The input date (optional for functions like today(), now())
    * @returns The result (either a number or a date)
    * @throws Error if execution fails
    */
-  executeDate?(value: Date): Big | Date
+  executeDate?(value?: Date): Big | Date
 
   /**
    * Validate if the date value is acceptable for this function

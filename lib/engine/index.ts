@@ -3,7 +3,7 @@ import { parse } from "./parser"
 import { evaluate } from "./evaluator"
 import { formatResult, createFormatOptions } from "./formatter"
 import { createContext, LineEvaluation, ASTNode } from "./types"
-import { Preferences } from "../types"
+import { Preferences } from "../preferences/Preferences"
 import { formatRegistry } from "./adapters/formats/registry"
 import { binaryOperatorRegistry } from "./adapters/registry"
 

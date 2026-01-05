@@ -539,12 +539,16 @@ class Parser {
     }
 
     // Unexpected token - return empty node
+    // IMPORTANT: Don't advance if the token is a closing paren - let the caller handle it
+    const isClosingParen = current.type === "paren" && current.value === ")"
     const node: EmptyNode = {
       kind: "empty",
       position: current.position,
       length: current.length,
     }
-    this.advance()
+    if (!isClosingParen) {
+      this.advance()
+    }
     return node
   }
 }

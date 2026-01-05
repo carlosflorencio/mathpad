@@ -512,13 +512,17 @@ export function tokenize(line: string, context?: ExecutionContext): Token[] {
 
         // Check if this is a date keyword (today, now, yesterday, tomorrow)
         // These should always be recognized, regardless of context
+        // EXCEPT when followed by parentheses (function call like today(), now())
         const isDateKeyword =
           lowerIdentifier === "today" ||
           lowerIdentifier === "now" ||
           lowerIdentifier === "yesterday" ||
           lowerIdentifier === "tomorrow"
 
-        if (isDateKeyword && !isAssignment) {
+        // Check if next non-whitespace character is an opening parenthesis (function call)
+        const isFunctionCall = nextPos < line.length && line[nextPos] === "("
+
+        if (isDateKeyword && !isAssignment && !isFunctionCall) {
           // Emit a date token
           tokens.push({
             type: "date",

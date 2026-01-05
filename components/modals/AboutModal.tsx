@@ -9,15 +9,15 @@ export function AboutModal({ onClose }: AboutModalProps) {
 
       <div className="space-y-4 text-[var(--text-color)]">
         <div className="text-center py-4">
-          <div className="text-4xl mb-2">🧮</div>
-          <h3 className="text-xl font-semibold mb-1">MathPad</h3>
-          <p className="text-sm text-[var(--text-muted)]">Version 0.1.0</p>
+          <div className="mb-4 flex justify-center">
+            <img src="/mathpad/logo.png" alt="MathPad Logo" width={80} height={80} />
+          </div>
+          <h3 className="text-xl font-semibold">MathPad</h3>
         </div>
 
         <div className="border-t border-[var(--ui-border-color)] pt-4">
           <p className="text-sm text-[var(--text-muted)] mb-3">
             A powerful calculator with support for variables, units, and real-time computation.
-            Built with Next.js, React, and TypeScript.
           </p>
         </div>
 
@@ -37,26 +37,16 @@ export function AboutModal({ onClose }: AboutModalProps) {
         </div>
 
         <div className="border-t border-[var(--ui-border-color)] pt-4">
-          <h4 className="font-semibold text-sm mb-2">Technology Stack</h4>
-          <div className="grid grid-cols-2 gap-2 text-xs text-[var(--text-muted)]">
-            <div className="p-2 bg-[var(--bg-input)] rounded">
-              <strong>Framework:</strong> Next.js 16
-            </div>
-            <div className="p-2 bg-[var(--bg-input)] rounded">
-              <strong>UI:</strong> React 19
-            </div>
-            <div className="p-2 bg-[var(--bg-input)] rounded">
-              <strong>Editor:</strong> CodeMirror 6
-            </div>
-            <div className="p-2 bg-[var(--bg-input)] rounded">
-              <strong>Math:</strong> Big.js
-            </div>
-          </div>
-        </div>
-
-        <div className="border-t border-[var(--ui-border-color)] pt-4 text-center">
-          <p className="text-xs text-[var(--text-muted)]">
-            Built with ❤️ using modern web technologies
+          <p className="text-xs text-[var(--text-muted)] text-center">
+            Currency exchange rates are updated daily.{" "}
+            <a
+              href="https://www.exchangerate-api.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline hover:text-[var(--text-color)]"
+            >
+              Rates By Exchange Rate API
+            </a>
           </p>
         </div>
       </div>

@@ -25,7 +25,7 @@ import { separatorDecorationsExtension } from "./codemirror/SeparatorDecorations
 import { aggregateDecorationsExtension } from "./codemirror/AggregateDecorations"
 import { variableHoverExtension } from "./codemirror/VariableHover"
 import { CodeMirror } from "./codemirror/CodeMirror"
-import { Preferences } from "@/lib/types"
+import { Preferences } from "@/lib/preferences/Preferences"
 import { evaluateDocument, LineEvaluation, ErrorResult } from "@/lib/engine"
 
 interface EditorProps {

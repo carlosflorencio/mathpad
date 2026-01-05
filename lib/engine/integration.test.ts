@@ -1797,6 +1797,25 @@ z = y * 2`
       expect(results[0]).not.toContain("Error")
       expect(results[0]).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/)
     })
+
+    it("should support today() in binary expressions (date subtraction)", () => {
+      const results = computeResults("today() - 2020-01-01", prefs)
+      expect(results[0]).not.toContain("Error")
+      expect(results[0]).toMatch(/^\d+,?\d*day$/) // Should be a duration like "2,196day"
+    })
+
+    it("should support now() in binary expressions (date subtraction)", () => {
+      const results = computeResults("now() - 2020-01-01", prefs)
+      expect(results[0]).not.toContain("Error")
+      expect(results[0]).toMatch(/^\d+,?\d*(\.\d+)?day$/) // Should be a duration with decimals
+    })
+
+    it("should calculate age from birthday with today()", () => {
+      const results = computeResults("birthday = 1990-06-15\ntoday() - birthday", prefs)
+      expect(results[0]).toBe("1990-06-15") // birthday assignment
+      expect(results[1]).not.toContain("Error") // today() - birthday calculation
+      expect(results[1]).toMatch(/^\d+,?\d*day$/) // Should be a duration in days
+    })
   })
 
   describe("Complex Date Scenarios", () => {

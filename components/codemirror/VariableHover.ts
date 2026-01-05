@@ -1,7 +1,7 @@
 import { hoverTooltip, EditorView } from "@codemirror/view"
 import { contextsField, resultsField } from "./MathpadLang"
 import { formatResult, createFormatOptions } from "@/lib/engine/formatter"
-import { Preferences } from "@/lib/types"
+import { Preferences } from "@/lib/preferences/Preferences"
 import { aggregateFunctionRegistry } from "@/lib/engine/adapters/registry"
 
 /**
