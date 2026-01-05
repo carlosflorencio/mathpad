@@ -6,9 +6,19 @@ import { Preferences } from "@/lib/preferences/Preferences"
 import { ShareData } from "@/lib/notes/types"
 import { FileSystemNoteRepository } from "@/lib/notes/FileSystemNoteRepository"
 import { Editor } from "./Editor"
-import { Help } from "./Help"
+import { HelpMenu } from "./HelpMenu"
 import { PreferencesDialog } from "./PreferencesDialog"
 import { ToastContainer } from "./Toast"
+import { KeybindingsModal } from "./modals/KeybindingsModal"
+import { EditorSyntaxModal } from "./modals/EditorSyntaxModal"
+import { FolderSyncHelpModal } from "./modals/FolderSyncHelpModal"
+import { AboutModal } from "./modals/AboutModal"
+import { ConflictResolutionModal } from "./modals/ConflictResolutionModal"
+import { ExternalDeletionModal } from "./modals/ExternalDeletionModal"
+import { ManageNotesModal } from "./modals/ManageNotesModal"
+import { ShareModal } from "./modals/ShareModal"
+import { QuickActionPalette, Action } from "./QuickActionPalette"
+import { useKeyBindings } from "@/hooks/useKeyBindings"
 import * as darkTheme from "./codemirror/DarkTheme"
 import * as lightTheme from "./codemirror/LightTheme"
 
@@ -67,16 +77,20 @@ export function App() {
   } = useNotes()
 
   const [showPreferences, setShowPreferences] = useState(false)
-  const [showHelp, setShowHelp] = useState(false)
+  const [showHelpMenu, setShowHelpMenu] = useState(false)
+  const [showKeybindingsModal, setShowKeybindingsModal] = useState(false)
+  const [showSyntaxModal, setShowSyntaxModal] = useState(false)
+  const [showAboutModal, setShowAboutModal] = useState(false)
   const [showMenu, setShowMenu] = useState(false)
   const [showNotesMenu, setShowNotesMenu] = useState(false)
   const [showManageNotes, setShowManageNotes] = useState(false)
   const [showFolderSyncHelp, setShowFolderSyncHelp] = useState(false)
+  const [showQuickActions, setShowQuickActions] = useState(false)
+  const [showShareModal, setShowShareModal] = useState(false)
+  const [shareUrl, setShareUrl] = useState("")
   const [renamingNoteId, setRenamingNoteId] = useState<string | null>(null)
-  const [renamingInModal, setRenamingInModal] = useState(false)
   const [renameValue, setRenameValue] = useState("")
   const [toasts, setToasts] = useState<Array<{ id: number; message: string }>>([])
-  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
   const [conflictData, setConflictData] = useState<ShareData | null>(null)
 
   const menuTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined)
@@ -124,11 +138,15 @@ export function App() {
 
   const closeDialogs = useCallback(() => {
     setShowPreferences(false)
-    setShowHelp(false)
+    setShowHelpMenu(false)
+    setShowKeybindingsModal(false)
+    setShowSyntaxModal(false)
+    setShowAboutModal(false)
     setShowMenu(false)
     setShowNotesMenu(false)
     setShowManageNotes(false)
     setShowFolderSyncHelp(false)
+    setShowQuickActions(false)
   }, [])
 
   useEffect(() => {
@@ -136,7 +154,6 @@ export function App() {
       if (e.key === "Escape") {
         closeDialogs()
         setRenamingNoteId(null)
-        setDeleteConfirmId(null)
         setConflictData(null)
       }
     }
@@ -144,6 +161,197 @@ export function App() {
     window.addEventListener("keyup", handleKeyUp)
     return () => window.removeEventListener("keyup", handleKeyUp)
   }, [closeDialogs])
+
+  // Keyboard shortcuts
+  useKeyBindings({
+    bindings: [
+      {
+        key: "k",
+        ctrlOrCmd: true,
+        handler: () => setShowQuickActions(true),
+        description: "Open quick actions",
+      },
+      {
+        key: "n",
+        ctrlOrCmd: true,
+        handler: () => {
+          createNote()
+          showToast("New note created")
+        },
+        description: "Create new note",
+      },
+    ],
+  })
+
+  // Quick actions for palette
+  const quickActions: Action[] = [
+    {
+      id: "new-note",
+      label: "New Note",
+      description: "Create a new note",
+      icon: (
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M12 5v14M5 12h14" />
+        </svg>
+      ),
+      handler: () => {
+        createNote()
+        showToast("New note created")
+      },
+      keywords: ["create", "add"],
+    },
+    {
+      id: "manage-notes",
+      label: "Manage Notes",
+      description: "Rename and delete notes",
+      icon: (
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M3 3h18v18H3zM9 3v18M3 9h18M3 15h6" />
+        </svg>
+      ),
+      handler: () => setShowManageNotes(true),
+      keywords: ["rename", "delete", "organize"],
+    },
+    {
+      id: "open-folder",
+      label: isFolderMapped ? "Change Folder" : "Open Folder",
+      description: "Sync notes with a folder on your computer",
+      icon: (
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+        </svg>
+      ),
+      handler: () => {
+        handleOpenFolder()
+      },
+      keywords: ["sync", "folder", "file"],
+    },
+    ...(isFolderMapped
+      ? [
+          {
+            id: "close-folder",
+            label: "Close Folder",
+            description: "Stop syncing with folder",
+            icon: (
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+                <line x1="3" y1="3" x2="21" y2="21" />
+              </svg>
+            ),
+            handler: () => {
+              handleCloseFolder()
+            },
+            keywords: ["sync", "folder"],
+          },
+        ]
+      : []),
+    {
+      id: "preferences",
+      label: "Preferences",
+      description: "Change theme and font size",
+      icon: (
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <circle cx="12" cy="12" r="3" />
+          <path d="M12 1v6m0 6v6M5.6 5.6l4.2 4.2m4.2 4.2l4.2 4.2M1 12h6m6 0h6M5.6 18.4l4.2-4.2m4.2-4.2l4.2-4.2" />
+        </svg>
+      ),
+      handler: () => setShowPreferences(true),
+      keywords: ["settings", "theme", "font", "dark", "light"],
+    },
+    {
+      id: "share",
+      label: "Share",
+      description: "Copy share link to clipboard",
+      icon: (
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
+          <polyline points="16 6 12 2 8 6" />
+          <line x1="12" y1="2" x2="12" y2="15" />
+        </svg>
+      ),
+      handler: () => {
+        handleShare()
+      },
+      keywords: ["copy", "link", "export"],
+    },
+    {
+      id: "help",
+      label: "Help",
+      description: "View documentation and syntax guide",
+      icon: (
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <circle cx="12" cy="12" r="10" />
+          <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+          <line x1="12" y1="17" x2="12.01" y2="17" />
+        </svg>
+      ),
+      handler: () => setShowHelpMenu(true),
+      keywords: ["documentation", "docs", "syntax"],
+    },
+  ]
 
   const handleSavePreferences = useCallback(
     (prefs: Preferences) => {
@@ -166,6 +374,8 @@ export function App() {
     const url = shareNote()
     if (url) {
       navigator.clipboard.writeText(url)
+      setShareUrl(url)
+      setShowShareModal(true)
       showToast("Link copied to clipboard")
     }
   }, [shareNote, showToast])
@@ -197,38 +407,15 @@ export function App() {
     showToast(`Syncing with: ${folderName}`)
   }, [folderName, showToast])
 
-  const handleDeleteNote = useCallback(
-    (noteId: string) => {
-      const note = notes.find((n) => n.id === noteId)
-      if (!note) return
-
-      if (deleteConfirmId === noteId) {
-        // Confirmed, delete it
-        deleteNote(noteId)
-        setDeleteConfirmId(null)
-        showToast("Note deleted")
-      } else {
-        // Show confirmation
-        setDeleteConfirmId(noteId)
-        setTimeout(() => setDeleteConfirmId(null), 3000) // Reset after 3s
-      }
-    },
-    [notes, deleteNote, deleteConfirmId, showToast]
-  )
-
-  const startRename = useCallback(
-    (noteId: string, currentName: string, inModal: boolean = false) => {
-      renameBlurEnabledRef.current = false
-      setRenamingNoteId(noteId)
-      setRenamingInModal(inModal)
-      setRenameValue(currentName)
-      // Enable blur after a short delay to prevent immediate blur
-      setTimeout(() => {
-        renameBlurEnabledRef.current = true
-      }, 100)
-    },
-    []
-  )
+  const startRename = useCallback((noteId: string, currentName: string) => {
+    renameBlurEnabledRef.current = false
+    setRenamingNoteId(noteId)
+    setRenameValue(currentName)
+    // Enable blur after a short delay to prevent immediate blur
+    setTimeout(() => {
+      renameBlurEnabledRef.current = true
+    }, 100)
+  }, [])
 
   const finishRename = useCallback(() => {
     if (!renameBlurEnabledRef.current) {
@@ -246,7 +433,6 @@ export function App() {
       }
     }
     setRenamingNoteId(null)
-    setRenamingInModal(false)
     setRenameValue("")
   }, [renamingNoteId, renameValue, renameNote, showToast, notes])
 
@@ -306,10 +492,13 @@ export function App() {
       </div>
 
       {(showPreferences ||
-        showHelp ||
+        showKeybindingsModal ||
+        showSyntaxModal ||
+        showAboutModal ||
         conflictData ||
         showManageNotes ||
         showFolderSyncHelp ||
+        showShareModal ||
         pendingDeletions.length > 0) && <div className="modal-backdrop" onClick={closeDialogs} />}
 
       {showPreferences && (
@@ -320,292 +509,60 @@ export function App() {
         />
       )}
 
-      {showHelp && <Help close={closeDialogs} />}
+      {showKeybindingsModal && <KeybindingsModal onClose={() => setShowKeybindingsModal(false)} />}
 
-      {/* Conflict Resolution Dialog */}
+      {showSyntaxModal && <EditorSyntaxModal onClose={() => setShowSyntaxModal(false)} />}
+
+      {showAboutModal && <AboutModal onClose={() => setShowAboutModal(false)} />}
+
       {conflictData && (
-        <div className="modal">
-          <h2 className="text-lg mb-4">Note Already Exists</h2>
-          <p className="mb-4">
-            Note &quot;{conflictData.n || "Untitled"}&quot; already exists with different content.
-          </p>
-          <div className="flex gap-2 justify-end">
-            <button
-              onClick={() => handleConflictResolve("cancel")}
-              className="px-4 py-2 text-[var(--text-color)] hover:bg-[var(--bg-button-hover)] rounded"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={() => handleConflictResolve("keep-both")}
-              className="px-4 py-2 text-[var(--text-color)] hover:bg-[var(--bg-button-hover)] rounded"
-            >
-              Keep Both
-            </button>
-            <button
-              onClick={() => handleConflictResolve("replace")}
-              className="px-4 py-2 text-[var(--text-color)] hover:bg-[var(--bg-button-hover)] rounded"
-            >
-              Replace
-            </button>
-          </div>
-        </div>
+        <ConflictResolutionModal conflictData={conflictData} onResolve={handleConflictResolve} />
       )}
 
-      {/* External Deletion Confirmation Dialog */}
       {pendingDeletions.length > 0 && (
-        <div className="modal">
-          <h2 className="text-lg mb-4">Notes Deleted Externally</h2>
-          <p className="mb-4">
-            {pendingDeletions.length} note(s) were deleted from the synced folder:
-          </p>
-          <ul className="mb-4 space-y-1 max-h-48 overflow-y-auto">
-            {pendingDeletions.map((note) => (
-              <li key={note.id} className="text-[var(--text-muted)]">
-                • {note.name}
-              </li>
-            ))}
-          </ul>
-          <div className="flex gap-2 justify-end">
-            <button
-              onClick={() => {
-                cancelDeletions()
-                showToast("Deleted notes will be restored to folder")
-              }}
-              className="px-4 py-2 text-[var(--text-color)] hover:bg-[var(--bg-button-hover)] rounded"
-            >
-              Keep in App
-            </button>
-            <button
-              onClick={() => {
-                confirmDeletions()
-                showToast("Deleted notes removed from app")
-              }}
-              className="px-4 py-2 text-red-500 hover:bg-[var(--bg-button-hover)] rounded"
-            >
-              Remove from App
-            </button>
-          </div>
-        </div>
+        <ExternalDeletionModal
+          pendingDeletions={pendingDeletions}
+          onConfirm={() => {
+            confirmDeletions()
+            showToast("Deleted notes removed from app")
+          }}
+          onCancel={() => {
+            cancelDeletions()
+            showToast("Deleted notes will be restored to folder")
+          }}
+        />
       )}
 
-      {/* Manage Notes Dialog */}
       {showManageNotes && (
-        <div className="modal" style={{ maxWidth: "500px" }}>
-          <h2 className="text-lg mb-4">Manage Notes</h2>
-          <div className="space-y-2 mb-4 max-h-96 overflow-y-auto">
-            {notes.map((note) => {
-              return (
-                <div
-                  key={note.id}
-                  className="flex items-center gap-2 p-2 rounded hover:bg-[var(--bg-button-hover)]"
-                >
-                  {renamingNoteId === note.id && renamingInModal ? (
-                    <>
-                      <input
-                        type="text"
-                        value={renameValue}
-                        onChange={(e) => setRenameValue(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") finishRename()
-                          if (e.key === "Escape") setRenamingNoteId(null)
-                        }}
-                        onBlur={finishRename}
-                        className="flex-1 px-2 py-1 bg-[var(--bg-input)] text-[var(--text-color)] rounded border border-[var(--ui-border-color)] cursor-text outline-none focus:border-[var(--text-muted)]"
-                        ref={(input) => {
-                          if (input) {
-                            setTimeout(() => input.focus(), 0)
-                          }
-                        }}
-                      />
-                      {notes.length > 1 && (
-                        <button
-                          onClick={() => handleDeleteNote(note.id)}
-                          className="px-2 py-1 text-[var(--text-muted)] hover:text-red-500 border border-[var(--ui-border-color)] rounded cursor-pointer hover:border-red-500"
-                          title={deleteConfirmId === note.id ? "Click again to confirm" : "Delete"}
-                        >
-                          {deleteConfirmId === note.id ? (
-                            <svg
-                              width="16"
-                              height="16"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            >
-                              <circle cx="12" cy="12" r="10"></circle>
-                              <line x1="12" y1="8" x2="12" y2="12"></line>
-                              <line x1="12" y1="16" x2="12.01" y2="16"></line>
-                            </svg>
-                          ) : (
-                            <svg
-                              width="16"
-                              height="16"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            >
-                              <polyline points="3 6 5 6 21 6"></polyline>
-                              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                              <line x1="10" y1="11" x2="10" y2="17"></line>
-                              <line x1="14" y1="11" x2="14" y2="17"></line>
-                            </svg>
-                          )}
-                        </button>
-                      )}
-                    </>
-                  ) : (
-                    <>
-                      <span
-                        className="flex-1 text-[var(--text-color)] cursor-text"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          startRename(note.id, note.name, true)
-                        }}
-                        title="Click to rename"
-                      >
-                        {note.id === activeNote.id && "• "}
-                        {note.name}
-                      </span>
-                      {notes.length > 1 && (
-                        <button
-                          onClick={() => handleDeleteNote(note.id)}
-                          className="px-2 py-1 text-[var(--text-muted)] hover:text-red-500 border border-[var(--ui-border-color)] rounded cursor-pointer hover:border-red-500"
-                          title={deleteConfirmId === note.id ? "Click again to confirm" : "Delete"}
-                        >
-                          {deleteConfirmId === note.id ? (
-                            <svg
-                              width="16"
-                              height="16"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            >
-                              <circle cx="12" cy="12" r="10"></circle>
-                              <line x1="12" y1="8" x2="12" y2="12"></line>
-                              <line x1="12" y1="16" x2="12.01" y2="16"></line>
-                            </svg>
-                          ) : (
-                            <svg
-                              width="16"
-                              height="16"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            >
-                              <polyline points="3 6 5 6 21 6"></polyline>
-                              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                              <line x1="10" y1="11" x2="10" y2="17"></line>
-                              <line x1="14" y1="11" x2="14" y2="17"></line>
-                            </svg>
-                          )}
-                        </button>
-                      )}
-                    </>
-                  )}
-                </div>
-              )
-            })}
-          </div>
-          <div className="flex justify-end">
-            <button
-              onClick={() => setShowManageNotes(false)}
-              className="px-4 py-2 text-[var(--text-color)] hover:bg-[var(--bg-button-hover)] rounded"
-            >
-              Close
-            </button>
-          </div>
-        </div>
+        <ManageNotesModal
+          notes={notes}
+          activeNote={activeNote}
+          onClose={() => setShowManageNotes(false)}
+          onRename={(noteId, newName) => {
+            renameNote(noteId, newName)
+            showToast("Note renamed")
+          }}
+          onDelete={(noteId) => {
+            deleteNote(noteId)
+            showToast("Note deleted")
+          }}
+        />
       )}
 
-      {/* Folder Sync Help Dialog */}
-      {showFolderSyncHelp && (
-        <div className="modal" style={{ maxWidth: "750px", maxHeight: "90vh", overflowY: "auto" }}>
-          <h2 className="text-lg mb-4">Folder Sync</h2>
-          <div className="space-y-4 text-[var(--text-color)]">
-            <div>
-              <h3 className="font-semibold mb-2">What is Folder Sync?</h3>
-              <p className="text-sm text-[var(--text-muted)]">
-                Sync your notes with a folder on your computer. Notes are saved as{" "}
-                <code className="px-1 py-0.5 bg-[var(--bg-input)] rounded">.json</code> files and
-                automatically kept in sync.
-              </p>
-            </div>
+      {showFolderSyncHelp && <FolderSyncHelpModal onClose={() => setShowFolderSyncHelp(false)} />}
 
-            <div>
-              <h3 className="font-semibold mb-2">How it works</h3>
-              <ul className="text-sm text-[var(--text-muted)] space-y-2 list-disc list-inside">
-                <li>
-                  <strong>Choose a folder:</strong> Click &quot;Open Folder&quot; to select where
-                  notes should be saved
-                </li>
-                <li>
-                  <strong>Auto-sync:</strong> Changes sync automatically every 10 seconds and when
-                  you switch back to the app
-                </li>
-                <li>
-                  <strong>Edit anywhere:</strong> Open and edit the .json files with any text editor
-                </li>
-                <li>
-                  <strong>Always in the app:</strong> Notes are always saved in your browser first,
-                  so the app works offline
-                </li>
-              </ul>
-            </div>
+      {showShareModal && <ShareModal url={shareUrl} onClose={() => setShowShareModal(false)} />}
 
-            <div>
-              <h3 className="font-semibold mb-2">File Format</h3>
-              <p className="text-sm text-[var(--text-muted)] mb-2">
-                Each note is saved as{" "}
-                <code className="px-1 py-0.5 bg-[var(--bg-input)] rounded">note-name.json</code>:
-              </p>
-              <pre className="text-xs bg-[var(--bg-input)] p-3 rounded overflow-x-auto">
-                {`{
-  "version": "1.0",
-  "id": "...",
-  "name": "My Note",
-  "content": "note content..."
-}`}
-              </pre>
-            </div>
-
-            <div>
-              <h3 className="font-semibold mb-2">External Changes</h3>
-              <p className="text-sm text-[var(--text-muted)]">
-                If you edit or delete files outside the app, MathPad will detect changes and ask you
-                what to do. When conflicts occur, the newest version (by timestamp) wins.
-              </p>
-            </div>
-
-            <div className="bg-[var(--bg-input)] p-3 rounded">
-              <p className="text-sm text-[var(--text-muted)]">
-                <strong>Browser support:</strong> This feature requires Chrome 86+, Edge 86+, or
-                Safari 15.2+. Firefox is not currently supported.
-              </p>
-            </div>
-          </div>
-
-          <div className="flex justify-end mt-4">
-            <button
-              onClick={() => setShowFolderSyncHelp(false)}
-              className="px-4 py-2 text-[var(--text-color)] hover:bg-[var(--bg-button-hover)] rounded"
-            >
-              Got it
-            </button>
-          </div>
-        </div>
-      )}
+      <QuickActionPalette
+        isOpen={showQuickActions}
+        onClose={() => setShowQuickActions(false)}
+        actions={quickActions}
+        notes={notes}
+        activeNoteId={activeNote.id}
+        onSwitchNote={(noteId) => {
+          switchNote(noteId)
+        }}
+      />
 
       <ToastContainer toasts={toasts} onRemove={removeToast} />
 
@@ -746,14 +703,42 @@ export function App() {
 
               {isFolderMapped && (
                 <div
-                  className="dropdown-item"
-                  onClick={() => {
-                    handleCloseFolder()
-                    setShowMenu(false)
-                  }}
+                  className="dropdown-item flex justify-between items-center"
                   title="Stop syncing with folder. Notes will remain in the app."
                 >
-                  Close Folder
+                  <span
+                    onClick={() => {
+                      handleCloseFolder()
+                      setShowMenu(false)
+                    }}
+                    className="flex-1"
+                  >
+                    Close Folder
+                  </span>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setShowFolderSyncHelp(true)
+                      setShowMenu(false)
+                    }}
+                    className="ml-2 px-1.5 py-1 text-[var(--text-muted)] hover:text-[var(--text-color)] border border-[var(--ui-border-color)] rounded cursor-pointer hover:border-[var(--text-muted)] transition-colors"
+                    title="Learn about folder sync"
+                  >
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <circle cx="12" cy="12" r="10"></circle>
+                      <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+                      <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                    </svg>
+                  </button>
                 </div>
               )}
 
@@ -782,7 +767,7 @@ export function App() {
               <div
                 className="dropdown-item md:hidden"
                 onClick={() => {
-                  setShowHelp(true)
+                  setShowHelpMenu(true)
                   setShowMenu(false)
                 }}
               >
@@ -836,7 +821,7 @@ export function App() {
               <span className="text-[var(--text-muted)]">›</span>
             </>
           )}
-          {renamingNoteId === activeNote.id && !renamingInModal ? (
+          {renamingNoteId === activeNote.id ? (
             <input
               type="text"
               value={renameValue}
@@ -867,7 +852,7 @@ export function App() {
         <button
           title="Help & Documentation"
           className="icon-button rounded-full"
-          onClick={() => setShowHelp(true)}
+          onClick={() => setShowHelpMenu(true)}
         >
           <svg
             width="24"
@@ -884,6 +869,16 @@ export function App() {
             <line x1="12" y1="17" x2="12.01" y2="17"></line>
           </svg>
         </button>
+
+        {showHelpMenu && (
+          <HelpMenu
+            onClose={() => setShowHelpMenu(false)}
+            onSelectKeybindings={() => setShowKeybindingsModal(true)}
+            onSelectSyntax={() => setShowSyntaxModal(true)}
+            onSelectFolderSync={() => setShowFolderSyncHelp(true)}
+            onSelectAbout={() => setShowAboutModal(true)}
+          />
+        )}
       </div>
     </div>
   )
