@@ -1,5 +1,13 @@
 import Big from "big.js"
-import { ASTNode, EvalResult, ExecutionContext, NumberResult, PercentResult } from "./types"
+import {
+  ASTNode,
+  EvalResult,
+  ExecutionContext,
+  NumberResult,
+  PercentResult,
+  DateResult,
+  DurationResult,
+} from "./types"
 import {
   functionRegistry,
   binaryOperatorRegistry,
@@ -12,6 +20,30 @@ import { performUnitArithmetic } from "./unitArithmetic"
 // Configure Big.js for better precision
 Big.DP = 20 // Decimal places
 Big.RM = Big.roundHalfUp // Rounding mode
+
+// Duration units (time category)
+const DURATION_UNITS = new Set(["ms", "sec", "min", "hr", "day"])
+
+/**
+ * Check if a NumberResult is actually a duration (has a time unit)
+ */
+function isDuration(result: NumberResult): boolean {
+  if (!result.format) return false
+  return DURATION_UNITS.has(result.format)
+}
+
+/**
+ * Convert a NumberResult with duration format to DurationResult
+ */
+function toDurationResult(result: NumberResult): DurationResult {
+  const unit = result.format as "ms" | "sec" | "min" | "hr" | "day"
+  return {
+    type: "duration",
+    value: result.value,
+    unit,
+    format: result.format,
+  }
+}
 
 /**
  * Evaluate an AST node and return a result
@@ -28,6 +60,9 @@ export function evaluate(node: ASTNode, context: ExecutionContext): [EvalResult,
 
       case "percent":
         return evaluatePercent(node, context)
+
+      case "dateLiteral":
+        return evaluateDateLiteral(node, context)
 
       case "identifier":
         return evaluateIdentifier(node, context)
@@ -163,6 +198,70 @@ function evaluatePercent(
 }
 
 /**
+ * Evaluate a date literal (ISO format or keywords like "today", "now")
+ */
+function evaluateDateLiteral(
+  node: ASTNode & { kind: "dateLiteral" },
+  context: ExecutionContext
+): [EvalResult, ExecutionContext] {
+  try {
+    const value = node.value.toLowerCase()
+    let date: Date
+
+    // Handle date keywords
+    if (value === "now") {
+      date = new Date()
+    } else if (value === "today") {
+      // Current date at midnight UTC
+      const localNow = new Date()
+      date = new Date(Date.UTC(localNow.getFullYear(), localNow.getMonth(), localNow.getDate()))
+    } else if (value === "yesterday") {
+      const localNow = new Date()
+      const yesterday = new Date(
+        Date.UTC(localNow.getFullYear(), localNow.getMonth(), localNow.getDate())
+      )
+      yesterday.setUTCDate(yesterday.getUTCDate() - 1)
+      date = yesterday
+    } else if (value === "tomorrow") {
+      const localNow = new Date()
+      const tomorrow = new Date(
+        Date.UTC(localNow.getFullYear(), localNow.getMonth(), localNow.getDate())
+      )
+      tomorrow.setUTCDate(tomorrow.getUTCDate() + 1)
+      date = tomorrow
+    } else {
+      // Parse ISO format date
+      date = new Date(node.value)
+    }
+
+    // Validate the date
+    if (isNaN(date.getTime())) {
+      return [
+        {
+          type: "error",
+          message: "Invalid date format",
+          position: node.position,
+          length: node.length,
+        },
+        context,
+      ]
+    }
+
+    return [{ type: "date", value: date }, context]
+  } catch {
+    return [
+      {
+        type: "error",
+        message: "Invalid date format",
+        position: node.position,
+        length: node.length,
+      },
+      context,
+    ]
+  }
+}
+
+/**
  * Evaluate an identifier (variable reference)
  * Special identifiers: "prev" and "previous" reference the previous line's result
  */
@@ -248,24 +347,63 @@ function evaluateBinary(
 
   const op = node.operator
 
-  // Number + Number
-  if (left.type === "number" && right.type === "number") {
-    return evaluateBinaryNumbers(op, left, right, node, ctx2)
+  // Only convert time units to DurationResult when needed for date arithmetic
+  // For unit arithmetic (e.g., 100m / 10sec = 10m/s), keep them as NumberResult with format
+  const needsDurationConversion =
+    left.type === "date" ||
+    right.type === "date" ||
+    (left.type === "number" && isDuration(left) && right.type === "number" && isDuration(right))
+
+  const leftIsDuration = needsDurationConversion && left.type === "number" && isDuration(left)
+  const rightIsDuration = needsDurationConversion && right.type === "number" && isDuration(right)
+
+  const actualLeft: EvalResult = leftIsDuration ? toDurationResult(left as NumberResult) : left
+  const actualRight: EvalResult = rightIsDuration ? toDurationResult(right as NumberResult) : right
+
+  // Number + Number (excluding durations which were converted above)
+  if (actualLeft.type === "number" && actualRight.type === "number") {
+    return evaluateBinaryNumbers(op, actualLeft, actualRight, node, ctx2)
   }
 
   // Number + Percent
-  if (left.type === "number" && right.type === "percent") {
-    return evaluateNumberPercent(op, left, right, node, ctx2)
+  if (actualLeft.type === "number" && actualRight.type === "percent") {
+    return evaluateNumberPercent(op, actualLeft as NumberResult, actualRight, node, ctx2)
   }
 
   // Percent + Number (only valid for some operations)
-  if (left.type === "percent" && right.type === "number") {
-    return evaluatePercentNumber(op, left, right, node, ctx2)
+  if (actualLeft.type === "percent" && actualRight.type === "number") {
+    return evaluatePercentNumber(op, actualLeft, actualRight as NumberResult, node, ctx2)
   }
 
   // Percent + Percent
-  if (left.type === "percent" && right.type === "percent") {
-    return evaluatePercentPercent(op, left, right, node, ctx2)
+  if (actualLeft.type === "percent" && actualRight.type === "percent") {
+    return evaluatePercentPercent(op, actualLeft, actualRight, node, ctx2)
+  }
+
+  // Date + Duration or Duration + Date
+  if (actualLeft.type === "date" && actualRight.type === "duration") {
+    return evaluateDateDuration(op, actualLeft, actualRight, node, ctx2)
+  }
+  if (actualLeft.type === "duration" && actualRight.type === "date") {
+    return evaluateDurationDate(op, actualLeft, actualRight, node, ctx2)
+  }
+
+  // Date - Date
+  if (actualLeft.type === "date" && actualRight.type === "date") {
+    return evaluateDateDate(op, actualLeft, actualRight, node, ctx2)
+  }
+
+  // Duration + Duration or Duration - Duration
+  if (actualLeft.type === "duration" && actualRight.type === "duration") {
+    return evaluateDurationDuration(op, actualLeft, actualRight, node, ctx2)
+  }
+
+  // Duration * Number or Number * Duration
+  if (actualLeft.type === "duration" && actualRight.type === "number") {
+    return evaluateDurationNumber(op, actualLeft, actualRight as NumberResult, node, ctx2)
+  }
+  if (actualLeft.type === "number" && actualRight.type === "duration") {
+    return evaluateNumberDuration(op, actualLeft as NumberResult, actualRight, node, ctx2)
   }
 
   return [
@@ -543,6 +681,251 @@ function evaluatePercentPercent(
   try {
     const result = adapter.executePercentPercent(left.value, right.value)
     return [{ type: "percent", value: result }, context]
+  } catch (error) {
+    return [
+      {
+        type: "error",
+        message: error instanceof Error ? error.message : "Calculation error",
+        position: node.position,
+        length: node.length,
+      },
+      context,
+    ]
+  }
+}
+
+/**
+ * Evaluate Date + Duration or Date - Duration
+ */
+function evaluateDateDuration(
+  op: string,
+  left: DateResult,
+  right: DurationResult,
+  node: ASTNode,
+  context: ExecutionContext
+): [EvalResult, ExecutionContext] {
+  const adapter = binaryOperatorRegistry.get(op)
+  if (!adapter || !adapter.executeDateDuration) {
+    return [
+      {
+        type: "error",
+        message: `Cannot apply operator '${op}' to date and duration`,
+        position: node.position,
+        length: node.length,
+      },
+      context,
+    ]
+  }
+
+  try {
+    const result = adapter.executeDateDuration(left.value, right.value, right.unit)
+    return [{ type: "date", value: result }, context]
+  } catch (error) {
+    return [
+      {
+        type: "error",
+        message: error instanceof Error ? error.message : "Calculation error",
+        position: node.position,
+        length: node.length,
+      },
+      context,
+    ]
+  }
+}
+
+/**
+ * Evaluate Duration + Date
+ */
+function evaluateDurationDate(
+  op: string,
+  left: DurationResult,
+  right: DateResult,
+  node: ASTNode,
+  context: ExecutionContext
+): [EvalResult, ExecutionContext] {
+  const adapter = binaryOperatorRegistry.get(op)
+  if (!adapter || !adapter.executeDurationDate) {
+    return [
+      {
+        type: "error",
+        message: `Cannot apply operator '${op}' to duration and date`,
+        position: node.position,
+        length: node.length,
+      },
+      context,
+    ]
+  }
+
+  try {
+    const result = adapter.executeDurationDate(left.value, left.unit, right.value)
+    return [{ type: "date", value: result }, context]
+  } catch (error) {
+    return [
+      {
+        type: "error",
+        message: error instanceof Error ? error.message : "Calculation error",
+        position: node.position,
+        length: node.length,
+      },
+      context,
+    ]
+  }
+}
+
+/**
+ * Evaluate Date - Date
+ */
+function evaluateDateDate(
+  op: string,
+  left: DateResult,
+  right: DateResult,
+  node: ASTNode,
+  context: ExecutionContext
+): [EvalResult, ExecutionContext] {
+  const adapter = binaryOperatorRegistry.get(op)
+  if (!adapter || !adapter.executeDateDate) {
+    return [
+      {
+        type: "error",
+        message: `Cannot apply operator '${op}' to two dates`,
+        position: node.position,
+        length: node.length,
+      },
+      context,
+    ]
+  }
+
+  try {
+    const { value, unit } = adapter.executeDateDate(left.value, right.value)
+    return [{ type: "duration", value, unit: unit as "ms" | "sec" | "min" | "hr" | "day" }, context]
+  } catch (error) {
+    return [
+      {
+        type: "error",
+        message: error instanceof Error ? error.message : "Calculation error",
+        position: node.position,
+        length: node.length,
+      },
+      context,
+    ]
+  }
+}
+
+/**
+ * Evaluate Duration op Duration
+ */
+function evaluateDurationDuration(
+  op: string,
+  left: DurationResult,
+  right: DurationResult,
+  node: ASTNode,
+  context: ExecutionContext
+): [EvalResult, ExecutionContext] {
+  const adapter = binaryOperatorRegistry.get(op)
+  if (!adapter || !adapter.executeDurationDuration) {
+    return [
+      {
+        type: "error",
+        message: `Cannot apply operator '${op}' to two durations`,
+        position: node.position,
+        length: node.length,
+      },
+      context,
+    ]
+  }
+
+  try {
+    const { value, unit } = adapter.executeDurationDuration(
+      left.value,
+      left.unit,
+      right.value,
+      right.unit
+    )
+
+    // If unit is empty string, it's a dimensionless number (from duration / duration)
+    if (unit === "") {
+      return [{ type: "number", value }, context]
+    }
+
+    return [{ type: "duration", value, unit: unit as "ms" | "sec" | "min" | "hr" | "day" }, context]
+  } catch (error) {
+    return [
+      {
+        type: "error",
+        message: error instanceof Error ? error.message : "Calculation error",
+        position: node.position,
+        length: node.length,
+      },
+      context,
+    ]
+  }
+}
+
+/**
+ * Evaluate Duration * Number or Duration / Number
+ */
+function evaluateDurationNumber(
+  op: string,
+  left: DurationResult,
+  right: NumberResult,
+  node: ASTNode,
+  context: ExecutionContext
+): [EvalResult, ExecutionContext] {
+  const adapter = binaryOperatorRegistry.get(op)
+  if (!adapter || !adapter.executeDurationNumber) {
+    return [
+      {
+        type: "error",
+        message: `Cannot apply operator '${op}' to duration and number`,
+        position: node.position,
+        length: node.length,
+      },
+      context,
+    ]
+  }
+
+  try {
+    const { value, unit } = adapter.executeDurationNumber(left.value, left.unit, right.value)
+    return [{ type: "duration", value, unit: unit as "ms" | "sec" | "min" | "hr" | "day" }, context]
+  } catch (error) {
+    return [
+      {
+        type: "error",
+        message: error instanceof Error ? error.message : "Calculation error",
+        position: node.position,
+        length: node.length,
+      },
+      context,
+    ]
+  }
+}
+
+/**
+ * Evaluate Number * Duration
+ */
+function evaluateNumberDuration(
+  op: string,
+  left: NumberResult,
+  right: DurationResult,
+  node: ASTNode,
+  context: ExecutionContext
+): [EvalResult, ExecutionContext] {
+  const adapter = binaryOperatorRegistry.get(op)
+  if (!adapter || !adapter.executeNumberDuration) {
+    return [
+      {
+        type: "error",
+        message: `Cannot apply operator '${op}' to number and duration`,
+        position: node.position,
+        length: node.length,
+      },
+      context,
+    ]
+  }
+
+  try {
+    const { value, unit } = adapter.executeNumberDuration(left.value, right.value, right.unit)
+    return [{ type: "duration", value, unit: unit as "ms" | "sec" | "min" | "hr" | "day" }, context]
   } catch (error) {
     return [
       {
@@ -842,7 +1225,45 @@ function evaluateFunction(
   const [argResult, newContext] = evaluate(node.argument, context)
 
   if (argResult.type === "error") return [argResult, newContext]
+
+  // Look up the function adapter
+  const adapter = functionRegistry.get(node.name)
+  if (!adapter) {
+    return [
+      {
+        type: "error",
+        message: `Unknown function '${node.name}'`,
+        position: node.position,
+        length: node.length,
+      },
+      newContext,
+    ]
+  }
+
+  // Handle empty argument (for no-arg functions like today(), now())
   if (argResult.type === "empty") {
+    // Check if this function supports no-argument execution (date constructors)
+    if (adapter.executeDate) {
+      try {
+        const result = adapter.executeDate()
+        if (result instanceof Date) {
+          return [{ type: "date", value: result }, newContext]
+        }
+        // If it returns a Big, treat as number
+        return [{ type: "number", value: result }, newContext]
+      } catch (error) {
+        return [
+          {
+            type: "error",
+            message: error instanceof Error ? error.message : "Function evaluation error",
+            position: node.position,
+            length: node.length,
+          },
+          newContext,
+        ]
+      }
+    }
+
     return [
       {
         type: "error",
@@ -854,31 +1275,71 @@ function evaluateFunction(
     ]
   }
 
+  // Handle date argument
+  if (argResult.type === "date") {
+    if (!adapter.executeDate) {
+      return [
+        {
+          type: "error",
+          message: `Function '${node.name}' does not accept date arguments`,
+          position: node.position,
+          length: node.length,
+        },
+        newContext,
+      ]
+    }
+
+    // Validate if the adapter has date validation logic
+    if (adapter.validateDate) {
+      const validationError = adapter.validateDate(argResult.value)
+      if (validationError) {
+        return [
+          {
+            type: "error",
+            message: validationError,
+            position: node.position,
+            length: node.length,
+          },
+          newContext,
+        ]
+      }
+    }
+
+    // Execute the function on the date
+    try {
+      const result = adapter.executeDate(argResult.value)
+      if (result instanceof Date) {
+        return [{ type: "date", value: result }, newContext]
+      }
+      // If it returns a Big (like year, month, etc.), return as number
+      return [{ type: "number", value: result }, newContext]
+    } catch (error) {
+      return [
+        {
+          type: "error",
+          message: error instanceof Error ? error.message : "Function evaluation error",
+          position: node.position,
+          length: node.length,
+        },
+        newContext,
+      ]
+    }
+  }
+
   // Get numeric value (works for both number and percent types)
   let value: Big
   if (argResult.type === "number") {
     value = argResult.value
   } else if (argResult.type === "percent") {
     value = argResult.value
+  } else if (argResult.type === "duration") {
+    // Duration is treated as a number for function purposes
+    value = argResult.value
   } else {
     return [
       {
         type: "error",
-        message: "Function requires a numeric argument",
-        position: node.position,
-        length: node.length,
-      },
-      newContext,
-    ]
-  }
-
-  // Look up the function adapter
-  const adapter = functionRegistry.get(node.name)
-  if (!adapter) {
-    return [
-      {
-        type: "error",
-        message: `Unknown function '${node.name}'`,
+        message: "Function requires a numeric or date argument",
         position: node.position,
         length: node.length,
       },

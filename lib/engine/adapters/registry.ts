@@ -24,6 +24,14 @@ import { CeilFunction } from "./functions/ceil"
 import { FloorFunction } from "./functions/floor"
 import { AbsFunction } from "./functions/abs"
 import { SqrtFunction } from "./functions/sqrt"
+import { YearFunction } from "./functions/year"
+import { MonthFunction } from "./functions/month"
+import { DayFunction } from "./functions/day"
+import { HourFunction } from "./functions/hour"
+import { MinuteFunction } from "./functions/minute"
+import { SecondFunction } from "./functions/second"
+import { TodayFunction } from "./functions/today"
+import { NowFunction } from "./functions/now"
 
 // Import all operators
 import { AddOperator } from "./operators/add"
@@ -230,6 +238,14 @@ functionRegistry.register(new CeilFunction())
 functionRegistry.register(new FloorFunction())
 functionRegistry.register(new AbsFunction())
 functionRegistry.register(new SqrtFunction())
+functionRegistry.register(new YearFunction())
+functionRegistry.register(new MonthFunction())
+functionRegistry.register(new DayFunction())
+functionRegistry.register(new HourFunction())
+functionRegistry.register(new MinuteFunction())
+functionRegistry.register(new SecondFunction())
+functionRegistry.register(new TodayFunction())
+functionRegistry.register(new NowFunction())
 
 // Register all binary operators
 binaryOperatorRegistry.register(new AddOperator())

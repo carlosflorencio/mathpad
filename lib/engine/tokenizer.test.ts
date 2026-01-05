@@ -279,4 +279,88 @@ describe("Tokenizer", () => {
       expect(identifierTokens[0].value).toBe("sdfsdf cal")
     })
   })
+
+  describe("Date literals", () => {
+    it("should tokenize ISO date (YYYY-MM-DD)", () => {
+      const tokens = tokenize("2024-01-15")
+      expect(tokens[0]).toMatchObject({ type: "date", value: "2024-01-15" })
+    })
+
+    it("should tokenize ISO datetime (YYYY-MM-DDTHH:mm:ss)", () => {
+      const tokens = tokenize("2024-01-15T10:30:45")
+      expect(tokens[0]).toMatchObject({ type: "date", value: "2024-01-15T10:30:45" })
+    })
+
+    it("should tokenize ISO datetime without seconds (YYYY-MM-DDTHH:mm)", () => {
+      const tokens = tokenize("2024-01-15T10:30")
+      expect(tokens[0]).toMatchObject({ type: "date", value: "2024-01-15T10:30" })
+    })
+
+    it("should tokenize today keyword", () => {
+      const tokens = tokenize("today")
+      expect(tokens[0]).toMatchObject({ type: "date", value: "today" })
+    })
+
+    it("should tokenize now keyword", () => {
+      const tokens = tokenize("now")
+      expect(tokens[0]).toMatchObject({ type: "date", value: "now" })
+    })
+
+    it("should tokenize yesterday keyword", () => {
+      const tokens = tokenize("yesterday")
+      expect(tokens[0]).toMatchObject({ type: "date", value: "yesterday" })
+    })
+
+    it("should tokenize tomorrow keyword", () => {
+      const tokens = tokenize("tomorrow")
+      expect(tokens[0]).toMatchObject({ type: "date", value: "tomorrow" })
+    })
+
+    it("should tokenize date keywords case-insensitively", () => {
+      const tokens1 = tokenize("TODAY")
+      const tokens2 = tokenize("Today")
+      const tokens3 = tokenize("NOW")
+      expect(tokens1[0]).toMatchObject({ type: "date", value: "today" })
+      expect(tokens2[0]).toMatchObject({ type: "date", value: "today" })
+      expect(tokens3[0]).toMatchObject({ type: "date", value: "now" })
+    })
+
+    it("should tokenize date in expression", () => {
+      const tokens = tokenize("2024-01-15 + 5day")
+      expect(tokens[0]).toMatchObject({ type: "date", value: "2024-01-15" })
+      expect(tokens[1]).toMatchObject({ type: "operator", value: "+" })
+      expect(tokens[2]).toMatchObject({ type: "number", value: "5day" })
+    })
+
+    it("should tokenize date keyword in expression", () => {
+      const tokens = tokenize("today + 7day")
+      expect(tokens[0]).toMatchObject({ type: "date", value: "today" })
+      expect(tokens[1]).toMatchObject({ type: "operator", value: "+" })
+      expect(tokens[2]).toMatchObject({ type: "number", value: "7day" })
+    })
+
+    it("should tokenize invalid dates (validated later in evaluator)", () => {
+      // Invalid month (13) - tokenizer accepts it, evaluator will validate
+      const tokens1 = tokenize("2024-13-01")
+      expect(tokens1[0]).toMatchObject({ type: "date", value: "2024-13-01" })
+
+      // Invalid day (00) - should fall back to arithmetic because day < 1
+      const tokens2 = tokenize("2024-00-15")
+      expect(tokens2[0]).toMatchObject({ type: "number", value: "2024" })
+    })
+
+    it("should disambiguate date from arithmetic", () => {
+      // With spaces, should be arithmetic
+      const tokens1 = tokenize("2024 - 01 - 15")
+      expect(tokens1[0]).toMatchObject({ type: "number", value: "2024" })
+      expect(tokens1[1]).toMatchObject({ type: "operator", value: "-" })
+      expect(tokens1[2]).toMatchObject({ type: "number", value: "01" })
+      expect(tokens1[3]).toMatchObject({ type: "operator", value: "-" })
+      expect(tokens1[4]).toMatchObject({ type: "number", value: "15" })
+
+      // Without spaces, should be date
+      const tokens2 = tokenize("2024-01-15")
+      expect(tokens2[0]).toMatchObject({ type: "date", value: "2024-01-15" })
+    })
+  })
 })

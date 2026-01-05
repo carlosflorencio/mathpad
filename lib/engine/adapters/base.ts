@@ -59,6 +59,21 @@ export interface FunctionAdapter {
    * @returns Error message if invalid, null if valid
    */
   validate?(value: Big): string | null
+
+  /**
+   * Execute the function on a date value
+   * @param value The input date
+   * @returns The result (either a number or a date)
+   * @throws Error if execution fails
+   */
+  executeDate?(value: Date): Big | Date
+
+  /**
+   * Validate if the date value is acceptable for this function
+   * @param value The date to validate
+   * @returns Error message if invalid, null if valid
+   */
+  validateDate?(value: Date): string | null
 }
 
 /**
@@ -100,6 +115,29 @@ export interface BinaryOperatorAdapter {
 
   /** Execute operation on two percents, returns percent */
   executePercentPercent?(left: Big, right: Big): Big
+
+  /** Execute operation: date operator duration, returns date */
+  executeDateDuration?(left: Date, right: Big, rightUnit: string): Date
+
+  /** Execute operation: duration operator date, returns date */
+  executeDurationDate?(left: Big, leftUnit: string, right: Date): Date
+
+  /** Execute operation: date operator date, returns duration (value in ms, unit) */
+  executeDateDate?(left: Date, right: Date): { value: Big; unit: string }
+
+  /** Execute operation: duration operator duration, returns duration */
+  executeDurationDuration?(
+    left: Big,
+    leftUnit: string,
+    right: Big,
+    rightUnit: string
+  ): { value: Big; unit: string }
+
+  /** Execute operation: duration operator number, returns duration */
+  executeDurationNumber?(left: Big, leftUnit: string, right: Big): { value: Big; unit: string }
+
+  /** Execute operation: number operator duration, returns duration */
+  executeNumberDuration?(left: Big, right: Big, rightUnit: string): { value: Big; unit: string }
 
   /**
    * Validate the operation (e.g., check for division by zero)

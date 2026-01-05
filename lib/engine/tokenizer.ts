@@ -59,14 +59,27 @@ export function tokenize(line: string, context?: ExecutionContext): Token[] {
       lowerLine.includes(keyword.toLowerCase())
     )
 
+    // Check for date keywords
+    const hasDateKeyword =
+      lowerLine.includes("today") ||
+      lowerLine.includes("now") ||
+      lowerLine.includes("yesterday") ||
+      lowerLine.includes("tomorrow")
+
     // Check if it looks like a potential identifier/variable reference
     // Allow if it starts with a letter and has 3 or fewer words (to distinguish from prose)
     const wordCount = remainingLine.split(/\s+/).length
     const startsWithLetter = /^[a-zA-Z_]/.test(remainingLine)
     const looksLikeIdentifier = startsWithLetter && wordCount <= 3
 
-    // If no numbers, no operators, no aggregate keywords, and doesn't look like an identifier, treat as plain text
-    if (!hasNumbers && !hasOperators && !hasAggregateKeyword && !looksLikeIdentifier) {
+    // If no numbers, no operators, no aggregate keywords, no date keywords, and doesn't look like an identifier, treat as plain text
+    if (
+      !hasNumbers &&
+      !hasOperators &&
+      !hasAggregateKeyword &&
+      !hasDateKeyword &&
+      !looksLikeIdentifier
+    ) {
       // Return only EOF token (empty line)
       tokens.push({
         type: "eof",
@@ -85,6 +98,41 @@ export function tokenize(line: string, context?: ExecutionContext): Token[] {
     if (/\s/.test(ch)) {
       pos++
       continue
+    }
+
+    // ISO Date literal (YYYY-MM-DD or YYYY-MM-DDTHH:mm:ss)
+    // Check this before number parsing to avoid treating "2024-01-15" as arithmetic
+    if (/\d/.test(ch) && pos + 9 < line.length) {
+      const dateMatch = line
+        .slice(pos)
+        .match(/^(\d{4})-(\d{2})-(\d{2})(T(\d{2}):(\d{2})(:(\d{2}))?)?/)
+      if (dateMatch) {
+        const fullMatch = dateMatch[0]
+        const year = parseInt(dateMatch[1], 10)
+        const month = parseInt(dateMatch[2], 10)
+        const day = parseInt(dateMatch[3], 10)
+
+        // Basic validation - more thorough validation happens in evaluator
+        // Accept plausible ranges to avoid tokenizing invalid dates as arithmetic
+        const isValidDate =
+          year >= 1000 &&
+          year <= 9999 &&
+          month >= 1 &&
+          month <= 99 && // Accept invalid months to catch errors in evaluator
+          day >= 1 &&
+          day <= 99 // Accept invalid days to catch errors in evaluator
+
+        if (isValidDate) {
+          tokens.push({
+            type: "date",
+            value: fullMatch,
+            position: pos,
+            length: fullMatch.length,
+          })
+          pos += fullMatch.length
+          continue
+        }
+      }
     }
 
     // Number (including decimals and suffixes like k, M)
@@ -327,12 +375,17 @@ export function tokenize(line: string, context?: ExecutionContext): Token[] {
         nextPos++
       }
 
-      // Special handling for format specifiers: they should NEVER be treated as assignment targets
-      // even if followed by "=", because they're format specifiers (e.g., K, M, B, $)
-      const isFormatSpecifierToken = isFormatSuffix(identifier)
+      // Check if this identifier appears AFTER an "in" keyword
+      // If so, it might be a format specifier in "variable in FORMAT =" pattern
+      const prevToken = tokens.length > 0 ? tokens[tokens.length - 1] : null
+      const isAfterInKeyword = prevToken && prevToken.type === "keyword" && prevToken.value === "in"
+
+      // Check if this is an assignment FIRST, before checking format specifiers
+      // This allows format suffix characters (like "d", "h", "m") to be used as variable names
+      // BUT: If this identifier appears after "in", it's NOT an assignment target
       let isAssignment = false
 
-      if (!isFormatSpecifierToken) {
+      if (!isAfterInKeyword) {
         // Check if directly followed by "="
         isAssignment = nextPos < line.length && line[nextPos] === "="
 
@@ -348,6 +401,12 @@ export function tokenize(line: string, context?: ExecutionContext): Token[] {
           }
         }
       }
+
+      // Only check if it's a format specifier if it's NOT an assignment
+      // AND if we have context, check that it's not a defined variable
+      // This prevents format suffixes from blocking variable names (both in assignments and expressions)
+      const isDefined = context && context.variables.has(identifier)
+      const isFormatSpecifierToken = !isAssignment && !isDefined && isFormatSuffix(identifier)
 
       // Check if it's the "in" or "to" keyword (but not if followed by =)
       // Determine if this is a conversion context by checking previous and next tokens
@@ -445,6 +504,25 @@ export function tokenize(line: string, context?: ExecutionContext): Token[] {
           tokens.push({
             type: "previousResult",
             value: identifier,
+            position: start,
+            length: identifier.length,
+          })
+          continue
+        }
+
+        // Check if this is a date keyword (today, now, yesterday, tomorrow)
+        // These should always be recognized, regardless of context
+        const isDateKeyword =
+          lowerIdentifier === "today" ||
+          lowerIdentifier === "now" ||
+          lowerIdentifier === "yesterday" ||
+          lowerIdentifier === "tomorrow"
+
+        if (isDateKeyword && !isAssignment) {
+          // Emit a date token
+          tokens.push({
+            type: "date",
+            value: lowerIdentifier,
             position: start,
             length: identifier.length,
           })

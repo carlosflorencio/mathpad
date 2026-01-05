@@ -1591,4 +1591,324 @@ z = y * 2`
       })
     })
   })
+
+  describe("Date Literals", () => {
+    it("should parse ISO date literals", () => {
+      const results = computeResults("2024-01-15", prefs)
+      expect(results[0]).toBe("2024-01-15")
+    })
+
+    it("should parse ISO datetime literals", () => {
+      const results = computeResults("2024-01-15T10:30:45", prefs)
+      expect(results[0]).toBe("2024-01-15T10:30:45")
+    })
+
+    it("should parse date keywords", () => {
+      const results = computeResults("today\nyesterday\ntomorrow", prefs)
+      // Results will be current dates, just check they're not errors
+      expect(results[0]).not.toContain("Error")
+      expect(results[1]).not.toContain("Error")
+      expect(results[2]).not.toContain("Error")
+      // Check they're in ISO date format (YYYY-MM-DD)
+      expect(results[0]).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+      expect(results[1]).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+      expect(results[2]).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+    })
+
+    it("should support now keyword", () => {
+      const results = computeResults("now", prefs)
+      expect(results[0]).not.toContain("Error")
+      // Check it's in ISO datetime format (YYYY-MM-DDTHH:mm:ss)
+      expect(results[0]).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/)
+    })
+  })
+
+  describe("Date Arithmetic - Adding Durations", () => {
+    it("should add days to dates", () => {
+      const results = computeResults("2024-01-15 + 5day", prefs)
+      expect(results[0]).toBe("2024-01-20")
+    })
+
+    it("should add days across month boundary", () => {
+      const results = computeResults("2024-01-31 + 1day", prefs)
+      expect(results[0]).toBe("2024-02-01")
+    })
+
+    it("should add hours to dates", () => {
+      const results = computeResults("2024-01-15 + 2hr", prefs)
+      expect(results[0]).toBe("2024-01-15T02:00:00")
+    })
+
+    it("should add minutes to datetimes", () => {
+      const results = computeResults("2024-01-15T10:30:00 + 30min", prefs)
+      expect(results[0]).toBe("2024-01-15T11:00:00")
+    })
+
+    it("should add hours with day rollover", () => {
+      const results = computeResults("2024-01-15T23:00:00 + 2hr", prefs)
+      expect(results[0]).toBe("2024-01-16T01:00:00")
+    })
+
+    it("should handle duration + date (commutative)", () => {
+      const results = computeResults("5day + 2024-01-15", prefs)
+      expect(results[0]).toBe("2024-01-20")
+    })
+
+    it("should support relative operations with now", () => {
+      const results = computeResults("now + 1day", prefs)
+      expect(results[0]).not.toContain("Error")
+      expect(results[0]).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/)
+    })
+
+    it("should support relative operations with today", () => {
+      const results = computeResults("today + 7day", prefs)
+      expect(results[0]).not.toContain("Error")
+      expect(results[0]).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+    })
+  })
+
+  describe("Date Arithmetic - Subtracting Durations", () => {
+    it("should subtract days from dates", () => {
+      const results = computeResults("2024-01-15 - 5day", prefs)
+      expect(results[0]).toBe("2024-01-10")
+    })
+
+    it("should subtract days across month boundary", () => {
+      const results = computeResults("2024-02-01 - 1day", prefs)
+      expect(results[0]).toBe("2024-01-31")
+    })
+
+    it("should subtract hours from datetimes", () => {
+      const results = computeResults("2024-01-15T10:30:00 - 2hr", prefs)
+      expect(results[0]).toBe("2024-01-15T08:30:00")
+    })
+
+    it("should subtract hours with day rollback", () => {
+      const results = computeResults("2024-01-15T01:00:00 - 2hr", prefs)
+      expect(results[0]).toBe("2024-01-14T23:00:00")
+    })
+  })
+
+  describe("Date Differences (Date - Date)", () => {
+    it("should calculate difference in days", () => {
+      const results = computeResults("2024-01-15 - 2024-01-01", prefs)
+      expect(results[0]).toBe("14day")
+    })
+
+    it("should calculate year difference", () => {
+      const results = computeResults("2024-12-31 - 2024-01-01", prefs)
+      expect(results[0]).toBe("365day") // 2024 is leap year (365 days from Jan 1 to Dec 31)
+    })
+
+    it("should calculate difference with times in hours", () => {
+      const results = computeResults("2024-01-15T12:00:00 - 2024-01-15T10:00:00", prefs)
+      expect(results[0]).toBe("2hr")
+    })
+
+    it("should calculate small differences in minutes", () => {
+      const results = computeResults("2024-01-15T10:30:00 - 2024-01-15T10:00:00", prefs)
+      expect(results[0]).toBe("30min")
+    })
+
+    it("should calculate small differences in seconds", () => {
+      const results = computeResults("2024-01-15T10:00:45 - 2024-01-15T10:00:00", prefs)
+      expect(results[0]).toBe("45sec")
+    })
+  })
+
+  describe("Duration Arithmetic", () => {
+    it("should add durations", () => {
+      const results = computeResults("5day + 2day", prefs)
+      expect(results[0]).toBe("7day")
+    })
+
+    it("should subtract durations", () => {
+      const results = computeResults("10day - 2day", prefs)
+      expect(results[0]).toBe("8day")
+    })
+
+    it("should multiply duration by number", () => {
+      const results = computeResults("5day * 2", prefs)
+      expect(results[0]).toBe("10day")
+    })
+
+    it("should multiply number by duration", () => {
+      const results = computeResults("2 * 5day", prefs)
+      expect(results[0]).toBe("10day")
+    })
+
+    it("should divide duration by number", () => {
+      const results = computeResults("10hr / 2", prefs)
+      expect(results[0]).toBe("5hr")
+    })
+
+    it("should divide duration by duration to get ratio", () => {
+      const results = computeResults("10day / 5day", prefs)
+      expect(results[0]).toBe("2")
+    })
+  })
+
+  describe("Date Extraction Functions", () => {
+    it("should extract year from date", () => {
+      const results = computeResults("year(2024-03-15T14:30:45)", prefs)
+      expect(results[0]).toBe("2,024")
+    })
+
+    it("should extract month from date", () => {
+      const results = computeResults("month(2024-03-15T14:30:45)", prefs)
+      expect(results[0]).toBe("3")
+    })
+
+    it("should extract day from date", () => {
+      const results = computeResults("dayOfMonth(2024-03-15T14:30:45)", prefs)
+      expect(results[0]).toBe("15")
+    })
+
+    it("should extract hour from datetime", () => {
+      const results = computeResults("hourOfDay(2024-03-15T14:30:45)", prefs)
+      expect(results[0]).toBe("14")
+    })
+
+    it("should extract minute from datetime", () => {
+      const results = computeResults("minuteOfHour(2024-03-15T14:30:45)", prefs)
+      expect(results[0]).toBe("30")
+    })
+
+    it("should extract second from datetime", () => {
+      const results = computeResults("secondOfMinute(2024-03-15T14:30:45)", prefs)
+      expect(results[0]).toBe("45")
+    })
+
+    it("should work with variables", () => {
+      const results = computeResults("date = 2024-06-15T18:00:00\nyear(date)", prefs)
+      expect(results[1]).toBe("2,024")
+    })
+  })
+
+  describe("Date Constructor Functions", () => {
+    it("should create today date", () => {
+      const results = computeResults("today()", prefs)
+      expect(results[0]).not.toContain("Error")
+      expect(results[0]).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+    })
+
+    it("should create now datetime", () => {
+      const results = computeResults("now()", prefs)
+      expect(results[0]).not.toContain("Error")
+      expect(results[0]).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/)
+    })
+  })
+
+  describe("Complex Date Scenarios", () => {
+    it("should calculate project timeline", () => {
+      const results = computeResults(
+        `project start = 2024-01-15
+sprint length = 14day
+sprint one end = project start + sprint length
+sprint two end = sprint one end + sprint length
+total duration = sprint two end - project start`,
+        prefs
+      )
+      expect(results[2]).toBe("2024-01-29")
+      expect(results[3]).toBe("2024-02-12")
+      expect(results[4]).toBe("28day")
+    })
+
+    it("should work with operator prefix", () => {
+      const results = computeResults(
+        `2024-01-15
++ 5day
++ 2hr
+- 30min`,
+        prefs
+      )
+      expect(results[0]).toBe("2024-01-15")
+      expect(results[1]).toBe("2024-01-20")
+      expect(results[2]).toBe("2024-01-20T02:00:00")
+      expect(results[3]).toBe("2024-01-20T01:30:00")
+    })
+
+    it("should handle date arithmetic with previous results", () => {
+      const results = computeResults(
+        `start = 2024-01-01
+day one = start + 1day
+day two = day one + 1day
+total = day two - start`,
+        prefs
+      )
+      expect(results[3]).toBe("2day")
+    })
+
+    it("should extract components from computed dates", () => {
+      const results = computeResults(
+        `2024-01-15
++ 5day
++ 2hr
+- 30min
+year(prev)`,
+        prefs
+      )
+      expect(results[4]).toBe("2,024")
+    })
+  })
+
+  describe("Date Error Handling", () => {
+    it("should error on invalid date formats", () => {
+      const results = computeResults("2024-13-01", prefs)
+      expect(results[0]).toContain("Error")
+    })
+
+    it("should normalize invalid date (Feb 30 becomes March 1)", () => {
+      const results = computeResults("2024-02-30", prefs)
+      // JavaScript Date normalizes Feb 30 to March 1
+      expect(results[0]).toBe("2024-03-01")
+    })
+
+    it("should error when multiplying dates", () => {
+      const results = computeResults("2024-01-15 * 2", prefs)
+      expect(results[0]).toContain("Error")
+    })
+
+    it("should error when dividing dates", () => {
+      const results = computeResults("2024-01-15 / 2", prefs)
+      expect(results[0]).toContain("Error")
+    })
+
+    it("should error when adding dates", () => {
+      const results = computeResults("2024-01-15 + 2024-01-20", prefs)
+      expect(results[0]).toContain("Error")
+    })
+
+    it("should error on year() with number argument", () => {
+      const results = computeResults("year(100)", prefs)
+      expect(results[0]).toContain("Error")
+    })
+  })
+
+  describe("Duration Edge Cases", () => {
+    it("should handle fractional durations", () => {
+      const results = computeResults("2024-01-15 + 2.5day", prefs)
+      expect(results[0]).toBe("2024-01-17T12:00:00")
+    })
+
+    it("should handle fractional hours", () => {
+      const results = computeResults("2024-01-15T00:00:00 + 1.5hr", prefs)
+      expect(results[0]).toBe("2024-01-15T01:30:00")
+    })
+
+    it("should handle negative durations via subtraction", () => {
+      const results = computeResults("2024-01-15 - 5day", prefs)
+      expect(results[0]).toBe("2024-01-10")
+    })
+
+    it("should handle zero duration", () => {
+      const results = computeResults("2024-01-15 + 0day", prefs)
+      expect(results[0]).toBe("2024-01-15")
+    })
+
+    it("should handle zero difference", () => {
+      const results = computeResults("2024-01-15 - 2024-01-15", prefs)
+      expect(results[0]).toBe("0ms")
+    })
+  })
 })

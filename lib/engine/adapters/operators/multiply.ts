@@ -27,4 +27,18 @@ export class MultiplyOperator implements BinaryOperatorAdapter {
     // 20% * 50% = 10% (0.2 * 0.5 = 0.1)
     return left.times(right).div(100)
   }
+
+  executeDurationNumber(left: Big, leftUnit: string, right: Big): { value: Big; unit: string } {
+    // Duration * Number = Duration
+    // e.g., 5day * 2 = 10day
+    const value = left.times(right)
+    return { value, unit: leftUnit }
+  }
+
+  executeNumberDuration(left: Big, right: Big, rightUnit: string): { value: Big; unit: string } {
+    // Number * Duration = Duration (commutative)
+    // e.g., 2 * 5day = 10day
+    const value = left.times(right)
+    return { value, unit: rightUnit }
+  }
 }

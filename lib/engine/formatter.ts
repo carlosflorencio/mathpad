@@ -19,6 +19,12 @@ export function formatResult(result: EvalResult, options: FormatOptions): string
     case "percent":
       return formatPercent(result.value, options, result.format)
 
+    case "date":
+      return formatDate(result.value)
+
+    case "duration":
+      return formatDuration(result.value, result.unit, options)
+
     default:
       return ""
   }
@@ -143,6 +149,31 @@ function addThousandsSeparator(intStr: string, separator: string): string {
 
   const result = parts.join(separator)
   return isNegative ? `-${result}` : result
+}
+
+/**
+ * Format a date value
+ */
+function formatDate(value: Date): string {
+  // Check if the date has a time component (not midnight UTC)
+  const hasTime =
+    value.getUTCHours() !== 0 || value.getUTCMinutes() !== 0 || value.getUTCSeconds() !== 0
+
+  if (hasTime) {
+    // Format as YYYY-MM-DDTHH:mm:ss
+    return value.toISOString().slice(0, 19)
+  } else {
+    // Format as YYYY-MM-DD
+    return value.toISOString().slice(0, 10)
+  }
+}
+
+/**
+ * Format a duration value
+ */
+function formatDuration(value: Big, unit: string, options: FormatOptions): string {
+  const formatted = formatNumber(value, options)
+  return `${formatted}${unit}`
 }
 
 /**

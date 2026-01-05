@@ -212,10 +212,104 @@ Lines starting with operators (e.g., `+1`, `*2`) operate on the previous result:
 4. **Empty error decorations** - Check `error.length > 0` before creating mark decorations
 5. **Operator-prefix edge cases** - Remember the unary fallback logic for first-line expressions
 
+## Date/Time Operations
+
+The engine supports comprehensive date and time operations:
+
+### Date Literals
+
+- **ISO format**: `2024-01-15`, `2024-01-15T10:30:45`
+- **Keywords**: `today`, `now`, `yesterday`, `tomorrow`
+- Display format: ISO (YYYY-MM-DD or YYYY-MM-DDTHH:mm:ss)
+
+### Duration Units
+
+- `ms`, `sec`, `min`, `hr`, `day`
+- Format adapters in `adapters/formats/`: `day.ts`, `ms.ts`, `hr.ts`, `min.ts`, `sec.ts`
+
+### Date Arithmetic
+
+```
+2024-01-15 + 5day        → 2024-01-20 (Date + Duration)
+2024-01-15 - 5day        → 2024-01-10 (Date - Duration)
+2024-01-15 - 2024-01-01  → 14day (Date - Date)
+now + 300hr              → Future date (Relative operations)
+5day + 2day              → 7day (Duration + Duration)
+10day / 5day             → 2 (Duration / Duration = dimensionless number)
+```
+
+### Date Functions
+
+**Extraction functions** (require date argument):
+
+- `year(date)`, `month(date)`, `dayOfMonth(date)`
+- `hourOfDay(date)`, `minuteOfHour(date)`, `secondOfMinute(date)`
+- Aliases: `day()`, `hour()`, `minute()`, `second()`
+
+**Constructor functions** (no arguments):
+
+- `today()` - Current date at midnight UTC
+- `now()` - Current date and time
+
+### Adding Date-Aware Functions
+
+Functions can handle both numeric and date inputs:
+
+```typescript
+export class MyDateFunction implements FunctionAdapter {
+  name = "myfunction"
+  description = "Works with dates"
+
+  execute(_value: Big): Big {
+    throw new Error("myfunction() requires a date argument")
+  }
+
+  executeDate(value: Date): Big | Date {
+    // Return Big for numeric result, Date for date result
+    return new Big(value.getUTCFullYear())
+  }
+
+  validateDate?(value: Date): string | null {
+    if (isNaN(value.getTime())) return "Invalid date"
+    return null
+  }
+}
+```
+
+### Implementation Notes
+
+1. **Date Storage**: JavaScript `Date` objects stored as UTC
+2. **Duration Storage**: `Big` values in milliseconds internally, displayed with unit
+3. **Type Conversion**: Numbers with time units (e.g., `5day`) are converted to `DurationResult` before operations
+4. **Date Validation**: Tokenizer accepts broad ranges, evaluator validates actual dates
+5. **Result Types**: `DateResult` has `value: Date`, `DurationResult` has `value: Big` + `unit`
+6. **Operator Support**: Binary operators have optional methods like `executeDateDuration()`, `executeDurationDuration()`
+7. **Function Name Conflicts**: Use descriptive names (`dayOfMonth`, `hourOfDay`) to avoid conflicts with format parsers
+
+### Example Usage
+
+```
+// Project planning
+project start = 2024-01-15
+sprint length = 14day
+sprint end = project start + sprint length
+
+// Relative dates
+deadline = today + 30day
+in 300 hours = now + 300hr
+
+// Date extraction
+event = 2024-06-15T18:00:00
+event year = year(event)
+event month = month(event)
+```
+
 ## Key Type Definitions
 
-- `Token` - Lexical token from tokenizer
-- `ASTNode` - Abstract syntax tree node (union of 14+ node types)
-- `EvalResult` - Evaluation result: `NumberResult | PercentResult | ErrorResult | EmptyResult`
+- `Token` - Lexical token from tokenizer (includes `"date"` type)
+- `ASTNode` - Abstract syntax tree node (union of 14+ node types, includes `DateLiteralNode`)
+- `EvalResult` - Evaluation result: `NumberResult | PercentResult | DateResult | DurationResult | ErrorResult | EmptyResult`
+- `DateResult` - `{ type: "date", value: Date, format?: FormatSuffix }`
+- `DurationResult` - `{ type: "duration", value: Big, unit: "ms"|"sec"|"min"|"hr"|"day", format?: FormatSuffix }`
 - `ExecutionContext` - Stores variables and previous line results
 - `LineEvaluation` - Result for a single line (includes result, formatted string, context)

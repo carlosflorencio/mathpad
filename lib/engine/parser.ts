@@ -3,6 +3,7 @@ import {
   ASTNode,
   NumberNode,
   PercentNode,
+  DateLiteralNode,
   IdentifierNode,
   AggregateNode,
   FunctionCallNode,
@@ -433,6 +434,18 @@ class Parser {
     if (current.type === "percent") {
       const node: PercentNode = {
         kind: "percent",
+        value: current.value,
+        position: current.position,
+        length: current.length,
+      }
+      this.advance()
+      return node
+    }
+
+    // Date literals (ISO format or keywords like "today", "now")
+    if (current.type === "date") {
+      const node: DateLiteralNode = {
+        kind: "dateLiteral",
         value: current.value,
         position: current.position,
         length: current.length,

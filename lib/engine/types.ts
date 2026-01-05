@@ -20,6 +20,7 @@ export type FormatSuffix = string
 export type TokenType =
   | "number"
   | "percent"
+  | "date" // Date literals (ISO format or keywords like "today", "now")
   | "identifier"
   | "operator"
   | "paren"
@@ -43,6 +44,7 @@ export interface Token {
 export type ASTNode =
   | NumberNode
   | PercentNode
+  | DateLiteralNode
   | IdentifierNode
   | BinaryOpNode
   | UnaryOpNode
@@ -66,6 +68,13 @@ export interface NumberNode {
 export interface PercentNode {
   kind: "percent"
   value: string
+  position: number
+  length: number
+}
+
+export interface DateLiteralNode {
+  kind: "dateLiteral"
+  value: string // ISO string or keyword ("today", "now", "yesterday", "tomorrow")
   position: number
   length: number
 }
@@ -166,7 +175,13 @@ export interface EmptyNode {
 // Evaluation Result Types
 // ============================================================================
 
-export type EvalResult = NumberResult | PercentResult | EmptyResult | ErrorResult
+export type EvalResult =
+  | NumberResult
+  | PercentResult
+  | DateResult
+  | DurationResult
+  | EmptyResult
+  | ErrorResult
 
 export interface NumberResult {
   type: "number"
@@ -177,6 +192,19 @@ export interface NumberResult {
 export interface PercentResult {
   type: "percent"
   value: Big
+  format?: FormatSuffix
+}
+
+export interface DateResult {
+  type: "date"
+  value: Date // JavaScript Date object (stored as UTC)
+  format?: FormatSuffix
+}
+
+export interface DurationResult {
+  type: "duration"
+  value: Big // Duration in milliseconds
+  unit: "ms" | "sec" | "min" | "hr" | "day"
   format?: FormatSuffix
 }
 

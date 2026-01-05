@@ -9,6 +9,8 @@ import { MeterFormat } from "./m"
 import { MinutesFormat } from "./min"
 import { SecondsFormat } from "./sec"
 import { HoursFormat } from "./hr"
+import { DaysFormat } from "./day"
+import { MillisecondsFormat } from "./ms"
 import { MilesFormat } from "./mi"
 import { FeetFormat } from "./ft"
 import { KilogramsFormat } from "./kg"
@@ -91,6 +93,8 @@ formatRegistry.register(new FeetFormat())
 formatRegistry.register(new MinutesFormat())
 formatRegistry.register(new SecondsFormat())
 formatRegistry.register(new HoursFormat())
+formatRegistry.register(new DaysFormat())
+formatRegistry.register(new MillisecondsFormat())
 
 // Register weight unit formats
 formatRegistry.register(new KilogramsFormat())
