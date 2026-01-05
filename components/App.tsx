@@ -98,20 +98,46 @@ export function App() {
   const [editorContent, setEditorContent] = useState(activeNote?.content || "")
   const editorContentRef = useRef(editorContent)
   const activeNoteIdRef = useRef(activeNote?.id)
+  const menuTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined)
+  const notesMenuRef = useRef<HTMLDivElement>(null)
+  const renameBlurEnabledRef = useRef(false)
+
+  // Debounced update to collection - only update Note objects when saving
+  const debouncedUpdateContentRef = useRef<NodeJS.Timeout | undefined>(undefined)
 
   // Update editor content ONLY when active note ID changes (switching notes)
-  // Do NOT update when content changes (that would cause data loss during typing)
+  // activeNote.content is NOT in the dependency array to avoid re-running on every edit
   useEffect(() => {
     if (activeNote && activeNote.id !== activeNoteIdRef.current) {
+      // Clear any pending debounced updates when switching notes
+      if (debouncedUpdateContentRef.current) {
+        clearTimeout(debouncedUpdateContentRef.current)
+      }
+
       setEditorContent(activeNote.content)
       editorContentRef.current = activeNote.content
       activeNoteIdRef.current = activeNote.id
     }
-  }, [activeNote?.id, activeNote?.content])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeNote?.id]) // Only depend on ID, not full activeNote object
 
-  const menuTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined)
-  const notesMenuRef = useRef<HTMLDivElement>(null)
-  const renameBlurEnabledRef = useRef(false)
+  const handleContentChange = useCallback(
+    (content: string) => {
+      // Immediately update local state for responsive UI
+      editorContentRef.current = content
+      setEditorContent(content)
+
+      // Debounce the collection update (which creates new Note objects)
+      if (debouncedUpdateContentRef.current) {
+        clearTimeout(debouncedUpdateContentRef.current)
+      }
+
+      debouncedUpdateContentRef.current = setTimeout(() => {
+        updateContent(content)
+      }, 200) // Same debounce as auto-save
+    },
+    [updateContent]
+  )
 
   useEffect(() => {
     if (isLoaded) {
@@ -126,7 +152,6 @@ export function App() {
       if (pending) {
         try {
           const sharedNote = JSON.parse(pending) as ShareData
-          // eslint-disable-next-line react-hooks/set-state-in-effect
           setConflictData(sharedNote)
           sessionStorage.removeItem("pending-shared-note")
         } catch (e) {
@@ -482,12 +507,7 @@ export function App() {
         <div className="paper-container">
           <Editor
             value={editorContent}
-            onUpdate={(content) => {
-              // Don't update editorContent state here to avoid re-renders
-              // Only update the ref for tracking
-              editorContentRef.current = content
-              updateContent(content)
-            }}
+            onUpdate={handleContentChange}
             preferences={preferences}
             onCopy={(value: string) => showToast(`Copied: ${value}`)}
           />
@@ -574,6 +594,150 @@ export function App() {
           <button title="Menu" className="icon-button" onClick={() => setShowMenu(!showMenu)}>
             <MenuIcon />
           </button>
+
+          {/* Desktop Menu Dropdown - positioned relative to button */}
+          {showMenu && (
+            <div className="dropdown-menu">
+              <div
+                className="dropdown-item"
+                onClick={() => {
+                  createNote()
+                  setShowMenu(false)
+                  showToast("New note created")
+                }}
+              >
+                New Note
+              </div>
+
+              <div
+                className="relative"
+                ref={notesMenuRef}
+                onMouseEnter={handleNotesMenuHover}
+                onMouseLeave={handleNotesMenuLeave}
+              >
+                <div className="dropdown-item flex justify-between items-center">
+                  <span>Notes</span>
+                  <span className="ml-2">▸</span>
+                </div>
+
+                {showNotesMenu && (
+                  <div
+                    className="dropdown-menu"
+                    style={{ left: "100%", top: 0, minWidth: "250px" }}
+                    onMouseEnter={handleNotesMenuHover}
+                    onMouseLeave={handleNotesMenuLeave}
+                  >
+                    {notes.map((note) => (
+                      <div
+                        key={note.id}
+                        className="dropdown-item"
+                        onClick={() => {
+                          switchNote(note.id)
+                          setShowMenu(false)
+                          setShowNotesMenu(false)
+                        }}
+                      >
+                        {note.id === activeNote.id && "• "}
+                        {note.name}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div
+                className="dropdown-item"
+                onClick={() => {
+                  setShowManageNotes(true)
+                  setShowMenu(false)
+                }}
+              >
+                Manage Notes
+              </div>
+
+              <div className="border-t border-[var(--ui-border-color)] my-1"></div>
+
+              <div
+                className="dropdown-item flex justify-between items-center"
+                style={{
+                  opacity: isFileSystemSupported ? 1 : 0.5,
+                  cursor: isFileSystemSupported ? "pointer" : "not-allowed",
+                }}
+              >
+                <span
+                  onClick={
+                    isFileSystemSupported
+                      ? () => {
+                          handleOpenFolder()
+                          setShowMenu(false)
+                        }
+                      : undefined
+                  }
+                  className="flex-1"
+                  title={
+                    !isFileSystemSupported
+                      ? "File System API not supported in this browser"
+                      : undefined
+                  }
+                >
+                  {isFolderMapped ? "Change Folder" : "Open Folder"}
+                </span>
+                {isFileSystemSupported && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setShowFolderSyncHelp(true)
+                      setShowMenu(false)
+                    }}
+                    className="ml-2 px-1.5 py-1 text-[var(--text-muted)] hover:text-[var(--text-color)] border border-[var(--ui-border-color)] rounded cursor-pointer hover:border-[var(--text-muted)] transition-colors"
+                    title="Learn about folder sync"
+                  >
+                    <QuestionIcon />
+                  </button>
+                )}
+              </div>
+
+              {isFolderMapped && (
+                <div
+                  className="dropdown-item flex justify-between items-center"
+                  title="Stop syncing with folder. Notes will remain in the app."
+                >
+                  <span
+                    onClick={() => {
+                      handleCloseFolder()
+                      setShowMenu(false)
+                    }}
+                    className="flex-1"
+                  >
+                    Close Folder
+                  </span>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setShowFolderSyncHelp(true)
+                      setShowMenu(false)
+                    }}
+                    className="ml-2 px-1.5 py-1 text-[var(--text-muted)] hover:text-[var(--text-color)] border border-[var(--ui-border-color)] rounded cursor-pointer hover:border-[var(--text-muted)] transition-colors"
+                    title="Learn about folder sync"
+                  >
+                    <QuestionIcon />
+                  </button>
+                </div>
+              )}
+
+              <div className="border-t border-[var(--ui-border-color)] my-1"></div>
+
+              <div
+                className="dropdown-item"
+                onClick={() => {
+                  setShowPreferences(true)
+                  setShowMenu(false)
+                }}
+              >
+                Preferences
+              </div>
+            </div>
+          )}
         </div>
 
         <button title="Share" className="hidden md:flex icon-button" onClick={handleShare}>
@@ -660,9 +824,9 @@ export function App() {
         />
       )}
 
-      {/* Shared Menu Dropdown - positioned for mobile (above button) or desktop (below button) */}
+      {/* Mobile Menu Dropdown - positioned above the bottom-right button */}
       {showMenu && (
-        <div className="dropdown-menu mobile-menu fixed right-4 md:top-16 md:left-4 md:right-auto">
+        <div className="dropdown-menu mobile-menu fixed right-4 md:hidden">
           <div
             className="dropdown-item"
             onClick={() => {
@@ -672,42 +836,6 @@ export function App() {
             }}
           >
             New Note
-          </div>
-
-          <div
-            className="relative"
-            ref={notesMenuRef}
-            onMouseEnter={handleNotesMenuHover}
-            onMouseLeave={handleNotesMenuLeave}
-          >
-            <div className="dropdown-item flex justify-between items-center">
-              <span>Notes</span>
-              <span className="ml-2">▸</span>
-            </div>
-
-            {showNotesMenu && (
-              <div
-                className="dropdown-menu"
-                style={{ left: "100%", top: 0, minWidth: "250px" }}
-                onMouseEnter={handleNotesMenuHover}
-                onMouseLeave={handleNotesMenuLeave}
-              >
-                {notes.map((note) => (
-                  <div
-                    key={note.id}
-                    className="dropdown-item"
-                    onClick={() => {
-                      switchNote(note.id)
-                      setShowMenu(false)
-                      setShowNotesMenu(false)
-                    }}
-                  >
-                    {note.id === activeNote.id && "• "}
-                    {note.name}
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
 
           <div
