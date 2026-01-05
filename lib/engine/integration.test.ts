@@ -1017,6 +1017,62 @@ z = y * 2`
     })
   })
 
+  describe("Currency Conversions", () => {
+    it("should convert USD to EUR", () => {
+      const results = computeResults("100$ to eur", prefs)
+      // Should return a value in EUR (actual rate varies)
+      expect(results[0]).toMatch(/^[\d,]+\.?\d*€$/)
+      expect(results[0]).not.toBe("100€") // Should convert, not just keep value
+    })
+
+    it("should convert EUR to USD", () => {
+      const results = computeResults("100€ to usd", prefs)
+      // Should return a value in USD
+      expect(results[0]).toMatch(/^[\d,]+\.?\d*\$$/)
+      expect(results[0]).not.toBe("100$")
+    })
+
+    it("should convert USD to GBP", () => {
+      const results = computeResults("100$ to gbp", prefs)
+      // Should return a value in GBP
+      expect(results[0]).toMatch(/^[\d,]+\.?\d*£$/)
+      expect(results[0]).not.toBe("100£")
+    })
+
+    it("should convert GBP to EUR", () => {
+      const results = computeResults("100£ to eur", prefs)
+      // Should return a value in EUR
+      expect(results[0]).toMatch(/^[\d,]+\.?\d*€$/)
+      expect(results[0]).not.toBe("100€")
+    })
+
+    it("should handle JPY conversions with large numbers", () => {
+      const results = computeResults("100$ to jpy", prefs)
+      // JPY has small unit value, so 100 USD should convert to thousands of JPY
+      expect(results[0]).toMatch(/^[\d,]+\.?\d*¥$/)
+      // Extract numeric part and verify it's much larger than 100
+      const numeric = parseFloat(results[0].replace(/[,¥]/g, ""))
+      expect(numeric).toBeGreaterThan(1000) // JPY is typically 100+ per USD
+    })
+
+    it("should accept 3-letter currency codes", () => {
+      const results = computeResults("100usd to eur", prefs)
+      // Should work the same as using $ symbol
+      expect(results[0]).toMatch(/^[\d,]+\.?\d*€$/)
+      expect(results[0]).not.toBe("100€")
+    })
+
+    it("should convert between non-USD currencies", () => {
+      const results = computeResults("100gbp to cad", prefs)
+      expect(results[0]).toContain("CA$")
+    })
+
+    it("should reject conversion between currency and other units", () => {
+      const results = computeResults("100$ to km", prefs)
+      expect(results[0]).toBe("Error: Cannot convert currency to distance")
+    })
+  })
+
   describe("Previous Result References", () => {
     it("should use previous result with operator prefix (+)", () => {
       const results = computeResults("100\n+ 2", prefs)

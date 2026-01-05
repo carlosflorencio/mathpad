@@ -193,9 +193,14 @@ class Parser {
       this.current().value === "to"
     ) {
       this.advance() // skip 'to'
-      // After "to", the unit might be tokenized as keyword or operator (e.g., "min" is an aggregate)
+      // After "to", the unit might be tokenized as keyword, operator, identifier, or number (e.g., "$", "min", etc.)
       // For compound units like "m/s" or "km/h", we need to combine multiple tokens
-      if (this.current().type === "keyword" || this.current().type === "operator") {
+      if (
+        this.current().type === "keyword" ||
+        this.current().type === "operator" ||
+        this.current().type === "identifier" ||
+        this.current().type === "number"
+      ) {
         let targetUnit = this.current().value
         this.advance() // skip first part of unit
 

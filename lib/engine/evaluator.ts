@@ -980,7 +980,8 @@ function evaluateConversion(
 
   // Get source and target format adapters
   const sourceAdapter = formatRegistry.get(exprResult.format)
-  const targetAdapter = formatRegistry.get(node.targetUnit)
+  const targetParseResult = formatRegistry.findParser(node.targetUnit)
+  const targetAdapter = targetParseResult?.adapter
 
   if (!sourceAdapter) {
     return [
@@ -1068,7 +1069,7 @@ function evaluateConversion(
       {
         type: "number",
         value: valueInTargetUnit,
-        format: node.targetUnit,
+        format: targetAdapter.id,
       },
       newContext,
     ]

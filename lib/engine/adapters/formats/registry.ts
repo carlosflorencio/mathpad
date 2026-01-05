@@ -2,8 +2,8 @@ import { FormatAdapter } from "./base"
 import { ThousandsFormat } from "./thousands"
 import { MillionsFormat } from "./millions"
 import { BillionsFormat } from "./billions"
-import { USDFormat } from "./usd"
-import { EURFormat } from "./eur"
+import { Currency } from "./currency"
+import { getAllCurrencies } from "../currencyLoader"
 import { KilometerFormat } from "./km"
 import { MeterFormat } from "./m"
 import { MinutesFormat } from "./min"
@@ -76,9 +76,10 @@ formatRegistry.register(new ThousandsFormat())
 formatRegistry.register(new MillionsFormat())
 formatRegistry.register(new BillionsFormat())
 
-// Register currency formats
-formatRegistry.register(new USDFormat())
-formatRegistry.register(new EURFormat())
+// Register currency formats from unified config
+getAllCurrencies().forEach((currencyData) => {
+  formatRegistry.register(new Currency(currencyData))
+})
 
 // Register distance unit formats
 formatRegistry.register(new KilometerFormat())
