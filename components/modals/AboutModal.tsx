@@ -27,8 +27,8 @@ export function AboutModal({ onClose }: AboutModalProps) {
           <div>
             <h4 className="font-semibold text-sm mb-1">Privacy & Offline</h4>
             <p className="text-sm text-[var(--text-muted)] mb-2">
-              MathPad is a fully offline application. All your notes and data are stored locally in
-              your browser. We do not collect, transmit, or store any of your data on our servers.
+              No telemetry. No tracking. This app runs entirely on your device and does not send
+              your data to any server.
             </p>
           </div>
           <div>
