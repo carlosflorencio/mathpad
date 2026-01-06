@@ -16,7 +16,14 @@ export class PreferencesRepository {
       }
 
       const data = JSON.parse(stored)
-      return { ok: true, value: Preferences.fromJSON(data) }
+      // Provide backward compatibility for hasSeenOnboarding field
+      return {
+        ok: true,
+        value: Preferences.fromJSON({
+          ...data,
+          hasSeenOnboarding: data.hasSeenOnboarding ?? false,
+        }),
+      }
     } catch (error) {
       return {
         ok: false,

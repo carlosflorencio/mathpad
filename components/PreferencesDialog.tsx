@@ -24,7 +24,8 @@ export function PreferencesDialog({ preferences, save, close }: PreferencesDialo
       decimalPlaces,
       decimalSeparator,
       thousandsSeparator,
-      theme
+      theme,
+      preferences.hasSeenOnboarding
     )
     save(updated)
     // eslint-disable-next-line react-hooks/exhaustive-deps

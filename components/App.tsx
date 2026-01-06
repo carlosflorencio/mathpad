@@ -17,6 +17,7 @@ import { ConflictResolutionModal } from "./modals/ConflictResolutionModal"
 import { ExternalDeletionModal } from "./modals/ExternalDeletionModal"
 import { ManageNotesModal } from "./modals/ManageNotesModal"
 import { ShareModal } from "./modals/ShareModal"
+import { OnboardingOverlay, EXAMPLE_TEMPLATE } from "./OnboardingOverlay"
 import { MenuIcon, ShareIcon, HelpIcon, FolderIcon, PlusIcon, QuestionIcon } from "./icons"
 import { QuickActionPalette, Action } from "./QuickActionPalette"
 import { useKeyBindings } from "@/hooks/useKeyBindings"
@@ -66,6 +67,7 @@ export function App() {
   const [showFolderSyncHelp, setShowFolderSyncHelp] = useState(false)
   const [showQuickActions, setShowQuickActions] = useState(false)
   const [showShareModal, setShowShareModal] = useState(false)
+  const [showOnboarding, setShowOnboarding] = useState(false)
   const [shareUrl, setShareUrl] = useState("")
   const [renamingNoteId, setRenamingNoteId] = useState<string | null>(null)
   const [renameValue, setRenameValue] = useState("")
@@ -101,6 +103,13 @@ export function App() {
 
   const handleContentChange = useCallback(
     (content: string) => {
+      // Dismiss onboarding if user starts typing
+      if (showOnboarding && content.length > 0) {
+        const updated = preferences.withOnboardingComplete()
+        savePreferences(updated)
+        setShowOnboarding(false)
+      }
+
       // Immediately update local state for responsive UI
       editorContentRef.current = content
       setEditorContent(content)
@@ -114,7 +123,7 @@ export function App() {
         updateContent(content)
       }, 200) // Same debounce as auto-save
     },
-    [updateContent]
+    [updateContent, showOnboarding, preferences, savePreferences]
   )
 
   useEffect(() => {
@@ -122,6 +131,13 @@ export function App() {
       configureCSSVars(preferences)
     }
   }, [isLoaded, preferences])
+
+  // Show onboarding for first-time users with empty editor
+  useEffect(() => {
+    if (isLoaded && !preferences.hasSeenOnboarding && activeNote?.content.trim() === "") {
+      setShowOnboarding(true)
+    }
+  }, [isLoaded, preferences.hasSeenOnboarding, activeNote?.content])
 
   // Check for pending shared note conflict
   useEffect(() => {
@@ -167,11 +183,17 @@ export function App() {
     setShowFolderSyncHelp(false)
     setShowQuickActions(false)
     setShowShareModal(false)
+    setShowOnboarding(false)
   }, [])
 
   useEffect(() => {
     const handleKeyUp = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
+        // Dismiss onboarding first if it's showing
+        if (showOnboarding) {
+          const updated = preferences.withOnboardingComplete()
+          savePreferences(updated)
+        }
         closeDialogs()
         setRenamingNoteId(null)
         setConflictData(null)
@@ -180,7 +202,7 @@ export function App() {
 
     window.addEventListener("keyup", handleKeyUp)
     return () => window.removeEventListener("keyup", handleKeyUp)
-  }, [closeDialogs])
+  }, [closeDialogs, showOnboarding, preferences, savePreferences])
 
   // Keyboard shortcuts
   useKeyBindings({
@@ -387,6 +409,19 @@ export function App() {
     }
   }, [shareNote, showToast])
 
+  const handleDismissOnboarding = useCallback(() => {
+    setShowOnboarding(false)
+    const updated = preferences.withOnboardingComplete()
+    savePreferences(updated)
+  }, [preferences, savePreferences])
+
+  const handleInsertTemplate = useCallback(() => {
+    if (activeNote) {
+      updateContent(EXAMPLE_TEMPLATE)
+      setEditorContent(EXAMPLE_TEMPLATE)
+    }
+  }, [activeNote, updateContent])
+
   const handleOpenFolder = useCallback(async () => {
     try {
       await openFolder()
@@ -563,6 +598,16 @@ export function App() {
           switchNote(noteId)
         }}
       />
+
+      {showOnboarding && (
+        <OnboardingOverlay
+          onInsertTemplate={() => {
+            handleInsertTemplate()
+            handleDismissOnboarding()
+          }}
+          onDismiss={handleDismissOnboarding}
+        />
+      )}
 
       <ToastContainer toasts={toasts} onRemove={removeToast} />
 

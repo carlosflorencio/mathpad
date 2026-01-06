@@ -4,11 +4,12 @@ export class Preferences {
     public readonly decimalPlaces: number,
     public readonly decimalSeparator: "," | ".",
     public readonly thousandsSeparator: "," | "." | " " | "",
-    public readonly theme: "dark" | "light"
+    public readonly theme: "dark" | "light",
+    public readonly hasSeenOnboarding: boolean
   ) {}
 
   static default(): Preferences {
-    return new Preferences(18, 2, ".", ",", "dark")
+    return new Preferences(18, 2, ".", ",", "dark", false)
   }
 
   withFontSize(size: number): Preferences {
@@ -17,7 +18,8 @@ export class Preferences {
       this.decimalPlaces,
       this.decimalSeparator,
       this.thousandsSeparator,
-      this.theme
+      this.theme,
+      this.hasSeenOnboarding
     )
   }
 
@@ -27,7 +29,8 @@ export class Preferences {
       places,
       this.decimalSeparator,
       this.thousandsSeparator,
-      this.theme
+      this.theme,
+      this.hasSeenOnboarding
     )
   }
 
@@ -37,7 +40,8 @@ export class Preferences {
       this.decimalPlaces,
       separator,
       this.thousandsSeparator,
-      this.theme
+      this.theme,
+      this.hasSeenOnboarding
     )
   }
 
@@ -47,7 +51,8 @@ export class Preferences {
       this.decimalPlaces,
       this.decimalSeparator,
       separator,
-      this.theme
+      this.theme,
+      this.hasSeenOnboarding
     )
   }
 
@@ -57,7 +62,19 @@ export class Preferences {
       this.decimalPlaces,
       this.decimalSeparator,
       this.thousandsSeparator,
-      theme
+      theme,
+      this.hasSeenOnboarding
+    )
+  }
+
+  withOnboardingComplete(): Preferences {
+    return new Preferences(
+      this.fontSize,
+      this.decimalPlaces,
+      this.decimalSeparator,
+      this.thousandsSeparator,
+      this.theme,
+      true
     )
   }
 
@@ -68,6 +85,7 @@ export class Preferences {
       decimalSeparator: this.decimalSeparator,
       thousandsSeparator: this.thousandsSeparator,
       theme: this.theme,
+      hasSeenOnboarding: this.hasSeenOnboarding,
     }
   }
 
@@ -77,13 +95,15 @@ export class Preferences {
     decimalSeparator: "," | "."
     thousandsSeparator: "," | "." | " " | ""
     theme: "dark" | "light"
+    hasSeenOnboarding: boolean
   }): Preferences {
     return new Preferences(
       data.fontSize,
       data.decimalPlaces,
       data.decimalSeparator,
       data.thousandsSeparator,
-      data.theme
+      data.theme,
+      data.hasSeenOnboarding
     )
   }
 }
