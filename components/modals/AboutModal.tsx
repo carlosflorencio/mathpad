@@ -1,3 +1,5 @@
+import Image from "next/image"
+
 interface AboutModalProps {
   onClose: () => void
 }
@@ -10,7 +12,7 @@ export function AboutModal({ onClose }: AboutModalProps) {
       <div className="space-y-4 text-[var(--text-color)]">
         <div className="text-center py-4">
           <div className="mb-4 flex justify-center">
-            <img src="/mathpad/logo.png" alt="MathPad Logo" width={80} height={80} />
+            <Image src="/mathpad/logo.png" alt="MathPad Logo" width={80} height={80} />
           </div>
           <h3 className="text-xl font-semibold">MathPad</h3>
         </div>
@@ -22,6 +24,13 @@ export function AboutModal({ onClose }: AboutModalProps) {
         </div>
 
         <div className="bg-[var(--bg-input)] p-4 rounded space-y-3">
+          <div>
+            <h4 className="font-semibold text-sm mb-1">Privacy & Offline</h4>
+            <p className="text-sm text-[var(--text-muted)] mb-2">
+              MathPad is a fully offline application. All your notes and data are stored locally in
+              your browser. We do not collect, transmit, or store any of your data on our servers.
+            </p>
+          </div>
           <div>
             <h4 className="font-semibold text-sm mb-1">Features</h4>
             <ul className="text-sm text-[var(--text-muted)] space-y-1 list-disc list-inside">

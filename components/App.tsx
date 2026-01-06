@@ -775,9 +775,9 @@ export function App() {
                 if (e.key === "Escape") setRenamingNoteId(null)
               }}
               onBlur={finishRename}
-              className="px-2 py-1 bg-[var(--bg-input)] text-[var(--text-color)] rounded border border-[var(--ui-border-color)] cursor-text outline-none focus:border-[var(--text-muted)]"
+              className="px-2 bg-[var(--bg-input)] text-[var(--text-color)] rounded border border-[var(--ui-border-color)] cursor-text outline-none focus:border-[var(--text-muted)]"
               autoFocus
-              style={{ width: "200px" }}
+              style={{ width: "200px", margin: "-1px 0" }}
             />
           ) : (
             <span
