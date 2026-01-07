@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { computeResults } from "./index"
+import { computeResults, evaluateDocument } from "./index"
 import { Preferences } from "@/lib/preferences/Preferences"
 
 describe("Integration Tests", () => {
@@ -1071,6 +1071,26 @@ z = y * 2`
       const results = computeResults("100$ to km", prefs)
       expect(results[0]).toBe("Error: Cannot convert currency to distance")
     })
+
+    it("should convert currency in variable assignment", () => {
+      const results = computeResults("price = 100$ to eur", prefs)
+      // The assignment should store the converted value
+      expect(results[0]).toMatch(/^[\d,]+\.?\d*€$/)
+      expect(results[0]).not.toBe("100$")
+    })
+
+    it("should use converted variable value", () => {
+      const results = computeResults(
+        "price_usd = 100$\nprice_eur = price_usd to eur\nprice_eur",
+        prefs
+      )
+      // First line is just 100$
+      expect(results[0]).toBe("100$")
+      // Second line should be converted
+      expect(results[1]).toMatch(/^[\d,]+\.?\d*€$/)
+      // Third line should reference the converted value
+      expect(results[2]).toMatch(/^[\d,]+\.?\d*€$/)
+    })
   })
 
   describe("Previous Result References", () => {
@@ -1928,6 +1948,88 @@ year(prev)`,
     it("should handle zero difference", () => {
       const results = computeResults("2024-01-15 - 2024-01-15", prefs)
       expect(results[0]).toBe("0ms")
+    })
+  })
+
+  describe("Inline Comments", () => {
+    it("should handle // inline comments", () => {
+      const results = computeResults("100 + 50 // adding numbers", prefs)
+      expect(results[0]).toBe("150")
+    })
+
+    it("should handle # inline comments", () => {
+      const results = computeResults("x = 10 # assign x", prefs)
+      expect(results[0]).toBe("10")
+    })
+
+    it("should handle full-line // comments", () => {
+      const results = computeResults("// This is a comment\n100", prefs)
+      expect(results[0]).toBe("")
+      expect(results[1]).toBe("100")
+    })
+
+    it("should handle full-line # comments", () => {
+      const results = computeResults("# This is a comment\n100", prefs)
+      expect(results[0]).toBe("")
+      expect(results[1]).toBe("100")
+    })
+
+    it("should preserve // comment text", () => {
+      const evals = evaluateDocument("100 // my note", prefs)
+      expect(evals[0].comment).toBe("my note")
+      expect(evals[0].formatted).toBe("100")
+    })
+
+    it("should preserve # comment text", () => {
+      const evals = evaluateDocument("x = 50 # price", prefs)
+      expect(evals[0].comment).toBe("price")
+      expect(evals[0].formatted).toBe("50")
+    })
+
+    it("should preserve full-line comment text", () => {
+      const evals = evaluateDocument("// This is a note", prefs)
+      expect(evals[0].comment).toBe("This is a note")
+      expect(evals[0].formatted).toBe("")
+    })
+
+    it("should work with operator prefix and comment", () => {
+      const results = computeResults("100\n+ 10 // add ten", prefs)
+      expect(results[0]).toBe("100")
+      expect(results[1]).toBe("110")
+    })
+
+    it("should work with aggregates and comments", () => {
+      const results = computeResults("10 // first\n20 // second\nsum", prefs)
+      expect(results[0]).toBe("10")
+      expect(results[1]).toBe("20")
+      expect(results[2]).toBe("30")
+    })
+
+    it("should handle empty inline comment", () => {
+      const results = computeResults("100 //", prefs)
+      expect(results[0]).toBe("100")
+    })
+
+    it("should handle comment with only whitespace after expression", () => {
+      const results = computeResults("100 // ", prefs)
+      expect(results[0]).toBe("100")
+    })
+
+    it("should handle multiple // in comment (only first splits)", () => {
+      const evals = evaluateDocument("100 // first // second", prefs)
+      expect(evals[0].comment).toBe("first // second")
+      expect(evals[0].formatted).toBe("100")
+    })
+
+    it("should work with variable assignment and inline comment", () => {
+      const results = computeResults("price = 50 # in dollars\nprice * 2", prefs)
+      expect(results[0]).toBe("50")
+      expect(results[1]).toBe("100")
+    })
+
+    it("should work with currency conversion and comment", () => {
+      const results = computeResults("100$ to eur // convert to euro", prefs)
+      expect(results[0]).toMatch(/^[\d,]+\.?\d*€$/)
     })
   })
 })

@@ -254,6 +254,7 @@ export interface LineEvaluation {
   result: EvalResult
   formatted: string
   context: ExecutionContext
+  comment?: string
 }
 
 // ============================================================================
