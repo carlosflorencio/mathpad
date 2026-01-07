@@ -25,14 +25,18 @@
   --ui-button-size: 20px;
   --ui-button-padding: 0.5rem;
 
-  /* Colors (defaults - overridden by theme) */
-  --text-color: rgb(227, 230, 232);
+  /* Colors (dark theme defaults - must match lib/theme/cssVars.ts darkCssVars) */
+  --text-color: hsl(95, 6.7%, 64.7%);
   --text-muted: rgba(214, 221, 209, 0.7);
+  --desk-bg-color: hsl(216, 13.2%, 14.9%);
+  --cm-background: hsl(220, 13%, 18%);
+  --ui-border-color: rgba(255, 255, 255, 0.1);
   --bg-modal: rgba(33, 34, 38, 0.95);
   --bg-dropdown: rgba(33, 34, 38, 0.8);
   --bg-input: rgba(255, 255, 255, 0.05);
   --bg-button-hover: rgba(255, 255, 255, 0.1);
   --bg-menu-item-hover: rgba(122, 122, 122, 0.1);
+  --paper-shadow: var(--paper-shadow-dark);
 }
 
 html,
@@ -219,33 +223,48 @@ body {
   width: 12rem;
 }
 
-/* Custom Scrollbar Styles */
-* {
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
-}
-
+/* Custom Scrollbar Styles - Webkit browsers (Chrome, Safari, Edge) */
 *::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 8px !important;
+  height: 8px !important;
 }
 
 *::-webkit-scrollbar-track {
-  background: transparent;
-  border-radius: 4px;
+  background: var(--desk-bg-color) !important;
 }
 
 *::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.2) !important;
   border-radius: 4px;
 }
 
 *::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.3) !important;
 }
 
 *::-webkit-scrollbar-corner {
-  background: transparent;
+  background: transparent !important;
+}
+
+html.light-theme *::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2) !important;
+}
+
+html.light-theme *::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.3) !important;
+}
+
+/* Custom Scrollbar Styles - Firefox (uses scrollbar-color) */
+@supports not selector(::-webkit-scrollbar) {
+  * {
+    scrollbar-width: thin !important;
+    scrollbar-color: rgba(255, 255, 255, 0.2) transparent !important;
+  }
+
+  html.light-theme,
+  html.light-theme * {
+    scrollbar-color: rgba(0, 0, 0, 0.2) transparent !important;
+  }
 }
 
 @media (max-width: 768px) {

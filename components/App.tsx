@@ -20,36 +20,14 @@ import { ShareModal } from "./modals/ShareModal"
 import { MenuIcon, ShareIcon, HelpIcon, FolderIcon, PlusIcon, QuestionIcon } from "./icons"
 import { QuickActionPalette, Action } from "./QuickActionPalette"
 import { useKeyBindings } from "@/hooks/useKeyBindings"
+import { applyCssVars } from "@/lib/theme/cssVars"
 import * as darkTheme from "./codemirror/DarkTheme"
 import * as lightTheme from "./codemirror/LightTheme"
 
 function configureCSSVars(preferences: Preferences): void {
   if (typeof document !== "undefined" && document.documentElement) {
-    const style = document.documentElement.style
-    style.setProperty("--font-size", preferences.fontSize + "px")
-
-    const isDark = preferences.theme === "dark"
-    const colors = isDark ? darkTheme.colors : lightTheme.colors
-
-    // Colors
-    style.setProperty("--text-color", isDark ? colors.light : colors.medium)
-    style.setProperty("--text-muted", isDark ? "rgba(214,221,209,0.7)" : "rgba(0,0,0,0.5)")
-    style.setProperty("--desk-bg-color", isDark ? colors.darkBackground : "#f8f9fa")
-    style.setProperty("--cm-background", colors.background)
-
-    // UI Elements
-    style.setProperty("--ui-border-color", isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)")
-    style.setProperty("--bg-modal", isDark ? "rgba(33,34,38,0.95)" : "rgba(255,255,255,0.95)")
-    style.setProperty("--bg-dropdown", isDark ? "rgba(33,34,38,0.8)" : "rgba(255,255,255,0.8)")
-    style.setProperty("--bg-input", isDark ? "rgba(255,255,255,0.05)" : "rgba(255,255,255,1)")
-    style.setProperty("--bg-button-hover", isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.05)")
-    style.setProperty("--bg-menu-item-hover", "rgba(122,122,122,0.1)")
-
-    // Shadows
-    style.setProperty(
-      "--paper-shadow",
-      isDark ? "var(--paper-shadow-dark)" : "var(--paper-shadow-light)"
-    )
+    document.documentElement.style.setProperty("--font-size", preferences.fontSize + "px")
+    applyCssVars(preferences.theme === "dark")
   }
 }
 

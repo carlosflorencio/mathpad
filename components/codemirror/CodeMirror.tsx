@@ -1,6 +1,6 @@
 "use client"
 
-import { EditorState, Extension } from "@codemirror/state"
+import { Compartment, EditorState, Extension } from "@codemirror/state"
 import { EditorView } from "@codemirror/view"
 import { useEffect, useRef } from "react"
 
@@ -26,6 +26,7 @@ export function CodeMirror({
   }>(null)
 
   const changeHandlerRef = useRef<null | ((newValue: string) => boolean)>(null)
+  const extensionsCompartmentRef = useRef(new Compartment())
 
   // Update refs after render to avoid setting refs during render
   useEffect(() => {
@@ -43,7 +44,7 @@ export function CodeMirror({
             "&": { height: "100%", flex: "1 1 auto", display: "flex", flexDirection: "column" },
             ".cm-scroller": { flex: "1 1 auto" },
           }),
-          extensionsRef.current,
+          extensionsCompartmentRef.current.of(extensionsRef.current),
           EditorView.updateListener.of((update) => {
             if (update.docChanged) {
               const nextDoc = update.state.doc.toString()
@@ -93,6 +94,15 @@ export function CodeMirror({
       }
     }
   }, [valueProp])
+
+  // Reconfigure extensions when they change (e.g., theme switch)
+  useEffect(() => {
+    if (editorRef.current !== null) {
+      editorRef.current.view.dispatch({
+        effects: extensionsCompartmentRef.current.reconfigure(extensions),
+      })
+    }
+  }, [extensions])
 
   return (
     <div
