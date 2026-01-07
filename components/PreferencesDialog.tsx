@@ -40,7 +40,7 @@ export function PreferencesDialog({ preferences, save, close }: PreferencesDialo
         <select
           value={theme}
           onChange={(e) => setTheme(e.target.value as Theme)}
-          className="form-select mr-4"
+          className="form-select w-24 mr-4"
         >
           <option value="dark">Dark</option>
           <option value="light">Light</option>

@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useState, useRef } from "react"
+import { useCallback, useEffect, useState, useRef, useMemo } from "react"
 import { useNotes } from "@/hooks/notes/useNotes"
 import { Preferences } from "@/lib/preferences/Preferences"
 import { ShareData } from "@/lib/notes/types"
@@ -21,6 +21,7 @@ import { OnboardingOverlay, EXAMPLE_TEMPLATE } from "./OnboardingOverlay"
 import { MenuIcon, ShareIcon, HelpIcon, FolderIcon, PlusIcon, QuestionIcon } from "./icons"
 import { QuickActionPalette, Action } from "./QuickActionPalette"
 import { useKeyBindings } from "@/hooks/useKeyBindings"
+import { useKeyboardMenuNavigation, MenuKeyBinding } from "@/hooks/useKeyboardMenuNavigation"
 import { applyCssVars } from "@/lib/theme/cssVars"
 import * as darkTheme from "./codemirror/DarkTheme"
 import * as lightTheme from "./codemirror/LightTheme"
@@ -224,6 +225,82 @@ export function App() {
       },
     ],
   })
+
+  // Menu keyboard navigation (vim-style keybinds)
+  const menuKeyBindings: MenuKeyBinding[] = useMemo(
+    () => [
+      {
+        key: "n",
+        label: "New Note",
+        action: () => {
+          createNote()
+          setShowMenu(false)
+          showToast("New note created")
+        },
+      },
+      {
+        key: "m",
+        label: "Manage Notes",
+        action: () => {
+          setShowManageNotes(true)
+          setShowMenu(false)
+        },
+      },
+      {
+        key: "o",
+        label: "Open Folder",
+        action: () => {
+          handleOpenFolder()
+          setShowMenu(false)
+        },
+        disabled: !isFileSystemSupported,
+      },
+      {
+        key: "c",
+        label: "Close Folder",
+        action: () => {
+          handleCloseFolder()
+          setShowMenu(false)
+        },
+        disabled: !isFolderMapped,
+      },
+      {
+        key: "p",
+        label: "Preferences",
+        action: () => {
+          setShowPreferences(true)
+          setShowMenu(false)
+        },
+      },
+      {
+        key: "s",
+        label: "Share",
+        action: () => {
+          handleShare()
+          setShowMenu(false)
+        },
+      },
+      {
+        key: "h",
+        label: "Help",
+        action: () => {
+          setShowHelpMenu(true)
+          setShowMenu(false)
+        },
+      },
+    ],
+    [
+      createNote,
+      showToast,
+      handleOpenFolder,
+      handleCloseFolder,
+      handleShare,
+      isFileSystemSupported,
+      isFolderMapped,
+    ]
+  )
+
+  useKeyboardMenuNavigation(showMenu, menuKeyBindings, preferences.vimMode)
 
   // Quick actions for palette
   const quickActions: Action[] = [
@@ -629,14 +706,19 @@ export function App() {
           {showMenu && (
             <div className="dropdown-menu">
               <div
-                className="dropdown-item"
+                className="dropdown-item flex justify-between items-center"
                 onClick={() => {
                   createNote()
                   setShowMenu(false)
                   showToast("New note created")
                 }}
               >
-                New Note
+                <span>New Note</span>
+                {preferences.vimMode && (
+                  <span className="ml-auto pl-8 text-[var(--text-muted)] font-mono text-sm opacity-70">
+                    n
+                  </span>
+                )}
               </div>
 
               <div
@@ -676,13 +758,18 @@ export function App() {
               </div>
 
               <div
-                className="dropdown-item"
+                className="dropdown-item flex justify-between items-center"
                 onClick={() => {
                   setShowManageNotes(true)
                   setShowMenu(false)
                 }}
               >
-                Manage Notes
+                <span>Manage Notes</span>
+                {preferences.vimMode && (
+                  <span className="ml-auto pl-8 text-[var(--text-muted)] font-mono text-sm opacity-70">
+                    m
+                  </span>
+                )}
               </div>
 
               <div className="border-t border-[var(--ui-border-color)] my-1"></div>
@@ -712,6 +799,11 @@ export function App() {
                 >
                   {isFolderMapped ? "Change Folder" : "Open Folder"}
                 </span>
+                {preferences.vimMode && (
+                  <span className="mr-2 text-[var(--text-muted)] font-mono text-sm opacity-70">
+                    o
+                  </span>
+                )}
                 {isFileSystemSupported && (
                   <button
                     onClick={(e) => {
@@ -741,6 +833,11 @@ export function App() {
                   >
                     Close Folder
                   </span>
+                  {preferences.vimMode && (
+                    <span className="mr-2 text-[var(--text-muted)] font-mono text-sm opacity-70">
+                      c
+                    </span>
+                  )}
                   <button
                     onClick={(e) => {
                       e.stopPropagation()
@@ -758,13 +855,18 @@ export function App() {
               <div className="border-t border-[var(--ui-border-color)] my-1"></div>
 
               <div
-                className="dropdown-item"
+                className="dropdown-item flex justify-between items-center"
                 onClick={() => {
                   setShowPreferences(true)
                   setShowMenu(false)
                 }}
               >
-                Preferences
+                <span>Preferences</span>
+                {preferences.vimMode && (
+                  <span className="ml-auto pl-8 text-[var(--text-muted)] font-mono text-sm opacity-70">
+                    p
+                  </span>
+                )}
               </div>
             </div>
           )}
@@ -858,24 +960,34 @@ export function App() {
       {showMenu && (
         <div className="dropdown-menu mobile-menu fixed right-4 md:hidden">
           <div
-            className="dropdown-item"
+            className="dropdown-item flex justify-between items-center"
             onClick={() => {
               createNote()
               setShowMenu(false)
               showToast("New note created")
             }}
           >
-            New Note
+            <span>New Note</span>
+            {preferences.vimMode && (
+              <span className="ml-auto pl-8 text-[var(--text-muted)] font-mono text-sm opacity-70">
+                n
+              </span>
+            )}
           </div>
 
           <div
-            className="dropdown-item"
+            className="dropdown-item flex justify-between items-center"
             onClick={() => {
               setShowManageNotes(true)
               setShowMenu(false)
             }}
           >
-            Manage Notes
+            <span>Manage Notes</span>
+            {preferences.vimMode && (
+              <span className="ml-auto pl-8 text-[var(--text-muted)] font-mono text-sm opacity-70">
+                m
+              </span>
+            )}
           </div>
 
           <div className="border-t border-[var(--ui-border-color)] my-1"></div>
@@ -903,6 +1015,9 @@ export function App() {
             >
               {isFolderMapped ? "Change Folder" : "Open Folder"}
             </span>
+            {preferences.vimMode && (
+              <span className="mr-2 text-[var(--text-muted)] font-mono text-sm opacity-70">o</span>
+            )}
             {isFileSystemSupported && (
               <button
                 onClick={(e) => {
@@ -932,6 +1047,9 @@ export function App() {
               >
                 Close Folder
               </span>
+              {preferences.vimMode && (
+                <span className="mr-2 text-[var(--text-muted)] font-mono text-sm opacity-70">c</span>
+              )}
               <button
                 onClick={(e) => {
                   e.stopPropagation()
@@ -949,33 +1067,48 @@ export function App() {
           <div className="border-t border-[var(--ui-border-color)] my-1"></div>
 
           <div
-            className="dropdown-item"
+            className="dropdown-item flex justify-between items-center"
             onClick={() => {
               setShowPreferences(true)
               setShowMenu(false)
             }}
           >
-            Preferences
+            <span>Preferences</span>
+            {preferences.vimMode && (
+              <span className="ml-auto pl-8 text-[var(--text-muted)] font-mono text-sm opacity-70">
+                p
+              </span>
+            )}
           </div>
 
           <div
-            className="dropdown-item md:hidden"
+            className="dropdown-item md:hidden flex justify-between items-center"
             onClick={() => {
               handleShare()
               setShowMenu(false)
             }}
           >
-            Share
+            <span>Share</span>
+            {preferences.vimMode && (
+              <span className="ml-auto pl-8 text-[var(--text-muted)] font-mono text-sm opacity-70">
+                s
+              </span>
+            )}
           </div>
 
           <div
-            className="dropdown-item md:hidden"
+            className="dropdown-item md:hidden flex justify-between items-center"
             onClick={() => {
               setShowHelpMenu(true)
               setShowMenu(false)
             }}
           >
-            Help
+            <span>Help</span>
+            {preferences.vimMode && (
+              <span className="ml-auto pl-8 text-[var(--text-muted)] font-mono text-sm opacity-70">
+                h
+              </span>
+            )}
           </div>
         </div>
       )}
