@@ -137,10 +137,11 @@ class Parser {
       }
 
       // Check for regular assignment: identifier = expression
+      // Use parseFormatted to support conversions like "var = 100$ to eur"
       if (this.peek().type === "assign") {
         this.advance() // skip identifier
         this.advance() // skip '='
-        const expression = this.parseExpression()
+        const expression = this.parseFormatted()
         return {
           kind: "assignment",
           identifier,

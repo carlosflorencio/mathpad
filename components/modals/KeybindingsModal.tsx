@@ -102,8 +102,8 @@ export function KeybindingsModal({ onClose }: KeybindingsModalProps) {
           to access all actions and notes quickly!
         </p>
         <p className="text-xs text-[var(--text-muted)] mt-2">
-          <strong>Note:</strong> Some browsers may override {modKey}+N at the system
-          level. Use {modKey}+K → &quot;New Note&quot; as an alternative.
+          <strong>Note:</strong> Some browsers may override {modKey}+N at the system level. Use{" "}
+          {modKey}+K → &quot;New Note&quot; as an alternative.
         </p>
       </div>
 

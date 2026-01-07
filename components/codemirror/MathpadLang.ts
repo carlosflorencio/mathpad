@@ -133,6 +133,7 @@ interface MathpadLanguageState {
   currentToken: Token | null
   hasAssignment: boolean
   hasOperators: boolean
+  commentStart: number // Position where inline comment starts (-1 if none)
 }
 
 /**
@@ -265,6 +266,7 @@ const mathpadLanguage = StreamLanguage.define({
       currentToken: null as Token | null,
       hasAssignment: false, // Track if line has = sign
       hasOperators: false, // Track if line has operators
+      commentStart: -1, // Position where inline comment starts (-1 if none)
     }
   },
 
@@ -279,6 +281,7 @@ const mathpadLanguage = StreamLanguage.define({
       currentToken: state.currentToken,
       hasAssignment: state.hasAssignment,
       hasOperators: state.hasOperators,
+      commentStart: state.commentStart,
     }
   },
 
@@ -302,6 +305,7 @@ const mathpadLanguage = StreamLanguage.define({
       state.currentToken = null
       state.hasAssignment = false
       state.hasOperators = false
+      state.commentStart = -1
 
       // Check for separator line
       if (/^---+$/.test(state.lineText.trim())) {
@@ -309,10 +313,21 @@ const mathpadLanguage = StreamLanguage.define({
         return "separator"
       }
 
-      // Check for comment
-      if (state.lineText.trim().startsWith("#")) {
+      // Check for full-line comment (# or //)
+      const trimmedLine = state.lineText.trim()
+      if (trimmedLine.startsWith("#") || trimmedLine.startsWith("//")) {
         stream.skipToEnd()
         return "comment"
+      }
+
+      // Find inline comment position (// or # after content)
+      const doubleSlashIndex = state.lineText.indexOf("//")
+      const hashIndex = state.lineText.indexOf("#")
+      if (doubleSlashIndex !== -1) {
+        state.commentStart = doubleSlashIndex
+      } else if (hashIndex > 0) {
+        // Only treat # as comment if not at start (full-line already handled)
+        state.commentStart = hashIndex
       }
 
       // Find label (text before colon)
@@ -348,6 +363,12 @@ const mathpadLanguage = StreamLanguage.define({
     if (state.colonIndex !== -1 && stream.pos <= state.colonIndex) {
       stream.pos = state.colonIndex + 1
       return "labelName"
+    }
+
+    // Handle inline comment - if we've reached the comment position, highlight rest as comment
+    if (state.commentStart !== -1 && stream.pos >= state.commentStart) {
+      stream.skipToEnd()
+      return "comment"
     }
 
     // No tokens - skip to end
@@ -448,7 +469,7 @@ const mathpadLanguage = StreamLanguage.define({
   },
 
   languageData: {
-    commentTokens: { line: "#" },
+    commentTokens: { line: "//" },
   },
 })
 

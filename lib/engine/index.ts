@@ -34,19 +34,54 @@ export function evaluateDocument(text: string, preferences: Preferences): LineEv
       continue
     }
 
-    // Check for comment - skip line but show as empty
-    if (line.trim().startsWith("#")) {
+    // Check for full-line comment - skip line but show as empty and preserve comment
+    const trimmedLine = line.trim()
+    if (trimmedLine.startsWith("#") || trimmedLine.startsWith("//")) {
+      const commentStart = trimmedLine.startsWith("//") ? 2 : 1
       results.push({
         lineNumber: i,
         result: { type: "empty" },
         formatted: "",
         context,
+        comment: trimmedLine.substring(commentStart).trim(),
+      })
+      continue
+    }
+
+    // Extract inline comment if present (// or # style)
+    let lineToProcess = line
+    let comment: string | undefined
+
+    // Check for // comment first
+    const doubleSlashIndex = line.indexOf("//")
+    if (doubleSlashIndex !== -1) {
+      lineToProcess = line.substring(0, doubleSlashIndex).trimEnd()
+      comment = line.substring(doubleSlashIndex + 2).trim()
+    }
+
+    // Check for inline # comment (only if // not found and # not at start)
+    if (comment === undefined) {
+      const hashIndex = line.indexOf("#")
+      if (hashIndex > 0) {
+        lineToProcess = line.substring(0, hashIndex).trimEnd()
+        comment = line.substring(hashIndex + 1).trim()
+      }
+    }
+
+    // If nothing left after removing comment, treat as empty with comment
+    if (lineToProcess.trim() === "") {
+      results.push({
+        lineNumber: i,
+        result: { type: "empty" },
+        formatted: "",
+        context,
+        comment,
       })
       continue
     }
 
     // Check for multiline variable assignment: "variable ="
-    const multilineMatch = line.match(/^\s*(\w+)\s*=\s*$/)
+    const multilineMatch = lineToProcess.match(/^\s*(\w+)\s*=\s*$/)
     if (multilineMatch && i + 1 < lines.length) {
       const variableName = multilineMatch[1]
       const nextLine = lines[i + 1]
@@ -59,11 +94,27 @@ export function evaluateDocument(text: string, preferences: Preferences): LineEv
           result: { type: "empty" },
           formatted: "",
           context,
+          comment,
         })
 
         // Move to next line and process the indented value
         i++
-        const valueLine = nextLine.trim()
+        let valueLine = nextLine.trim()
+
+        // Extract inline comment from the value line
+        let valueComment: string | undefined
+        const valueDoubleSlash = valueLine.indexOf("//")
+        if (valueDoubleSlash !== -1) {
+          valueComment = valueLine.substring(valueDoubleSlash + 2).trim()
+          valueLine = valueLine.substring(0, valueDoubleSlash).trimEnd()
+        } else {
+          const valueHash = valueLine.indexOf("#")
+          if (valueHash > 0) {
+            valueComment = valueLine.substring(valueHash + 1).trim()
+            valueLine = valueLine.substring(0, valueHash).trimEnd()
+          }
+        }
+
         const tokens = tokenize(valueLine, context)
         const ast = parse(tokens)
         const [result, newContext] = evaluate(ast, context)
@@ -78,6 +129,7 @@ export function evaluateDocument(text: string, preferences: Preferences): LineEv
           result,
           formatted,
           context: newContext,
+          comment: valueComment,
         })
 
         context = newContext
@@ -87,7 +139,7 @@ export function evaluateDocument(text: string, preferences: Preferences): LineEv
     }
 
     // Tokenize the line (pass context so tokenizer can distinguish defined variables from text)
-    const tokens = tokenize(line, context)
+    const tokens = tokenize(lineToProcess, context)
 
     // Special case: Check if we have a number followed by a format keyword (e.g., "40k km")
     // This should be treated as a unit conversion: "40k in km"
@@ -309,6 +361,7 @@ export function evaluateDocument(text: string, preferences: Preferences): LineEv
       result,
       formatted,
       context: newContext,
+      comment,
     })
 
     // Update context for next line
