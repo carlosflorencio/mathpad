@@ -586,7 +586,14 @@ export function App() {
 
       {showFolderSyncHelp && <FolderSyncHelpModal onClose={() => setShowFolderSyncHelp(false)} />}
 
-      {showShareModal && <ShareModal url={shareUrl} onClose={() => setShowShareModal(false)} />}
+      {showShareModal && (
+        <ShareModal
+          url={shareUrl}
+          content={editorContent}
+          preferences={preferences}
+          onClose={() => setShowShareModal(false)}
+        />
+      )}
 
       <QuickActionPalette
         isOpen={showQuickActions}
