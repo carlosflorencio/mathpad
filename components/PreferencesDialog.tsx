@@ -17,6 +17,7 @@ export function PreferencesDialog({ preferences, save, close }: PreferencesDialo
   const [theme, setTheme] = useState(preferences.theme)
   const [decimalSeparator, setDecimalSeparator] = useState(preferences.decimalSeparator)
   const [thousandsSeparator, setThousandsSeparator] = useState(preferences.thousandsSeparator)
+  const [vimMode, setVimMode] = useState(preferences.vimMode)
 
   useEffect(() => {
     const updated = new Preferences(
@@ -25,11 +26,12 @@ export function PreferencesDialog({ preferences, save, close }: PreferencesDialo
       decimalSeparator,
       thousandsSeparator,
       theme,
-      preferences.hasSeenOnboarding
+      preferences.hasSeenOnboarding,
+      vimMode
     )
     save(updated)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fontSize, decimalPlaces, theme, thousandsSeparator, decimalSeparator])
+  }, [fontSize, decimalPlaces, theme, thousandsSeparator, decimalSeparator, vimMode])
 
   return (
     <div className="modal">
@@ -99,6 +101,21 @@ export function PreferencesDialog({ preferences, save, close }: PreferencesDialo
           onChange={(e) => setDecimalPlaces(parseInt(e.target.value))}
           className="form-input w-12 mr-4"
         />
+      </div>
+
+      <div className="mb-4">
+        <label className="form-label flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={vimMode}
+            onChange={(e) => setVimMode(e.target.checked)}
+            className="cursor-pointer"
+          />
+          <span>Enable Vim Key Bindings</span>
+        </label>
+        <p className="text-sm text-[var(--text-muted)] mt-1 ml-6">
+          Use vim-style navigation and editing commands in the editor
+        </p>
       </div>
 
       <div className="flex justify-end mt-6">

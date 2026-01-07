@@ -6,6 +6,7 @@ import { searchKeymap, highlightSelectionMatches } from "@codemirror/search"
 import { drawSelection, EditorView, keymap } from "@codemirror/view"
 import { EditorState } from "@codemirror/state"
 import { useRef, useEffect, useMemo, memo } from "react"
+import { vim } from "@replit/codemirror-vim"
 import {
   mathpadLanguage,
   contextsField,
@@ -166,6 +167,24 @@ function EditorComponent({ value, onUpdate, preferences, onCopy }: EditorProps) 
     [preferences.theme]
   )
 
+  // Memoize vim extension - only include when enabled
+  const vimExtension = useMemo(() => (preferences.vimMode ? vim() : []), [preferences.vimMode])
+
+  // Create keymap with Mathpad-specific overrides
+  // These keybindings should work even in vim mode
+  const keymapExtension = useMemo(
+    () =>
+      keymap.of([
+        ...defaultKeymap,
+        ...searchKeymap,
+        ...completionKeymap,
+        { key: "Tab", run: acceptCompletion },
+        ...historyKeymap,
+        { key: "Mod-Shift-z", run: redo, preventDefault: true },
+      ]),
+    []
+  )
+
   return (
     <CodeMirror
       className="flex-1 h-full"
@@ -191,14 +210,8 @@ function EditorComponent({ value, onUpdate, preferences, onCopy }: EditorProps) 
         autocompletion({ override: [completions] }),
         themeExtension,
         history(),
-        keymap.of([
-          ...defaultKeymap,
-          ...searchKeymap,
-          ...completionKeymap,
-          { key: "Tab", run: acceptCompletion },
-          ...historyKeymap,
-          { key: "Mod-Shift-z", run: redo, preventDefault: true },
-        ]),
+        vimExtension, // Vim mode (conditionally included)
+        keymapExtension, // Regular keymaps (after vim to override certain keys)
       ]}
     />
   )

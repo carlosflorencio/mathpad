@@ -25,6 +25,7 @@
     "@codemirror/state": "^6.5.3",
     "@codemirror/view": "^6.39.8",
     "@lezer/highlight": "^1.2.3",
+    "@replit/codemirror-vim": "^6.3.0",
     "big.js": "^7.0.1",
     "convert-units": "^2.3.4",
     "idb-keyval": "^6.2.2",
