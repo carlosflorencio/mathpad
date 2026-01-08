@@ -22,6 +22,11 @@ export function KeybindingsModal({ onClose, vimMode = false }: KeybindingsModalP
       category: "Navigation",
     },
     {
+      keys: `${modKey}+O`,
+      description: "Open note selector",
+      category: "Navigation",
+    },
+    {
       keys: `${modKey}+M`,
       description: "Toggle menu",
       category: "Navigation",
@@ -43,6 +48,11 @@ export function KeybindingsModal({ onClose, vimMode = false }: KeybindingsModalP
       description: "Share note (copy link to clipboard)",
       category: "Notes",
     },
+    {
+      keys: `${modKey}+P`,
+      description: "Open folder",
+      category: "Notes",
+    },
 
     // Quick Actions (via Cmd+K)
     {
@@ -58,6 +68,11 @@ export function KeybindingsModal({ onClose, vimMode = false }: KeybindingsModalP
     {
       keys: "Enter",
       description: "Select action or note",
+      category: "Quick Actions",
+    },
+    {
+      keys: "Ctrl+D",
+      description: "Delete selected note",
       category: "Quick Actions",
     },
   ]
@@ -82,6 +97,16 @@ export function KeybindingsModal({ onClose, vimMode = false }: KeybindingsModalP
     {
       keys: "gg G",
       description: "Move to start/end of document",
+      category: "Vim Editor - Navigation",
+    },
+    {
+      keys: "Ctrl+D",
+      description: "Page down",
+      category: "Vim Editor - Navigation",
+    },
+    {
+      keys: "Ctrl+U",
+      description: "Page up",
       category: "Vim Editor - Navigation",
     },
 

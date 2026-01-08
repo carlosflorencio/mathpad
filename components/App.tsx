@@ -31,6 +31,7 @@ import {
   PreferencesIcon,
 } from "./icons"
 import { QuickActionPalette, Action } from "./QuickActionPalette"
+import { NoteSelector } from "./NoteSelector"
 import { useKeyBindings } from "@/hooks/useKeyBindings"
 import { useToasts } from "./app/hooks/useToasts"
 import { useFolderSync } from "./app/hooks/useFolderSync"
@@ -82,6 +83,7 @@ export function App() {
     showManageNotes,
     showFolderSyncHelp,
     showQuickActions,
+    showNoteSelector,
     showShareModal,
     showOnboarding,
     shareUrl,
@@ -96,6 +98,7 @@ export function App() {
     setShowManageNotes,
     setShowFolderSyncHelp,
     setShowQuickActions,
+    setShowNoteSelector,
     setShowShareModal,
     setShowOnboarding,
     setShareUrl,
@@ -222,6 +225,16 @@ export function App() {
     }
   }, [isLoaded, setConflictData])
 
+  // Focus the editor (used after closing dialogs)
+  const focusEditor = useCallback(() => {
+    setTimeout(() => {
+      const cmEditor = document.querySelector(".cm-editor .cm-content") as HTMLElement
+      if (cmEditor) {
+        cmEditor.focus()
+      }
+    }, 0)
+  }, [])
+
   // Close menu when clicking outside
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -249,12 +262,13 @@ export function App() {
         closeAllDialogs()
         cancelRename()
         setConflictData(null)
+        focusEditor()
       }
     }
 
     window.addEventListener("keyup", handleKeyUp)
     return () => window.removeEventListener("keyup", handleKeyUp)
-  }, [closeAllDialogs, showOnboarding, preferences, savePreferences, cancelRename, setConflictData])
+  }, [closeAllDialogs, showOnboarding, preferences, savePreferences, cancelRename, setConflictData, focusEditor])
 
   // Vim mode: Focus editor when pressing 'i' and editor doesn't have focus
   useEffect(() => {
@@ -288,6 +302,7 @@ export function App() {
         showManageNotes ||
         showFolderSyncHelp ||
         showQuickActions ||
+        showNoteSelector ||
         showShareModal ||
         showOnboarding
       ) {
@@ -321,6 +336,7 @@ export function App() {
     showManageNotes,
     showFolderSyncHelp,
     showQuickActions,
+    showNoteSelector,
     showShareModal,
     showOnboarding,
   ])
@@ -473,6 +489,18 @@ export function App() {
         handler: handleShare,
         description: "Share note",
       },
+      {
+        key: "o",
+        ctrlOrCmd: true,
+        handler: () => setShowNoteSelector(true),
+        description: "Open note selector",
+      },
+      {
+        key: "p",
+        ctrlOrCmd: true,
+        handler: handleOpenFolder,
+        description: "Open folder",
+      },
     ],
   })
 
@@ -573,6 +601,7 @@ export function App() {
 
       if (action === "cancel") {
         setConflictData(null)
+        focusEditor()
         return
       }
 
@@ -584,8 +613,9 @@ export function App() {
       } else {
         showToast("Imported as new note")
       }
+      focusEditor()
     },
-    [conflictData, importSharedNote, showToast, setConflictData]
+    [conflictData, importSharedNote, showToast, setConflictData, focusEditor]
   )
 
   const handleNotesMenuHover = useCallback(() => {
@@ -630,26 +660,54 @@ export function App() {
         showManageNotes ||
         showFolderSyncHelp ||
         showShareModal ||
-        pendingDeletions.length > 0) && <div className="modal-backdrop" onClick={closeAllDialogs} />}
+        pendingDeletions.length > 0) && (
+        <div
+          className="modal-backdrop"
+          onClick={() => {
+            closeAllDialogs()
+            focusEditor()
+          }}
+        />
+      )}
 
       {showPreferences && (
         <PreferencesDialog
           preferences={preferences}
-          close={closeAllDialogs}
+          close={() => {
+            closeAllDialogs()
+            focusEditor()
+          }}
           save={handleSavePreferences}
         />
       )}
 
       {showKeybindingsModal && (
         <KeybindingsModal
-          onClose={() => setShowKeybindingsModal(false)}
+          onClose={() => {
+            setShowKeybindingsModal(false)
+            focusEditor()
+          }}
           vimMode={preferences.vimMode}
         />
       )}
 
-      {showSyntaxModal && <EditorSyntaxModal onClose={() => setShowSyntaxModal(false)} />}
+      {showSyntaxModal && (
+        <EditorSyntaxModal
+          onClose={() => {
+            setShowSyntaxModal(false)
+            focusEditor()
+          }}
+        />
+      )}
 
-      {showAboutModal && <AboutModal onClose={() => setShowAboutModal(false)} />}
+      {showAboutModal && (
+        <AboutModal
+          onClose={() => {
+            setShowAboutModal(false)
+            focusEditor()
+          }}
+        />
+      )}
 
       {conflictData && (
         <ConflictResolutionModal conflictData={conflictData} onResolve={handleConflictResolve} />
@@ -661,10 +719,12 @@ export function App() {
           onConfirm={() => {
             confirmDeletions()
             showToast("Deleted notes removed from app")
+            focusEditor()
           }}
           onCancel={() => {
             cancelDeletions()
             showToast("Deleted notes will be restored to folder")
+            focusEditor()
           }}
         />
       )}
@@ -673,7 +733,10 @@ export function App() {
         <ManageNotesModal
           notes={notes}
           activeNote={activeNote}
-          onClose={() => setShowManageNotes(false)}
+          onClose={() => {
+            setShowManageNotes(false)
+            focusEditor()
+          }}
           onRename={(noteId, newName) => {
             renameNote(noteId, newName)
             showToast("Note renamed")
@@ -685,21 +748,50 @@ export function App() {
         />
       )}
 
-      {showFolderSyncHelp && <FolderSyncHelpModal onClose={() => setShowFolderSyncHelp(false)} />}
+      {showFolderSyncHelp && (
+        <FolderSyncHelpModal
+          onClose={() => {
+            setShowFolderSyncHelp(false)
+            focusEditor()
+          }}
+        />
+      )}
 
       {showShareModal && (
         <ShareModal
           url={shareUrl}
           content={editorContent}
           preferences={preferences}
-          onClose={() => setShowShareModal(false)}
+          onClose={() => {
+            setShowShareModal(false)
+            focusEditor()
+          }}
         />
       )}
 
       <QuickActionPalette
         isOpen={showQuickActions}
-        onClose={() => setShowQuickActions(false)}
+        onClose={() => {
+          setShowQuickActions(false)
+          focusEditor()
+        }}
         actions={quickActions}
+        notes={notes}
+        activeNoteId={activeNote.id}
+        onSwitchNote={(noteId) => {
+          switchNote(noteId)
+        }}
+        onDeleteNote={(noteId) => {
+          handleDeleteNote(noteId)
+        }}
+      />
+
+      <NoteSelector
+        isOpen={showNoteSelector}
+        onClose={() => {
+          setShowNoteSelector(false)
+          focusEditor()
+        }}
         notes={notes}
         activeNoteId={activeNote.id}
         onSwitchNote={(noteId) => {
@@ -1002,7 +1094,10 @@ export function App() {
       {/* Help Menu - works for both mobile and desktop */}
       {showHelpMenu && (
         <HelpMenu
-          onClose={() => setShowHelpMenu(false)}
+          onClose={() => {
+            setShowHelpMenu(false)
+            focusEditor()
+          }}
           onSelectKeybindings={() => setShowKeybindingsModal(true)}
           onSelectSyntax={() => setShowSyntaxModal(true)}
           onSelectFolderSync={() => setShowFolderSyncHelp(true)}

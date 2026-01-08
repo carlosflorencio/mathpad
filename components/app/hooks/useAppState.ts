@@ -15,6 +15,7 @@ export function useAppState() {
   const [showManageNotes, setShowManageNotes] = useState(false)
   const [showFolderSyncHelp, setShowFolderSyncHelp] = useState(false)
   const [showQuickActions, setShowQuickActions] = useState(false)
+  const [showNoteSelector, setShowNoteSelector] = useState(false)
   const [showShareModal, setShowShareModal] = useState(false)
   const [showOnboarding, setShowOnboarding] = useState(false)
   const [shareUrl, setShareUrl] = useState("")
@@ -31,6 +32,7 @@ export function useAppState() {
     setShowManageNotes(false)
     setShowFolderSyncHelp(false)
     setShowQuickActions(false)
+    setShowNoteSelector(false)
     setShowShareModal(false)
     setShowOnboarding(false)
   }, [])
@@ -47,6 +49,7 @@ export function useAppState() {
     showManageNotes,
     showFolderSyncHelp,
     showQuickActions,
+    showNoteSelector,
     showShareModal,
     showOnboarding,
     shareUrl,
@@ -62,6 +65,7 @@ export function useAppState() {
     setShowManageNotes,
     setShowFolderSyncHelp,
     setShowQuickActions,
+    setShowNoteSelector,
     setShowShareModal,
     setShowOnboarding,
     setShareUrl,

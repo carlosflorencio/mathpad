@@ -1,39 +1,29 @@
 import { useState, useEffect, useRef } from "react"
 import { Note } from "@/lib/notes/Note"
 
-export type Action = {
-  id: string
-  label: string
-  description?: string
-  icon?: React.ReactNode
-  handler: () => void
-  keywords?: string[]
-}
-
-interface QuickActionPaletteProps {
+interface NoteSelectorProps {
   isOpen: boolean
   onClose: () => void
-  actions: Action[]
   notes: Note[]
   activeNoteId: string
   onSwitchNote: (noteId: string) => void
   onDeleteNote: (noteId: string) => void
 }
 
-export function QuickActionPalette({
+export function NoteSelector({
   isOpen,
   onClose,
-  actions,
   notes,
   activeNoteId,
   onSwitchNote,
   onDeleteNote,
-}: QuickActionPaletteProps) {
+}: NoteSelectorProps) {
   const [query, setQuery] = useState("")
   const [selectedIndex, setSelectedIndex] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)
   const itemRefs = useRef<(HTMLDivElement | null)[]>([])
   const scrollContainerRef = useRef<HTMLDivElement>(null)
+  const isKeyboardNavigatingRef = useRef(false)
 
   // Delete confirmation state
   const [deleteConfirmation, setDeleteConfirmation] = useState<{
@@ -43,56 +33,28 @@ export function QuickActionPalette({
   } | null>(null)
   const [confirmChoice, setConfirmChoice] = useState(0) // 0 = Yes, 1 = No
   const justExitedConfirmationRef = useRef(false)
-  const isKeyboardNavigatingRef = useRef(false)
 
-  // Combine actions and notes into searchable items
-  const allItems = [
-    ...actions.map((action) => ({
-      type: "action" as const,
-      id: action.id,
-      label: action.label,
-      description: action.description,
-      icon: action.icon,
-      handler: action.handler,
-      searchText: `${action.label} ${action.keywords?.join(" ") || ""}`.toLowerCase(),
-    })),
-    ...notes.map((note) => ({
-      type: "note" as const,
-      id: note.id,
-      label: note.name,
-      description: note.id === activeNoteId ? "Current note" : undefined,
-      icon: (
-        <svg
-          width="16"
-          height="16"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-          <polyline points="14 2 14 8 20 8"></polyline>
-        </svg>
-      ),
-      handler: () => {
-        // Only switch if selecting a different note
-        if (note.id !== activeNoteId) {
-          onSwitchNote(note.id)
-        }
-      },
-      searchText: note.name.toLowerCase(),
-    })),
-  ]
+  // Convert notes to searchable items
+  const noteItems = notes.map((note) => ({
+    id: note.id,
+    label: note.name,
+    description: note.id === activeNoteId ? "Current note" : undefined,
+    handler: () => {
+      // Only switch if selecting a different note
+      if (note.id !== activeNoteId) {
+        onSwitchNote(note.id)
+      }
+    },
+    searchText: note.name.toLowerCase(),
+  }))
 
   // Filter items based on query
   const filteredItems = query
-    ? allItems.filter((item) => item.searchText.includes(query.toLowerCase()))
-    : allItems
+    ? noteItems.filter((item) => item.searchText.includes(query.toLowerCase()))
+    : noteItems
 
   // Ensure selected index is within bounds
-  const safeSelectedIndex = Math.min(selectedIndex, filteredItems.length - 1)
+  const safeSelectedIndex = Math.min(selectedIndex, Math.max(0, filteredItems.length - 1))
 
   // Focus input when opened
   useEffect(() => {
@@ -114,8 +76,6 @@ export function QuickActionPalette({
   useEffect(() => {
     if (itemRefs.current[safeSelectedIndex] && scrollContainerRef.current) {
       const selectedElement = itemRefs.current[safeSelectedIndex]
-
-      // Use scrollIntoView with options for smooth scrolling that works in both directions
       selectedElement.scrollIntoView({
         block: "nearest",
         behavior: "smooth",
@@ -127,7 +87,6 @@ export function QuickActionPalette({
   useEffect(() => {
     if (justExitedConfirmationRef.current && !deleteConfirmation) {
       justExitedConfirmationRef.current = false
-      // Use setTimeout to ensure DOM has updated with new filtered items
       setTimeout(() => {
         if (itemRefs.current[safeSelectedIndex] && scrollContainerRef.current) {
           const selectedElement = itemRefs.current[safeSelectedIndex]
@@ -153,21 +112,19 @@ export function QuickActionPalette({
         } else if (e.key === "Enter") {
           e.preventDefault()
           if (confirmChoice === 0) {
-            // Yes - delete the note, keep palette open, and select next item
+            // Yes - delete the note, keep selector open, and select next item
             onDeleteNote(deleteConfirmation.noteId)
 
             // Calculate the next selection index
-            // If we're deleting an item, the next item will take its place at the same index
-            // Unless it was the last item, then we select the previous one
-            const nextIndex = deleteConfirmation.originalIndex >= filteredItems.length - 1
-              ? Math.max(0, deleteConfirmation.originalIndex - 1)
-              : deleteConfirmation.originalIndex
+            const nextIndex =
+              deleteConfirmation.originalIndex >= filteredItems.length - 1
+                ? Math.max(0, deleteConfirmation.originalIndex - 1)
+                : deleteConfirmation.originalIndex
 
             setSelectedIndex(nextIndex)
             justExitedConfirmationRef.current = true
             setDeleteConfirmation(null)
             setConfirmChoice(0)
-            // Don't close the palette - keep it open
           } else {
             // No - cancel and restore focus to the original item
             setSelectedIndex(deleteConfirmation.originalIndex)
@@ -177,7 +134,6 @@ export function QuickActionPalette({
           }
         } else if (e.key === "Escape") {
           e.preventDefault()
-          // Restore focus to the original item
           setSelectedIndex(deleteConfirmation.originalIndex)
           justExitedConfirmationRef.current = true
           setDeleteConfirmation(null)
@@ -204,8 +160,7 @@ export function QuickActionPalette({
       } else if (e.key === "d" && e.ctrlKey) {
         e.preventDefault()
         const selectedItem = filteredItems[safeSelectedIndex]
-        if (selectedItem && selectedItem.type === "note") {
-          // Show delete confirmation
+        if (selectedItem) {
           setDeleteConfirmation({
             noteId: selectedItem.id,
             noteName: selectedItem.label,
@@ -232,14 +187,13 @@ export function QuickActionPalette({
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search actions and notes..."
+            placeholder="Search notes..."
             className="w-full px-3 py-2 bg-[var(--bg-input)] text-[var(--text-color)] rounded border border-[var(--ui-border-color)] outline-none focus:border-[var(--text-muted)]"
           />
         </div>
 
         <div ref={scrollContainerRef} className="max-h-96 overflow-y-auto">
           {deleteConfirmation ? (
-            // Delete confirmation mode
             <div className="p-6">
               <div className="text-[var(--text-color)] mb-4 text-center">
                 Delete &quot;{deleteConfirmation.noteName}&quot;?
@@ -252,19 +206,15 @@ export function QuickActionPalette({
                       : "border-[var(--ui-border-color)]"
                   }`}
                   onClick={() => {
-                    // Yes - delete the note, keep palette open, and select next item
                     onDeleteNote(deleteConfirmation.noteId)
-
-                    // Calculate the next selection index
-                    const nextIndex = deleteConfirmation.originalIndex >= filteredItems.length - 1
-                      ? Math.max(0, deleteConfirmation.originalIndex - 1)
-                      : deleteConfirmation.originalIndex
-
+                    const nextIndex =
+                      deleteConfirmation.originalIndex >= filteredItems.length - 1
+                        ? Math.max(0, deleteConfirmation.originalIndex - 1)
+                        : deleteConfirmation.originalIndex
                     setSelectedIndex(nextIndex)
                     justExitedConfirmationRef.current = true
                     setDeleteConfirmation(null)
                     setConfirmChoice(0)
-                    // Don't close the palette
                   }}
                   onMouseEnter={() => setConfirmChoice(0)}
                 >
@@ -277,7 +227,6 @@ export function QuickActionPalette({
                       : "border-[var(--ui-border-color)]"
                   }`}
                   onClick={() => {
-                    // No - cancel and restore focus to the original item
                     setSelectedIndex(deleteConfirmation.originalIndex)
                     justExitedConfirmationRef.current = true
                     setDeleteConfirmation(null)
@@ -290,7 +239,7 @@ export function QuickActionPalette({
               </div>
             </div>
           ) : filteredItems.length === 0 ? (
-            <div className="p-8 text-center text-[var(--text-muted)]">No results found</div>
+            <div className="p-8 text-center text-[var(--text-muted)]">No notes found</div>
           ) : (
             <div className="py-2">
               {filteredItems.map((item, index) => (
@@ -310,7 +259,6 @@ export function QuickActionPalette({
                       isKeyboardNavigatingRef.current = false
                       return
                     }
-                    // Update selection on mouse move (not just enter)
                     if (index !== safeSelectedIndex) {
                       setSelectedIndex(index)
                     }
@@ -319,9 +267,21 @@ export function QuickActionPalette({
                     index === safeSelectedIndex ? "bg-[var(--bg-button-hover)]" : ""
                   }`}
                 >
-                  {item.icon && (
-                    <div className="flex-shrink-0 text-[var(--text-muted)]">{item.icon}</div>
-                  )}
+                  <div className="flex-shrink-0 text-[var(--text-muted)]">
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                      <polyline points="14 2 14 8 20 8"></polyline>
+                    </svg>
+                  </div>
                   <div className="flex-1 min-w-0">
                     <div className="text-[var(--text-color)] truncate">{item.label}</div>
                     {item.description && (
@@ -330,7 +290,7 @@ export function QuickActionPalette({
                       </div>
                     )}
                   </div>
-                  {item.type === "note" && item.id === activeNoteId && (
+                  {item.id === activeNoteId && (
                     <div className="text-xs text-[var(--text-muted)]">•</div>
                   )}
                 </div>
@@ -373,13 +333,13 @@ export function QuickActionPalette({
                 <kbd className="px-1.5 py-0.5 bg-[var(--bg-input)] rounded border border-[var(--ui-border-color)]">
                   Enter
                 </kbd>{" "}
-                Select
+                Open
               </span>
               <span>
                 <kbd className="px-1.5 py-0.5 bg-[var(--bg-input)] rounded border border-[var(--ui-border-color)]">
                   Ctrl+D
                 </kbd>{" "}
-                Delete Note
+                Delete
               </span>
               <span>
                 <kbd className="px-1.5 py-0.5 bg-[var(--bg-input)] rounded border border-[var(--ui-border-color)]">

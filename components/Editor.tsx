@@ -1,9 +1,16 @@
 "use client"
 
 import { acceptCompletion, autocompletion, completionKeymap } from "@codemirror/autocomplete"
-import { defaultKeymap, history, historyKeymap, redo } from "@codemirror/commands"
+import {
+  defaultKeymap,
+  history,
+  historyKeymap,
+  redo,
+  cursorPageUp,
+  cursorPageDown,
+} from "@codemirror/commands"
 import { drawSelection, EditorView, keymap } from "@codemirror/view"
-import { EditorState } from "@codemirror/state"
+import { EditorState, Prec } from "@codemirror/state"
 import { useRef, useEffect, useMemo, memo } from "react"
 import { vim } from "@replit/codemirror-vim"
 import {
@@ -170,8 +177,20 @@ function EditorComponent({ value, onUpdate, preferences, onCopy, noteId }: Edito
   // Memoize vim extension - only include when enabled
   const vimExtension = useMemo(() => (preferences.vimMode ? vim() : []), [preferences.vimMode])
 
+  // High-precedence keymap to override vim mode bindings
+  const vimOverrideKeymap = useMemo(
+    () =>
+      Prec.high(
+        keymap.of([
+          // Override Ctrl+D and Ctrl+U in vim mode to use page down/up
+          { key: "Ctrl-d", run: cursorPageDown, preventDefault: true },
+          { key: "Ctrl-u", run: cursorPageUp, preventDefault: true },
+        ])
+      ),
+    []
+  )
+
   // Create keymap with Mathpad-specific overrides
-  // These keybindings should work even in vim mode and override vim defaults
   const keymapExtension = useMemo(
     () =>
       keymap.of([
@@ -180,8 +199,6 @@ function EditorComponent({ value, onUpdate, preferences, onCopy, noteId }: Edito
         { key: "Tab", run: acceptCompletion },
         ...historyKeymap,
         { key: "Mod-Shift-z", run: redo, preventDefault: true },
-        // Disable Ctrl+D in vim mode (prevent delete line behavior)
-        { key: "Ctrl-d", run: () => true, preventDefault: true },
       ]),
     []
   )
@@ -211,8 +228,9 @@ function EditorComponent({ value, onUpdate, preferences, onCopy, noteId }: Edito
         autocompletion({ override: [completions] }),
         themeExtension,
         history(),
+        vimOverrideKeymap, // High-precedence overrides (Ctrl+D/U for page down/up)
         vimExtension, // Vim mode (conditionally included)
-        keymapExtension, // Regular keymaps (after vim to override certain keys)
+        keymapExtension, // Regular keymaps
       ]}
     />
   )
