@@ -1,8 +1,8 @@
-# Mathpad Calculation Engine - Technical Explanation
+# Engine - Technical Explanation
 
 ## Overview
 
-The Mathpad calculation engine is a **three-phase pipeline** that transforms plain text containing mathematical expressions into evaluated results with formatted output. It processes entire documents line-by-line while maintaining context (variables, previous results) across lines.
+The calculation engine is a **three-phase pipeline** that transforms plain text containing mathematical expressions into evaluated results with formatted output. It processes entire documents line-by-line while maintaining context (variables, previous results) across lines.
 
 ## Architecture Diagram
 
@@ -61,13 +61,14 @@ The engine maintains state across lines using an `ExecutionContext`:
 
 ```typescript
 interface ExecutionContext {
-  variables: Map<string, EvalResult>  // User-defined variables
-  lineResults: EvalResult[]           // Results from previous lines
-  currentLine: number                 // Current line number (0-indexed)
+  variables: Map<string, EvalResult> // User-defined variables
+  lineResults: EvalResult[] // Results from previous lines
+  currentLine: number // Current line number (0-indexed)
 }
 ```
 
 **Key behaviors:**
+
 - Variables are scoped to the current section (reset by `---` separator)
 - Previous results are accessible via `prev`, `previous`, or operator-prefix syntax
 - Context is immutable - each evaluation returns a new context
@@ -81,16 +82,18 @@ interface ExecutionContext {
 **Input:** `"price = 100$"`
 
 **Output:**
+
 ```typescript
-[
+;[
   { type: "identifier", value: "price", position: 0, length: 5 },
   { type: "assign", value: "=", position: 6, length: 1 },
   { type: "number", value: "100$", position: 8, length: 4 },
-  { type: "eof", value: "", position: 12, length: 0 }
+  { type: "eof", value: "", position: 12, length: 0 },
 ]
 ```
 
 **Key features:**
+
 - Handles numbers with thousands separators: `1,000,000` or `1 000 000`
 - Recognizes format suffixes: `$`, `€`, `km`, `K`, `M`, `B`, etc.
 - Supports multi-word identifiers: `"total price = 100"`
@@ -104,6 +107,7 @@ Lines without numbers, operators, or aggregate keywords are treated as plain tex
 
 **Context-aware tokenization:**
 The tokenizer receives the current execution context to distinguish defined variables from undefined prose:
+
 - `"x + 10"` where `x` is defined → tokenizes as expression
 - `"x + 10"` where `x` is NOT defined → may be skipped as prose, handled by parser
 
@@ -119,6 +123,7 @@ The tokenizer receives the current execution context to distinguish defined vari
 Input: `"price * 1.2"`
 
 AST:
+
 ```typescript
 {
   kind: "binary",
@@ -142,6 +147,7 @@ AST:
 
 **Parser structure:**
 Uses **recursive descent parsing** with precedence climbing:
+
 1. Assignment (lowest precedence)
 2. Formatting/Conversion (`in`, `to`)
 3. Addition/Subtraction
@@ -155,6 +161,7 @@ Uses **recursive descent parsing** with precedence climbing:
 
 **Operator-prefix syntax:**
 Lines starting with a binary operator operate on the previous result:
+
 ```
 100
 +10   → Parsed as: previousResult + 10
@@ -162,17 +169,20 @@ Lines starting with a binary operator operate on the previous result:
 ```
 
 Implementation: `parser.ts:72-105`
+
 - Detects operator as first token
 - Creates implicit `previousResult` node with `position: 0, length: 0`
 - No whitespace required between operator and operand
 
 **Assignment syntax:**
 Supports multiple assignment patterns:
+
 - `variable = expression` - Simple assignment
 - `variable in FORMAT = expression` - Formatted assignment (e.g., `price in $ = 100`)
 
 **Function calls:**
 Identifier followed by `(...)` is parsed as function call:
+
 - `sqrt(16)` → function call node with argument
 
 #### Phase 3: Evaluation (`evaluator.ts`)
@@ -184,14 +194,15 @@ Identifier followed by `(...)` is parsed as function call:
 **Output:** `[EvalResult, ExecutionContext]` (pure function, returns new context)
 
 **Result types:**
+
 ```typescript
 type EvalResult =
-  | NumberResult    // { type: "number", value: Big, format?: string }
-  | PercentResult   // { type: "percent", value: Big, format?: string }
-  | DateResult      // { type: "date", value: Date, format?: string }
-  | DurationResult  // { type: "duration", value: Big, unit: "ms"|"sec"|"min"|"hr"|"day" }
-  | ErrorResult     // { type: "error", message: string, position: number, length: number }
-  | EmptyResult     // { type: "empty" }
+  | NumberResult // { type: "number", value: Big, format?: string }
+  | PercentResult // { type: "percent", value: Big, format?: string }
+  | DateResult // { type: "date", value: Date, format?: string }
+  | DurationResult // { type: "duration", value: Big, unit: "ms"|"sec"|"min"|"hr"|"day" }
+  | ErrorResult // { type: "error", message: string, position: number, length: number }
+  | EmptyResult // { type: "empty" }
 ```
 
 **Evaluation dispatch:**
@@ -199,21 +210,29 @@ The evaluator uses pattern matching on AST node types:
 
 ```typescript
 switch (node.kind) {
-  case "number": return evaluateNumber(node, context)
-  case "binary": return evaluateBinary(node, context)
-  case "identifier": return evaluateIdentifier(node, context)
-  case "assignment": return evaluateAssignment(node, context)
-  case "function": return evaluateFunction(node, context)
-  case "aggregate": return evaluateAggregate(node, context)
-  case "dateLiteral": return evaluateDateLiteral(node, context)
+  case "number":
+    return evaluateNumber(node, context)
+  case "binary":
+    return evaluateBinary(node, context)
+  case "identifier":
+    return evaluateIdentifier(node, context)
+  case "assignment":
+    return evaluateAssignment(node, context)
+  case "function":
+    return evaluateFunction(node, context)
+  case "aggregate":
+    return evaluateAggregate(node, context)
+  case "dateLiteral":
+    return evaluateDateLiteral(node, context)
   // ... etc
 }
 ```
 
 **Number precision:**
 All calculations use `big.js` to avoid floating-point errors:
+
 ```typescript
-Big.DP = 20              // 20 decimal places
+Big.DP = 20 // 20 decimal places
 Big.RM = Big.roundHalfUp // Round half up
 ```
 
@@ -249,30 +268,38 @@ formatRegistry.registerParser(new KiloFormat())
 #### Adapter interfaces (`adapters/base.ts`)
 
 **FunctionAdapter:**
+
 ```typescript
 interface FunctionAdapter {
   name: string
   description: string
   execute(value: Big): Big
-  executeDate?(value: Date): Big | Date  // Optional date support
+  executeDate?(value: Date): Big | Date // Optional date support
   validate?(value: Big): string | null
   validateDate?(value: Date): string | null
 }
 ```
 
 **BinaryOperatorAdapter:**
+
 ```typescript
 interface BinaryOperatorAdapter {
   symbol: string
   executeNumbers(left: Big, right: Big): Big
   executePercents?(left: Big, right: Big): Big
   executeDateDuration?(left: Date, right: Big, rightUnit: DurationUnit): Date
-  executeDurationDuration?(left: Big, leftUnit: DurationUnit, right: Big, rightUnit: DurationUnit): Big
+  executeDurationDuration?(
+    left: Big,
+    leftUnit: DurationUnit,
+    right: Big,
+    rightUnit: DurationUnit
+  ): Big
   // ... more type combinations
 }
 ```
 
 **AggregateFunctionAdapter:**
+
 ```typescript
 interface AggregateFunctionAdapter {
   keywords: string[]
@@ -282,6 +309,7 @@ interface AggregateFunctionAdapter {
 ```
 
 **FormatParserAdapter:**
+
 ```typescript
 interface FormatParserAdapter {
   id: string
@@ -322,6 +350,7 @@ The format system handles unit suffixes and conversions.
 **Purpose:** Parse and convert formatted numbers
 
 **Example formats:**
+
 - Currency: `$`, `€`, `£`, `¥`
 - Large numbers: `K` (1,000), `M` (1,000,000), `B` (1,000,000,000)
 - Distance: `km`, `m`, `cm`, `mm`, `mi`, `ft`, `in`
@@ -329,12 +358,14 @@ The format system handles unit suffixes and conversions.
 - Speed: `km/h`, `m/s`, `mph`
 
 **Conversion:**
+
 ```
 100km to m   → 100,000
 5hr to min   → 300
 ```
 
 **Implementation:**
+
 ```typescript
 // adapters/formats/kilometer.ts
 export class KilometerFormat implements FormatParserAdapter {
@@ -371,6 +402,7 @@ The engine supports comprehensive date/time operations.
 #### Date Literals
 
 **Supported formats:**
+
 - ISO dates: `2024-01-15`
 - ISO datetimes: `2024-01-15T10:30:45`
 - Keywords: `today`, `now`, `yesterday`, `tomorrow`
@@ -384,6 +416,7 @@ The engine supports comprehensive date/time operations.
 **Duration units:** `ms`, `sec`, `min`, `hr`, `day`
 
 **Internal representation:**
+
 - Stored as `Big` values in milliseconds
 - Tagged with unit for display
 
@@ -393,6 +426,7 @@ Numbers with duration units (e.g., `5day`) are converted to `DurationResult` bef
 #### Date Arithmetic
 
 **Supported operations:**
+
 ```
 Date + Duration = Date        // 2024-01-15 + 5day → 2024-01-20
 Date - Duration = Date        // 2024-01-15 - 5day → 2024-01-10
@@ -403,6 +437,7 @@ Duration / Duration = Number   // 10day / 5day → 2
 
 **Implementation:**
 Binary operators have optional methods for date operations:
+
 ```typescript
 class AdditionOperator implements BinaryOperatorAdapter {
   symbol = "+"
@@ -417,8 +452,10 @@ class AdditionOperator implements BinaryOperatorAdapter {
   }
 
   executeDurationDuration(
-    left: Big, leftUnit: DurationUnit,
-    right: Big, rightUnit: DurationUnit
+    left: Big,
+    leftUnit: DurationUnit,
+    right: Big,
+    rightUnit: DurationUnit
   ): Big {
     const leftMs = convertToMilliseconds(left, leftUnit)
     const rightMs = convertToMilliseconds(right, rightUnit)
@@ -430,16 +467,19 @@ class AdditionOperator implements BinaryOperatorAdapter {
 #### Date Functions
 
 **Extraction functions:**
+
 - `year(date)`, `month(date)`, `dayOfMonth(date)`
 - `hourOfDay(date)`, `minuteOfHour(date)`, `secondOfMinute(date)`
 - Aliases: `day()`, `hour()`, `minute()`, `second()`
 
 **Constructor functions:**
+
 - `today()` - Current date at midnight UTC
 - `now()` - Current date and time
 
 **Implementation:**
 Functions can handle both numeric and date inputs:
+
 ```typescript
 export class YearFunction implements FunctionAdapter {
   name = "year"
@@ -475,6 +515,7 @@ Lines starting with operators automatically reference the previous result:
 
 **Unary fallback:**
 On the **first line**, operators without space are treated as unary:
+
 ```
 -5     → -5 (unary negation)
 --5    → 5 (double negation)
@@ -495,6 +536,7 @@ previous * 2   → 220
 
 **Error skipping:**
 The evaluator skips error results when looking for the previous value:
+
 ```
 100
 invalid + 5    → Error
@@ -519,6 +561,7 @@ count   → 3
 ```
 
 **Implementation:**
+
 - Aggregate nodes are identified during parsing
 - During evaluation, they collect all previous non-empty, non-error results
 - Results are highlighted in the editor with blue borders
@@ -534,6 +577,7 @@ final cost = total price * (1 + tax rate)
 ```
 
 **Tokenizer logic:**
+
 - Collects letters, numbers, and spaces
 - Stops at special keywords (`of`, `in`, `to`)
 - Context-aware: stops if next word is a defined variable
@@ -549,6 +593,7 @@ tax = 20%    # This works too
 ```
 
 **Extraction:**
+
 - Comments are extracted before tokenization
 - Stored in `LineEvaluation.comment`
 - Preserved through evaluations
@@ -576,6 +621,7 @@ If an undefined variable is followed by non-operators, the engine tries to skip 
 ```
 "some text price + 10"
 ```
+
 - First parse: Error ("some" not defined)
 - Retry: Skip "some text", parse "price + 10"
 
@@ -606,11 +652,13 @@ function formatResult(result: EvalResult, options: FormatOptions): string
 ```
 
 **Format options** (from `Preferences`):
+
 - `decimalPlaces: number` - Number of decimal places (2-8)
 - `decimalSeparator: "," | "."` - Decimal separator
 - `thousandsSeparator: "," | "." | " " | ""` - Thousands separator
 
 **Example:**
+
 ```typescript
 // Input: NumberResult { value: Big(1234567.89), format: "$" }
 // Options: { decimalPlaces: 2, decimalSeparator: ".", thousandsSeparator: "," }
@@ -618,6 +666,7 @@ function formatResult(result: EvalResult, options: FormatOptions): string
 ```
 
 **Number formatting:**
+
 1. Round to specified decimal places
 2. Split into integer and fractional parts
 3. Add thousands separators
@@ -633,6 +682,7 @@ The engine integrates with CodeMirror through several custom extensions:
 Displays calculated results on the right side of each line.
 
 **Data flow:**
+
 1. `Editor` component calls `evaluateDocument(text, preferences)`
 2. Extracts `formatted` strings from `LineEvaluation[]`
 3. Passes to CodeMirror via `setResultsEffect`
@@ -644,6 +694,7 @@ Displays calculated results on the right side of each line.
 Shows red underlines and inline error messages.
 
 **Data flow:**
+
 1. Filter `LineEvaluation[]` for error results
 2. Extract `ErrorInfo` (lineNumber, position, length, message)
 3. Pass to CodeMirror via `setErrorsEffect`
@@ -658,6 +709,7 @@ Skips zero-length errors (from implicit previousResult nodes) because CodeMirror
 Shows blue borders around lines that feed into aggregate functions.
 
 **Data flow:**
+
 1. Scan AST for aggregate nodes
 2. Determine which previous lines contribute to the aggregate
 3. Add line decorations with blue border styling
@@ -665,6 +717,7 @@ Shows blue borders around lines that feed into aggregate functions.
 ### 4. Completions (`Completions.ts`)
 
 Provides autocomplete for:
+
 - Variables (from execution context)
 - Functions (from function registry)
 - Aggregate keywords (from aggregate registry)
@@ -677,6 +730,7 @@ Completions are filtered based on the current token position and type.
 ### 5. Syntax Highlighting (`MathpadLang.ts`)
 
 Custom language mode with:
+
 - Number highlighting
 - Operator highlighting
 - Keyword highlighting (functions, aggregates, date keywords)
@@ -690,10 +744,7 @@ Custom language mode with:
 The `Editor` component uses `useMemo` to avoid re-computing evaluations when props haven't changed:
 
 ```typescript
-const evaluations = useMemo(
-  () => textToEvaluations(value, preferences),
-  [value, preferences]
-)
+const evaluations = useMemo(() => textToEvaluations(value, preferences), [value, preferences])
 ```
 
 ### 2. Debounced Updates
@@ -715,8 +766,8 @@ The engine only evaluates visible lines when integrated with virtual scrolling (
 Adapters are registered once at startup. Lookups use Maps for O(1) access:
 
 ```typescript
-functionRegistry.has("sqrt")      // O(1)
-binaryOperatorRegistry.get("+")   // O(1)
+functionRegistry.has("sqrt") // O(1)
+binaryOperatorRegistry.get("+") // O(1)
 ```
 
 ## Error Handling
@@ -728,11 +779,13 @@ binaryOperatorRegistry.get("+")   // O(1)
 **Parser errors:** Returns empty nodes for unexpected tokens
 
 **Evaluator errors:** Returns `ErrorResult` with:
+
 - `message: string` - Human-readable error message
 - `position: number` - Character position of error
 - `length: number` - Length of erroneous token
 
 **Common errors:**
+
 - `"Variable 'x' not defined"`
 - `"Cannot divide by zero"`
 - `"No previous result available"`
@@ -743,6 +796,7 @@ binaryOperatorRegistry.get("+")   // O(1)
 ### Error Display
 
 Errors are shown:
+
 1. **Red underline** - At error position in editor
 2. **Inline message** - Below the erroneous line
 3. **Empty gutter** - No result shown for error lines
@@ -762,6 +816,7 @@ Each line is evaluated independently. Errors don't affect subsequent lines (unle
 ### Unit Tests
 
 Each module has a sibling test file:
+
 - `tokenizer.test.ts` - Tests tokenization of various inputs
 - `parser.test.ts` - Tests AST generation
 - `evaluator.test.ts` - Tests evaluation logic
@@ -770,6 +825,7 @@ Each module has a sibling test file:
 ### Integration Tests
 
 `integration.test.ts` tests the full pipeline:
+
 - Multi-line documents
 - Variable assignments
 - Previous result references
@@ -778,6 +834,7 @@ Each module has a sibling test file:
 - Error handling
 
 **Test pattern:**
+
 ```typescript
 test("should handle operator prefix without space (+1)", () => {
   const result = evaluateDocument("100\n+1", Preferences.default())
@@ -861,12 +918,15 @@ functionRegistry.register(new RoundFunction())
 Consistent error result creation:
 
 ```typescript
-return [{
-  type: "error",
-  message: "Variable 'x' not defined",
-  position: node.position,
-  length: node.length,
-}, context]
+return [
+  {
+    type: "error",
+    message: "Variable 'x' not defined",
+    position: node.position,
+    length: node.length,
+  },
+  context,
+]
 ```
 
 ## Debugging Tips
@@ -874,6 +934,7 @@ return [{
 ### 1. Tokenizer Issues
 
 Log tokens to see what's being parsed:
+
 ```typescript
 const tokens = tokenize("100 + 20%")
 console.log(tokens)
@@ -882,6 +943,7 @@ console.log(tokens)
 ### 2. Parser Issues
 
 Log AST to understand structure:
+
 ```typescript
 const ast = parse(tokens)
 console.log(JSON.stringify(ast, null, 2))
@@ -890,6 +952,7 @@ console.log(JSON.stringify(ast, null, 2))
 ### 3. Evaluator Issues
 
 Log intermediate results:
+
 ```typescript
 const [result, newContext] = evaluate(ast, context)
 console.log({ result, variables: Array.from(newContext.variables.entries()) })
@@ -898,25 +961,13 @@ console.log({ result, variables: Array.from(newContext.variables.entries()) })
 ### 4. Context Issues
 
 Log context at each line:
+
 ```typescript
 const evaluations = evaluateDocument(text, preferences)
-evaluations.forEach(e => {
+evaluations.forEach((e) => {
   console.log(`Line ${e.lineNumber}:`, {
     result: e.result,
-    variables: Array.from(e.context.variables.entries())
+    variables: Array.from(e.context.variables.entries()),
   })
 })
 ```
-
-## Conclusion
-
-The Mathpad calculation engine is a well-structured, extensible system that:
-- Uses a clean three-phase pipeline (tokenize → parse → evaluate)
-- Maintains context across lines for variables and previous results
-- Supports rich mathematical operations via the adapter pattern
-- Handles dates, durations, and unit conversions
-- Integrates seamlessly with CodeMirror for live editing
-- Uses Big.js for precision
-- Provides excellent error messages and recovery
-
-The architecture makes it easy to add new functions, operators, formats, and features without modifying core engine code. The use of immutable data structures and pure functions makes the engine predictable and testable.

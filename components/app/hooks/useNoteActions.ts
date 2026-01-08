@@ -1,5 +1,4 @@
 import { useCallback } from "react"
-import { Note } from "@/lib/notes/Note"
 
 export interface NoteActionsParams {
   createNote: () => void

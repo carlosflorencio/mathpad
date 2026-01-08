@@ -54,7 +54,7 @@ export function PreferencesDialog({ preferences, save, close }: PreferencesDialo
           min="8"
           value={fontSize}
           onChange={(e) => setFontSize(parseInt(e.target.value))}
-          className="form-input w-12 mr-4"
+          className="form-input w-20 mr-4"
         />
         px
       </div>
@@ -71,7 +71,7 @@ export function PreferencesDialog({ preferences, save, close }: PreferencesDialo
               setDecimalSeparator(val)
             }
           }}
-          className="form-input w-12 mr-4"
+          className="form-input w-20 mr-4"
         />
       </div>
 
@@ -87,7 +87,7 @@ export function PreferencesDialog({ preferences, save, close }: PreferencesDialo
               setThousandsSeparator(val as "" | "," | "." | " ")
             }
           }}
-          className="form-input w-12 mr-4"
+          className="form-input w-20 mr-4"
         />
       </div>
 
@@ -99,7 +99,7 @@ export function PreferencesDialog({ preferences, save, close }: PreferencesDialo
           max="8"
           value={decimalPlaces}
           onChange={(e) => setDecimalPlaces(parseInt(e.target.value))}
-          className="form-input w-12 mr-4"
+          className="form-input w-20 mr-4"
         />
       </div>
 
@@ -111,7 +111,7 @@ export function PreferencesDialog({ preferences, save, close }: PreferencesDialo
             onChange={(e) => setVimMode(e.target.checked)}
             className="cursor-pointer"
           />
-          <span>Enable Vim Key Bindings</span>
+          <span className="whitespace-nowrap">Enable Vim Key Bindings</span>
         </label>
         <p className="text-sm text-[var(--text-muted)] mt-1 ml-6">
           Use vim-style navigation and editing commands in the editor
