@@ -1,6 +1,6 @@
 {
-    "scripts": {
-        "setup": "npm install",
-        "run": "npm run dev -- --port $CONDUCTOR_PORT"
-    }
+  "scripts": {
+    "setup": "npm install",
+    "run": "npm run dev -- --port $CONDUCTOR_PORT"
+  }
 }

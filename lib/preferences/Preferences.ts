@@ -5,11 +5,12 @@ export class Preferences {
     public readonly decimalSeparator: "," | ".",
     public readonly thousandsSeparator: "," | "." | " " | "",
     public readonly theme: "dark" | "light",
-    public readonly hasSeenOnboarding: boolean
+    public readonly hasSeenOnboarding: boolean,
+    public readonly vimMode: boolean
   ) {}
 
   static default(): Preferences {
-    return new Preferences(18, 2, ".", ",", "dark", false)
+    return new Preferences(18, 2, ".", ",", "dark", false, false)
   }
 
   withFontSize(size: number): Preferences {
@@ -19,7 +20,8 @@ export class Preferences {
       this.decimalSeparator,
       this.thousandsSeparator,
       this.theme,
-      this.hasSeenOnboarding
+      this.hasSeenOnboarding,
+      this.vimMode
     )
   }
 
@@ -30,7 +32,8 @@ export class Preferences {
       this.decimalSeparator,
       this.thousandsSeparator,
       this.theme,
-      this.hasSeenOnboarding
+      this.hasSeenOnboarding,
+      this.vimMode
     )
   }
 
@@ -41,7 +44,8 @@ export class Preferences {
       separator,
       this.thousandsSeparator,
       this.theme,
-      this.hasSeenOnboarding
+      this.hasSeenOnboarding,
+      this.vimMode
     )
   }
 
@@ -52,7 +56,8 @@ export class Preferences {
       this.decimalSeparator,
       separator,
       this.theme,
-      this.hasSeenOnboarding
+      this.hasSeenOnboarding,
+      this.vimMode
     )
   }
 
@@ -63,7 +68,8 @@ export class Preferences {
       this.decimalSeparator,
       this.thousandsSeparator,
       theme,
-      this.hasSeenOnboarding
+      this.hasSeenOnboarding,
+      this.vimMode
     )
   }
 
@@ -74,7 +80,20 @@ export class Preferences {
       this.decimalSeparator,
       this.thousandsSeparator,
       this.theme,
-      true
+      true,
+      this.vimMode
+    )
+  }
+
+  withVimMode(enabled: boolean): Preferences {
+    return new Preferences(
+      this.fontSize,
+      this.decimalPlaces,
+      this.decimalSeparator,
+      this.thousandsSeparator,
+      this.theme,
+      this.hasSeenOnboarding,
+      enabled
     )
   }
 
@@ -86,6 +105,7 @@ export class Preferences {
       thousandsSeparator: this.thousandsSeparator,
       theme: this.theme,
       hasSeenOnboarding: this.hasSeenOnboarding,
+      vimMode: this.vimMode,
     }
   }
 
@@ -96,6 +116,7 @@ export class Preferences {
     thousandsSeparator: "," | "." | " " | ""
     theme: "dark" | "light"
     hasSeenOnboarding: boolean
+    vimMode?: boolean
   }): Preferences {
     return new Preferences(
       data.fontSize,
@@ -103,7 +124,8 @@ export class Preferences {
       data.decimalSeparator,
       data.thousandsSeparator,
       data.theme,
-      data.hasSeenOnboarding
+      data.hasSeenOnboarding,
+      data.vimMode ?? false
     )
   }
 }

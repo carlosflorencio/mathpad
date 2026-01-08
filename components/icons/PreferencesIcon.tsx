@@ -1,4 +1,4 @@
-export function ShareIcon() {
+export function PreferencesIcon() {
   return (
     <svg
       width="16"
@@ -10,9 +10,8 @@ export function ShareIcon() {
       strokeLinecap="round"
       strokeLinejoin="round"
     >
-      <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path>
-      <polyline points="16 6 12 2 8 6"></polyline>
-      <line x1="12" y1="2" x2="12" y2="15"></line>
+      <circle cx="12" cy="12" r="3" />
+      <path d="M12 1v6m0 6v6M5.6 5.6l4.2 4.2m4.2 4.2l4.2 4.2M1 12h6m6 0h6M5.6 18.4l4.2-4.2m4.2-4.2l4.2-4.2" />
     </svg>
   )
 }

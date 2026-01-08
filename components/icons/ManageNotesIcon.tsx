@@ -1,4 +1,4 @@
-export function ShareIcon() {
+export function ManageNotesIcon() {
   return (
     <svg
       width="16"
@@ -10,9 +10,7 @@ export function ShareIcon() {
       strokeLinecap="round"
       strokeLinejoin="round"
     >
-      <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path>
-      <polyline points="16 6 12 2 8 6"></polyline>
-      <line x1="12" y1="2" x2="12" y2="15"></line>
+      <path d="M3 3h18v18H3zM9 3v18M3 9h18M3 15h6" />
     </svg>
   )
 }

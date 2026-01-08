@@ -18,12 +18,26 @@ import { ExternalDeletionModal } from "./modals/ExternalDeletionModal"
 import { ManageNotesModal } from "./modals/ManageNotesModal"
 import { ShareModal } from "./modals/ShareModal"
 import { OnboardingOverlay, EXAMPLE_TEMPLATE } from "./OnboardingOverlay"
-import { MenuIcon, ShareIcon, HelpIcon, FolderIcon, PlusIcon, QuestionIcon } from "./icons"
+import {
+  MenuIcon,
+  ShareIcon,
+  HelpIcon,
+  FolderIcon,
+  PlusIcon,
+  QuestionIcon,
+  ManageNotesIcon,
+  OpenFolderIcon,
+  CloseFolderIcon,
+  PreferencesIcon,
+} from "./icons"
 import { QuickActionPalette, Action } from "./QuickActionPalette"
 import { useKeyBindings } from "@/hooks/useKeyBindings"
+import { useToasts } from "./app/hooks/useToasts"
+import { useFolderSync } from "./app/hooks/useFolderSync"
+import { useNoteRename } from "./app/hooks/useNoteRename"
+import { useAppState } from "./app/hooks/useAppState"
+import { useNoteActions } from "./app/hooks/useNoteActions"
 import { applyCssVars } from "@/lib/theme/cssVars"
-import * as darkTheme from "./codemirror/DarkTheme"
-import * as lightTheme from "./codemirror/LightTheme"
 
 function configureCSSVars(preferences: Preferences): void {
   if (typeof document !== "undefined" && document.documentElement) {
@@ -56,23 +70,74 @@ export function App() {
     cancelDeletions,
   } = useNotes()
 
-  const [showPreferences, setShowPreferences] = useState(false)
-  const [showHelpMenu, setShowHelpMenu] = useState(false)
-  const [showKeybindingsModal, setShowKeybindingsModal] = useState(false)
-  const [showSyntaxModal, setShowSyntaxModal] = useState(false)
-  const [showAboutModal, setShowAboutModal] = useState(false)
-  const [showMenu, setShowMenu] = useState(false)
-  const [showNotesMenu, setShowNotesMenu] = useState(false)
-  const [showManageNotes, setShowManageNotes] = useState(false)
-  const [showFolderSyncHelp, setShowFolderSyncHelp] = useState(false)
-  const [showQuickActions, setShowQuickActions] = useState(false)
-  const [showShareModal, setShowShareModal] = useState(false)
-  const [showOnboarding, setShowOnboarding] = useState(false)
-  const [shareUrl, setShareUrl] = useState("")
-  const [renamingNoteId, setRenamingNoteId] = useState<string | null>(null)
-  const [renameValue, setRenameValue] = useState("")
-  const [toasts, setToasts] = useState<Array<{ id: number; message: string }>>([])
-  const [conflictData, setConflictData] = useState<ShareData | null>(null)
+  // App state (modals, dialogs, UI state)
+  const {
+    showPreferences,
+    showHelpMenu,
+    showKeybindingsModal,
+    showSyntaxModal,
+    showAboutModal,
+    showMenu,
+    showNotesMenu,
+    showManageNotes,
+    showFolderSyncHelp,
+    showQuickActions,
+    showShareModal,
+    showOnboarding,
+    shareUrl,
+    conflictData,
+    setShowPreferences,
+    setShowHelpMenu,
+    setShowKeybindingsModal,
+    setShowSyntaxModal,
+    setShowAboutModal,
+    setShowMenu,
+    setShowNotesMenu,
+    setShowManageNotes,
+    setShowFolderSyncHelp,
+    setShowQuickActions,
+    setShowShareModal,
+    setShowOnboarding,
+    setShareUrl,
+    setConflictData,
+    closeAllDialogs,
+  } = useAppState()
+
+  // Toast notifications
+  const { toasts, showToast, removeToast } = useToasts()
+
+  // Folder sync actions
+  const { handleOpenFolder, handleCloseFolder } = useFolderSync({
+    openFolder,
+    closeFolder,
+    showToast,
+  })
+
+  // Note renaming
+  const { renamingNoteId, renameValue, setRenameValue, startRename, finishRename, cancelRename } =
+    useNoteRename({
+      notes,
+      renameNote,
+      showToast,
+    })
+
+  // Note actions (with toast integration)
+  const { handleCreateNote, handleDeleteNote, handleShare } = useNoteActions({
+    createNote,
+    renameNote,
+    deleteNote,
+    shareNote,
+    showToast,
+    setShowShareModal,
+    setShareUrl,
+  })
+
+  // Menu keyboard navigation
+  const [selectedMenuIndex, setSelectedMenuIndex] = useState(-1)
+  const menuItemsRef = useRef<(HTMLDivElement | null)[]>([])
+  const [isInSubmenu, setIsInSubmenu] = useState(false)
+  const [selectedSubmenuIndex, setSelectedSubmenuIndex] = useState(-1)
+  const submenuItemsRef = useRef<(HTMLDivElement | null)[]>([])
 
   // Track the content we're currently editing to prevent stale updates
   const [editorContent, setEditorContent] = useState(activeNote?.content || "")
@@ -80,10 +145,12 @@ export function App() {
   const activeNoteIdRef = useRef(activeNote?.id)
   const menuTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined)
   const notesMenuRef = useRef<HTMLDivElement>(null)
-  const renameBlurEnabledRef = useRef(false)
 
   // Debounced update to collection - only update Note objects when saving
   const debouncedUpdateContentRef = useRef<NodeJS.Timeout | undefined>(undefined)
+
+  // Constants used in menu key bindings
+  const isFileSystemSupported = FileSystemNoteRepository.isSupported()
 
   // Update editor content ONLY when active note ID changes (switching notes)
   // activeNote.content is NOT in the dependency array to avoid re-running on every edit
@@ -123,7 +190,7 @@ export function App() {
         updateContent(content)
       }, 200) // Same debounce as auto-save
     },
-    [updateContent, showOnboarding, preferences, savePreferences]
+    [updateContent, showOnboarding, preferences, savePreferences, setShowOnboarding]
   )
 
   useEffect(() => {
@@ -137,7 +204,7 @@ export function App() {
     if (isLoaded && !preferences.hasSeenOnboarding && activeNote?.content.trim() === "") {
       setShowOnboarding(true)
     }
-  }, [isLoaded, preferences.hasSeenOnboarding, activeNote?.content])
+  }, [isLoaded, preferences.hasSeenOnboarding, activeNote?.content, setShowOnboarding])
 
   // Check for pending shared note conflict
   useEffect(() => {
@@ -153,7 +220,7 @@ export function App() {
         }
       }
     }
-  }, [isLoaded])
+  }, [isLoaded, setConflictData])
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -169,22 +236,7 @@ export function App() {
 
     document.addEventListener("mousedown", handleClickOutside)
     return () => document.removeEventListener("mousedown", handleClickOutside)
-  }, [showMenu, showNotesMenu])
-
-  const closeDialogs = useCallback(() => {
-    setShowPreferences(false)
-    setShowKeybindingsModal(false)
-    setShowSyntaxModal(false)
-    setShowAboutModal(false)
-    setShowMenu(false)
-    setShowHelpMenu(false)
-    setShowNotesMenu(false)
-    setShowManageNotes(false)
-    setShowFolderSyncHelp(false)
-    setShowQuickActions(false)
-    setShowShareModal(false)
-    setShowOnboarding(false)
-  }, [])
+  }, [showMenu, showNotesMenu, setShowMenu, setShowNotesMenu])
 
   useEffect(() => {
     const handleKeyUp = (e: KeyboardEvent) => {
@@ -194,15 +246,188 @@ export function App() {
           const updated = preferences.withOnboardingComplete()
           savePreferences(updated)
         }
-        closeDialogs()
-        setRenamingNoteId(null)
+        closeAllDialogs()
+        cancelRename()
         setConflictData(null)
       }
     }
 
     window.addEventListener("keyup", handleKeyUp)
     return () => window.removeEventListener("keyup", handleKeyUp)
-  }, [closeDialogs, showOnboarding, preferences, savePreferences])
+  }, [closeAllDialogs, showOnboarding, preferences, savePreferences, cancelRename, setConflictData])
+
+  // Vim mode: Focus editor when pressing 'i' and editor doesn't have focus
+  useEffect(() => {
+    if (!preferences.vimMode) return
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Only handle 'i' key
+      if (e.key !== "i") return
+
+      // Don't interfere if any modifiers are pressed
+      if (e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) return
+
+      // Check if we're in an input/textarea (including the rename input)
+      const target = e.target as HTMLElement
+      if (
+        target.tagName === "INPUT" ||
+        target.tagName === "TEXTAREA" ||
+        target.isContentEditable
+      ) {
+        return
+      }
+
+      // Don't focus if any menu/dialog is open
+      if (
+        showMenu ||
+        showHelpMenu ||
+        showPreferences ||
+        showKeybindingsModal ||
+        showSyntaxModal ||
+        showAboutModal ||
+        showManageNotes ||
+        showFolderSyncHelp ||
+        showQuickActions ||
+        showShareModal ||
+        showOnboarding
+      ) {
+        return
+      }
+
+      // Check if editor already has focus (check for CodeMirror element)
+      const cmEditor = document.querySelector(".cm-editor")
+      if (cmEditor && cmEditor.contains(document.activeElement)) {
+        return
+      }
+
+      // Focus the editor by clicking on the paper container
+      const paperContainer = document.querySelector(".paper-container")
+      if (paperContainer) {
+        e.preventDefault()
+        ;(paperContainer as HTMLElement).click()
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown)
+    return () => window.removeEventListener("keydown", handleKeyDown)
+  }, [
+    preferences.vimMode,
+    showMenu,
+    showHelpMenu,
+    showPreferences,
+    showKeybindingsModal,
+    showSyntaxModal,
+    showAboutModal,
+    showManageNotes,
+    showFolderSyncHelp,
+    showQuickActions,
+    showShareModal,
+    showOnboarding,
+  ])
+
+  // Menu keyboard navigation
+  useEffect(() => {
+    if (!showMenu || selectedMenuIndex < 0) return
+
+    const handleMenuKeyDown = (e: KeyboardEvent) => {
+      // Get all menu items (only the visible/enabled ones)
+      const visibleItems = menuItemsRef.current.filter((item) => item !== null)
+      const visibleSubmenuItems = submenuItemsRef.current.filter((item) => item !== null)
+
+      if (visibleItems.length === 0) return
+
+      // Handle submenu navigation
+      if (isInSubmenu && showNotesMenu && visibleSubmenuItems.length > 0) {
+        if (e.key === "ArrowDown" || e.key === "j") {
+          e.preventDefault()
+          setSelectedSubmenuIndex((prev) =>
+            prev < 0 ? 0 : (prev + 1) % visibleSubmenuItems.length
+          )
+        } else if (e.key === "ArrowUp" || e.key === "k") {
+          e.preventDefault()
+          setSelectedSubmenuIndex((prev) =>
+            prev < 0 ? 0 : (prev - 1 + visibleSubmenuItems.length) % visibleSubmenuItems.length
+          )
+        } else if (e.key === "ArrowLeft" || e.key === "h") {
+          e.preventDefault()
+          // Go back to main menu
+          setIsInSubmenu(false)
+          setSelectedSubmenuIndex(-1)
+        } else if (e.key === "Enter") {
+          e.preventDefault()
+          if (selectedSubmenuIndex >= 0 && visibleSubmenuItems[selectedSubmenuIndex]) {
+            visibleSubmenuItems[selectedSubmenuIndex].click()
+          }
+        } else if (e.key === "Escape") {
+          e.preventDefault()
+          setShowMenu(false)
+          setSelectedMenuIndex(-1)
+          setShowNotesMenu(false)
+          setIsInSubmenu(false)
+          setSelectedSubmenuIndex(-1)
+          // Focus editor
+          const paperContainer = document.querySelector(".paper-container")
+          if (paperContainer) {
+            ;(paperContainer as HTMLElement).click()
+          }
+        }
+      } else {
+        // Handle main menu navigation
+        if (e.key === "ArrowDown" || e.key === "j") {
+          e.preventDefault()
+          setSelectedMenuIndex((prev) => (prev + 1) % visibleItems.length)
+        } else if (e.key === "ArrowUp" || e.key === "k") {
+          e.preventDefault()
+          setSelectedMenuIndex((prev) => (prev - 1 + visibleItems.length) % visibleItems.length)
+        } else if (e.key === "ArrowRight" || e.key === "l") {
+          // Open Notes submenu when on Notes item (index 1) and enter it
+          if (selectedMenuIndex === 1) {
+            e.preventDefault()
+            setShowNotesMenu(true)
+            setIsInSubmenu(true)
+            setSelectedSubmenuIndex(0)
+          }
+        } else if (e.key === "ArrowLeft" || e.key === "h") {
+          // Close Notes submenu if it's open
+          if (showNotesMenu) {
+            e.preventDefault()
+            setShowNotesMenu(false)
+            setIsInSubmenu(false)
+            setSelectedSubmenuIndex(-1)
+          }
+        } else if (e.key === "Enter") {
+          e.preventDefault()
+          const selectedItem = visibleItems[selectedMenuIndex]
+          if (selectedItem) {
+            selectedItem.click()
+          }
+        } else if (e.key === "Escape") {
+          e.preventDefault()
+          setShowMenu(false)
+          setSelectedMenuIndex(-1)
+          setShowNotesMenu(false)
+          setIsInSubmenu(false)
+          setSelectedSubmenuIndex(-1)
+          // Focus editor
+          const paperContainer = document.querySelector(".paper-container")
+          if (paperContainer) {
+            ;(paperContainer as HTMLElement).click()
+          }
+        }
+      }
+    }
+
+    window.addEventListener("keydown", handleMenuKeyDown)
+    return () => window.removeEventListener("keydown", handleMenuKeyDown)
+  }, [
+    showMenu,
+    selectedMenuIndex,
+    showNotesMenu,
+    isInSubmenu,
+    selectedSubmenuIndex,
+    setShowMenu,
+    setShowNotesMenu,
+  ])
 
   // Keyboard shortcuts
   useKeyBindings({
@@ -216,11 +441,37 @@ export function App() {
       {
         key: "n",
         ctrlOrCmd: true,
-        handler: () => {
-          createNote()
-          showToast("New note created")
-        },
+        handler: handleCreateNote,
         description: "Create new note",
+      },
+      {
+        key: "m",
+        ctrlOrCmd: true,
+        handler: () => {
+          setShowMenu((prev) => {
+            const newValue = !prev
+            if (newValue) {
+              // When opening menu, select first item
+              setSelectedMenuIndex(0)
+              setIsInSubmenu(false)
+              setSelectedSubmenuIndex(-1)
+            } else {
+              // When closing, reset
+              setSelectedMenuIndex(-1)
+              setShowNotesMenu(false)
+              setIsInSubmenu(false)
+              setSelectedSubmenuIndex(-1)
+            }
+            return newValue
+          })
+        },
+        description: "Toggle menu",
+      },
+      {
+        key: "s",
+        ctrlOrCmd: true,
+        handler: handleShare,
+        description: "Share note",
       },
     ],
   })
@@ -232,30 +483,14 @@ export function App() {
       label: "New Note",
       description: "Create a new note",
       icon: <PlusIcon />,
-      handler: () => {
-        createNote()
-        showToast("New note created")
-      },
+      handler: handleCreateNote,
       keywords: ["create", "add"],
     },
     {
       id: "manage-notes",
       label: "Manage Notes",
       description: "Rename and delete notes",
-      icon: (
-        <svg
-          width="16"
-          height="16"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <path d="M3 3h18v18H3zM9 3v18M3 9h18M3 15h6" />
-        </svg>
-      ),
+      icon: <ManageNotesIcon />,
       handler: () => setShowManageNotes(true),
       keywords: ["rename", "delete", "organize"],
     },
@@ -263,20 +498,7 @@ export function App() {
       id: "open-folder",
       label: isFolderMapped ? "Change Folder" : "Open Folder",
       description: "Sync notes with a folder on your computer",
-      icon: (
-        <svg
-          width="16"
-          height="16"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
-        </svg>
-      ),
+      icon: <OpenFolderIcon />,
       handler: () => {
         handleOpenFolder()
       },
@@ -288,21 +510,7 @@ export function App() {
             id: "close-folder",
             label: "Close Folder",
             description: "Stop syncing with folder",
-            icon: (
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
-                <line x1="3" y1="3" x2="21" y2="21" />
-              </svg>
-            ),
+            icon: <CloseFolderIcon />,
             handler: () => {
               handleCloseFolder()
             },
@@ -314,21 +522,7 @@ export function App() {
       id: "preferences",
       label: "Preferences",
       description: "Change theme and font size",
-      icon: (
-        <svg
-          width="16"
-          height="16"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <circle cx="12" cy="12" r="3" />
-          <path d="M12 1v6m0 6v6M5.6 5.6l4.2 4.2m4.2 4.2l4.2 4.2M1 12h6m6 0h6M5.6 18.4l4.2-4.2m4.2-4.2l4.2-4.2" />
-        </svg>
-      ),
+      icon: <PreferencesIcon />,
       handler: () => setShowPreferences(true),
       keywords: ["settings", "theme", "font", "dark", "light"],
     },
@@ -336,22 +530,7 @@ export function App() {
       id: "share",
       label: "Share",
       description: "Copy share link to clipboard",
-      icon: (
-        <svg
-          width="16"
-          height="16"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
-          <polyline points="16 6 12 2 8 6" />
-          <line x1="12" y1="2" x2="12" y2="15" />
-        </svg>
-      ),
+      icon: <ShareIcon />,
       handler: () => {
         handleShare()
       },
@@ -361,22 +540,7 @@ export function App() {
       id: "help",
       label: "Help",
       description: "View documentation and syntax guide",
-      icon: (
-        <svg
-          width="16"
-          height="16"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <circle cx="12" cy="12" r="10" />
-          <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
-          <line x1="12" y1="17" x2="12.01" y2="17" />
-        </svg>
-      ),
+      icon: <HelpIcon />,
       handler: () => setShowHelpMenu(true),
       keywords: ["documentation", "docs", "syntax"],
     },
@@ -390,30 +554,11 @@ export function App() {
     [savePreferences]
   )
 
-  const showToast = useCallback((message: string) => {
-    const id = Date.now()
-    setToasts((prev) => [...prev, { id, message }])
-  }, [])
-
-  const removeToast = useCallback((id: number) => {
-    setToasts((prev) => prev.filter((toast) => toast.id !== id))
-  }, [])
-
-  const handleShare = useCallback(() => {
-    const url = shareNote()
-    if (url) {
-      navigator.clipboard.writeText(url)
-      setShareUrl(url)
-      setShowShareModal(true)
-      showToast("Link copied to clipboard")
-    }
-  }, [shareNote, showToast])
-
   const handleDismissOnboarding = useCallback(() => {
     setShowOnboarding(false)
     const updated = preferences.withOnboardingComplete()
     savePreferences(updated)
-  }, [preferences, savePreferences])
+  }, [preferences, savePreferences, setShowOnboarding])
 
   const handleInsertTemplate = useCallback(() => {
     if (activeNote) {
@@ -421,56 +566,6 @@ export function App() {
       setEditorContent(EXAMPLE_TEMPLATE)
     }
   }, [activeNote, updateContent])
-
-  const handleOpenFolder = useCallback(async () => {
-    try {
-      await openFolder()
-      showToast("Folder opened successfully")
-    } catch (error) {
-      console.error("Error opening folder:", error)
-      showToast("Failed to open folder")
-    }
-  }, [openFolder, showToast])
-
-  const handleCloseFolder = useCallback(async () => {
-    try {
-      await closeFolder()
-      showToast("Folder closed")
-    } catch (error) {
-      console.error("Error closing folder:", error)
-    }
-  }, [closeFolder, showToast])
-
-  const isFileSystemSupported = FileSystemNoteRepository.isSupported()
-
-  const startRename = useCallback((noteId: string, currentName: string) => {
-    renameBlurEnabledRef.current = false
-    setRenamingNoteId(noteId)
-    setRenameValue(currentName)
-    // Enable blur after a short delay to prevent immediate blur
-    setTimeout(() => {
-      renameBlurEnabledRef.current = true
-    }, 100)
-  }, [])
-
-  const finishRename = useCallback(() => {
-    if (!renameBlurEnabledRef.current) {
-      return
-    }
-
-    if (renamingNoteId && renameValue.trim()) {
-      const note = notes.find((n) => n.id === renamingNoteId)
-      const newName = renameValue.trim()
-
-      // Only rename and show toast if the name actually changed
-      if (note && note.name !== newName) {
-        renameNote(renamingNoteId, newName)
-        showToast("Note renamed")
-      }
-    }
-    setRenamingNoteId(null)
-    setRenameValue("")
-  }, [renamingNoteId, renameValue, renameNote, showToast, notes])
 
   const handleConflictResolve = useCallback(
     (action: "replace" | "keep-both" | "cancel") => {
@@ -490,7 +585,7 @@ export function App() {
         showToast("Imported as new note")
       }
     },
-    [conflictData, importSharedNote, showToast]
+    [conflictData, importSharedNote, showToast, setConflictData]
   )
 
   const handleNotesMenuHover = useCallback(() => {
@@ -498,13 +593,13 @@ export function App() {
       clearTimeout(menuTimeoutRef.current)
     }
     setShowNotesMenu(true)
-  }, [])
+  }, [setShowNotesMenu])
 
   const handleNotesMenuLeave = useCallback(() => {
     menuTimeoutRef.current = setTimeout(() => {
       setShowNotesMenu(false)
     }, 300) // 300ms delay before closing
-  }, [])
+  }, [setShowNotesMenu])
 
   if (!isLoaded || typeof window === "undefined") {
     return <div className="flex flex-1 bg-[var(--desk-bg-color)]"></div>
@@ -523,6 +618,7 @@ export function App() {
             onUpdate={handleContentChange}
             preferences={preferences}
             onCopy={(value: string) => showToast(`Copied: ${value}`)}
+            noteId={activeNote.id}
           />
         </div>
       </div>
@@ -534,17 +630,22 @@ export function App() {
         showManageNotes ||
         showFolderSyncHelp ||
         showShareModal ||
-        pendingDeletions.length > 0) && <div className="modal-backdrop" onClick={closeDialogs} />}
+        pendingDeletions.length > 0) && <div className="modal-backdrop" onClick={closeAllDialogs} />}
 
       {showPreferences && (
         <PreferencesDialog
           preferences={preferences}
-          close={closeDialogs}
+          close={closeAllDialogs}
           save={handleSavePreferences}
         />
       )}
 
-      {showKeybindingsModal && <KeybindingsModal onClose={() => setShowKeybindingsModal(false)} />}
+      {showKeybindingsModal && (
+        <KeybindingsModal
+          onClose={() => setShowKeybindingsModal(false)}
+          vimMode={preferences.vimMode}
+        />
+      )}
 
       {showSyntaxModal && <EditorSyntaxModal onClose={() => setShowSyntaxModal(false)} />}
 
@@ -586,7 +687,14 @@ export function App() {
 
       {showFolderSyncHelp && <FolderSyncHelpModal onClose={() => setShowFolderSyncHelp(false)} />}
 
-      {showShareModal && <ShareModal url={shareUrl} onClose={() => setShowShareModal(false)} />}
+      {showShareModal && (
+        <ShareModal
+          url={shareUrl}
+          content={editorContent}
+          preferences={preferences}
+          onClose={() => setShowShareModal(false)}
+        />
+      )}
 
       <QuickActionPalette
         isOpen={showQuickActions}
@@ -596,6 +704,9 @@ export function App() {
         activeNoteId={activeNote.id}
         onSwitchNote={(noteId) => {
           switchNote(noteId)
+        }}
+        onDeleteNote={(noteId) => {
+          handleDeleteNote(noteId)
         }}
       />
 
@@ -621,144 +732,196 @@ export function App() {
           {/* Desktop Menu Dropdown - positioned relative to button */}
           {showMenu && (
             <div className="dropdown-menu">
-              <div
-                className="dropdown-item"
-                onClick={() => {
-                  createNote()
-                  setShowMenu(false)
-                  showToast("New note created")
-                }}
-              >
-                New Note
-              </div>
+              {(() => {
+                let currentIndex = -1
+                const getNextIndex = () => ++currentIndex
 
-              <div
-                className="relative"
-                ref={notesMenuRef}
-                onMouseEnter={handleNotesMenuHover}
-                onMouseLeave={handleNotesMenuLeave}
-              >
-                <div className="dropdown-item flex justify-between items-center">
-                  <span>Notes</span>
-                  <span className="ml-2">▸</span>
-                </div>
+                const idx0 = getNextIndex() // New Note
+                const idx1 = getNextIndex() // Notes
+                const idx2 = getNextIndex() // Manage Notes
+                const idx3 = getNextIndex() // Open/Change Folder
+                const idx4 = isFolderMapped ? getNextIndex() : -1 // Close Folder (conditional)
+                const idx5 = getNextIndex() // Preferences
 
-                {showNotesMenu && (
-                  <div
-                    className="dropdown-menu"
-                    style={{ left: "100%", top: 0, minWidth: "250px" }}
-                    onMouseEnter={handleNotesMenuHover}
-                    onMouseLeave={handleNotesMenuLeave}
-                  >
-                    {notes.map((note) => (
+                return (
+                  <>
+                    <div
+                      ref={(el) => {
+                        menuItemsRef.current[idx0] = el
+                      }}
+                      className={`dropdown-item flex justify-between items-center ${
+                        selectedMenuIndex === idx0 ? "bg-[var(--bg-button-hover)]" : ""
+                      }`}
+                      onClick={() => {
+                        createNote()
+                        setShowMenu(false)
+                        showToast("New note created")
+                      }}
+                    >
+                      <span>New Note</span>
+                    </div>
+
+                    <div
+                      className="relative"
+                      ref={notesMenuRef}
+                      onMouseEnter={handleNotesMenuHover}
+                      onMouseLeave={handleNotesMenuLeave}
+                    >
                       <div
-                        key={note.id}
-                        className="dropdown-item"
+                        ref={(el) => {
+                          menuItemsRef.current[idx1] = el
+                        }}
+                        className={`dropdown-item flex justify-between items-center ${
+                          selectedMenuIndex === idx1 ? "bg-[var(--bg-button-hover)]" : ""
+                        }`}
+                        onClick={() => setShowNotesMenu(!showNotesMenu)}
+                      >
+                        <span>Notes</span>
+                        <span className="ml-2">▸</span>
+                      </div>
+
+                      {showNotesMenu && (
+                        <div
+                          className="dropdown-menu"
+                          style={{ left: "100%", top: 0, minWidth: "250px" }}
+                          onMouseEnter={handleNotesMenuHover}
+                          onMouseLeave={handleNotesMenuLeave}
+                        >
+                          {notes.map((note, noteIndex) => (
+                            <div
+                              key={note.id}
+                              ref={(el) => {
+                                submenuItemsRef.current[noteIndex] = el
+                              }}
+                              className={`dropdown-item ${
+                                isInSubmenu && selectedSubmenuIndex === noteIndex
+                                  ? "bg-[var(--bg-button-hover)]"
+                                  : ""
+                              }`}
+                              onClick={() => {
+                                switchNote(note.id)
+                                setShowMenu(false)
+                                setShowNotesMenu(false)
+                                setIsInSubmenu(false)
+                                setSelectedSubmenuIndex(-1)
+                              }}
+                              onMouseEnter={() => {
+                                if (isInSubmenu) {
+                                  setSelectedSubmenuIndex(noteIndex)
+                                }
+                              }}
+                            >
+                              {note.id === activeNote.id && "• "}
+                              {note.name}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    <div
+                      ref={(el) => {
+                        menuItemsRef.current[idx2] = el
+                      }}
+                      className={`dropdown-item flex justify-between items-center ${
+                        selectedMenuIndex === idx2 ? "bg-[var(--bg-button-hover)]" : ""
+                      }`}
+                      onClick={() => {
+                        setShowManageNotes(true)
+                        setShowMenu(false)
+                      }}
+                    >
+                      <span>Manage Notes</span>
+                    </div>
+
+                    <div className="border-t border-[var(--ui-border-color)] my-1"></div>
+
+                    <div
+                      ref={(el) => {
+                        menuItemsRef.current[idx3] = el
+                      }}
+                      className={`dropdown-item flex justify-between items-center ${
+                        selectedMenuIndex === idx3 ? "bg-[var(--bg-button-hover)]" : ""
+                      }`}
+                      style={{
+                        opacity: isFileSystemSupported ? 1 : 0.5,
+                        cursor: isFileSystemSupported ? "pointer" : "not-allowed",
+                      }}
+                      onClick={
+                        isFileSystemSupported
+                          ? () => {
+                              handleOpenFolder()
+                              setShowMenu(false)
+                            }
+                          : undefined
+                      }
+                    >
+                      <span className="flex-1">
+                        {isFolderMapped ? "Change Folder" : "Open Folder"}
+                      </span>
+                      {isFileSystemSupported && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setShowFolderSyncHelp(true)
+                            setShowMenu(false)
+                          }}
+                          className="ml-2 px-1.5 py-1 text-[var(--text-muted)] hover:text-[var(--text-color)] border border-[var(--ui-border-color)] rounded cursor-pointer hover:border-[var(--text-muted)] transition-colors"
+                          title="Learn about folder sync"
+                        >
+                          <QuestionIcon />
+                        </button>
+                      )}
+                    </div>
+
+                    {isFolderMapped && (
+                      <div
+                        ref={(el) => {
+                          menuItemsRef.current[idx4] = el
+                        }}
+                        className={`dropdown-item flex justify-between items-center ${
+                          selectedMenuIndex === idx4 ? "bg-[var(--bg-button-hover)]" : ""
+                        }`}
+                        title="Stop syncing with folder. Notes will remain in the app."
                         onClick={() => {
-                          switchNote(note.id)
+                          handleCloseFolder()
                           setShowMenu(false)
-                          setShowNotesMenu(false)
                         }}
                       >
-                        {note.id === activeNote.id && "• "}
-                        {note.name}
+                        <span className="flex-1">Close Folder</span>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setShowFolderSyncHelp(true)
+                            setShowMenu(false)
+                          }}
+                          className="ml-2 px-1.5 py-1 text-[var(--text-muted)] hover:text-[var(--text-color)] border border-[var(--ui-border-color)] rounded cursor-pointer hover:border-[var(--text-muted)] transition-colors"
+                          title="Learn about folder sync"
+                        >
+                          <QuestionIcon />
+                        </button>
                       </div>
-                    ))}
-                  </div>
-                )}
-              </div>
+                    )}
 
-              <div
-                className="dropdown-item"
-                onClick={() => {
-                  setShowManageNotes(true)
-                  setShowMenu(false)
-                }}
-              >
-                Manage Notes
-              </div>
+                    <div className="border-t border-[var(--ui-border-color)] my-1"></div>
 
-              <div className="border-t border-[var(--ui-border-color)] my-1"></div>
-
-              <div
-                className="dropdown-item flex justify-between items-center"
-                style={{
-                  opacity: isFileSystemSupported ? 1 : 0.5,
-                  cursor: isFileSystemSupported ? "pointer" : "not-allowed",
-                }}
-              >
-                <span
-                  onClick={
-                    isFileSystemSupported
-                      ? () => {
-                          handleOpenFolder()
-                          setShowMenu(false)
-                        }
-                      : undefined
-                  }
-                  className="flex-1"
-                  title={
-                    !isFileSystemSupported
-                      ? "File System API not supported in this browser"
-                      : undefined
-                  }
-                >
-                  {isFolderMapped ? "Change Folder" : "Open Folder"}
-                </span>
-                {isFileSystemSupported && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      setShowFolderSyncHelp(true)
-                      setShowMenu(false)
-                    }}
-                    className="ml-2 px-1.5 py-1 text-[var(--text-muted)] hover:text-[var(--text-color)] border border-[var(--ui-border-color)] rounded cursor-pointer hover:border-[var(--text-muted)] transition-colors"
-                    title="Learn about folder sync"
-                  >
-                    <QuestionIcon />
-                  </button>
-                )}
-              </div>
-
-              {isFolderMapped && (
-                <div
-                  className="dropdown-item flex justify-between items-center"
-                  title="Stop syncing with folder. Notes will remain in the app."
-                >
-                  <span
-                    onClick={() => {
-                      handleCloseFolder()
-                      setShowMenu(false)
-                    }}
-                    className="flex-1"
-                  >
-                    Close Folder
-                  </span>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      setShowFolderSyncHelp(true)
-                      setShowMenu(false)
-                    }}
-                    className="ml-2 px-1.5 py-1 text-[var(--text-muted)] hover:text-[var(--text-color)] border border-[var(--ui-border-color)] rounded cursor-pointer hover:border-[var(--text-muted)] transition-colors"
-                    title="Learn about folder sync"
-                  >
-                    <QuestionIcon />
-                  </button>
-                </div>
-              )}
-
-              <div className="border-t border-[var(--ui-border-color)] my-1"></div>
-
-              <div
-                className="dropdown-item"
-                onClick={() => {
-                  setShowPreferences(true)
-                  setShowMenu(false)
-                }}
-              >
-                Preferences
-              </div>
+                    <div
+                      ref={(el) => {
+                        menuItemsRef.current[idx5] = el
+                      }}
+                      className={`dropdown-item flex justify-between items-center ${
+                        selectedMenuIndex === idx5 ? "bg-[var(--bg-button-hover)]" : ""
+                      }`}
+                      onClick={() => {
+                        setShowPreferences(true)
+                        setShowMenu(false)
+                      }}
+                    >
+                      <span>Preferences</span>
+                    </div>
+                  </>
+                )
+              })()}
             </div>
           )}
         </div>
@@ -795,7 +958,7 @@ export function App() {
               onChange={(e) => setRenameValue(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === "Enter") finishRename()
-                if (e.key === "Escape") setRenamingNoteId(null)
+                if (e.key === "Escape") cancelRename()
               }}
               onBlur={finishRename}
               className="px-2 bg-[var(--bg-input)] text-[var(--text-color)] rounded border border-[var(--ui-border-color)] cursor-text outline-none focus:border-[var(--text-muted)]"
@@ -851,24 +1014,23 @@ export function App() {
       {showMenu && (
         <div className="dropdown-menu mobile-menu fixed right-4 md:hidden">
           <div
-            className="dropdown-item"
+            className="dropdown-item flex justify-between items-center"
             onClick={() => {
-              createNote()
+              handleCreateNote()
               setShowMenu(false)
-              showToast("New note created")
             }}
           >
-            New Note
+            <span>New Note</span>
           </div>
 
           <div
-            className="dropdown-item"
+            className="dropdown-item flex justify-between items-center"
             onClick={() => {
               setShowManageNotes(true)
               setShowMenu(false)
             }}
           >
-            Manage Notes
+            <span>Manage Notes</span>
           </div>
 
           <div className="border-t border-[var(--ui-border-color)] my-1"></div>
@@ -942,33 +1104,33 @@ export function App() {
           <div className="border-t border-[var(--ui-border-color)] my-1"></div>
 
           <div
-            className="dropdown-item"
+            className="dropdown-item flex justify-between items-center"
             onClick={() => {
               setShowPreferences(true)
               setShowMenu(false)
             }}
           >
-            Preferences
+            <span>Preferences</span>
           </div>
 
           <div
-            className="dropdown-item md:hidden"
+            className="dropdown-item md:hidden flex justify-between items-center"
             onClick={() => {
               handleShare()
               setShowMenu(false)
             }}
           >
-            Share
+            <span>Share</span>
           </div>
 
           <div
-            className="dropdown-item md:hidden"
+            className="dropdown-item md:hidden flex justify-between items-center"
             onClick={() => {
               setShowHelpMenu(true)
               setShowMenu(false)
             }}
           >
-            Help
+            <span>Help</span>
           </div>
         </div>
       )}

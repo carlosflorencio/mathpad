@@ -2,6 +2,7 @@ import { getModifierKey } from "@/hooks/useKeyBindings"
 
 interface KeybindingsModalProps {
   onClose: () => void
+  vimMode?: boolean
 }
 
 type KeyBinding = {
@@ -10,7 +11,7 @@ type KeyBinding = {
   category: string
 }
 
-export function KeybindingsModal({ onClose }: KeybindingsModalProps) {
+export function KeybindingsModal({ onClose, vimMode = false }: KeybindingsModalProps) {
   const modKey = getModifierKey()
 
   const keybindings: KeyBinding[] = [
@@ -21,9 +22,9 @@ export function KeybindingsModal({ onClose }: KeybindingsModalProps) {
       category: "Navigation",
     },
     {
-      keys: `${modKey}+N`,
-      description: "Create new note",
-      category: "Notes",
+      keys: `${modKey}+M`,
+      description: "Toggle menu",
+      category: "Navigation",
     },
     {
       keys: "Esc",
@@ -31,11 +32,16 @@ export function KeybindingsModal({ onClose }: KeybindingsModalProps) {
       category: "Navigation",
     },
 
-    // Editor
+    // Notes
+    {
+      keys: `${modKey}+N`,
+      description: "Create new note",
+      category: "Notes",
+    },
     {
       keys: `${modKey}+S`,
-      description: "Save note (auto-saves continuously)",
-      category: "Editor",
+      description: "Share note (copy link to clipboard)",
+      category: "Notes",
     },
 
     // Quick Actions (via Cmd+K)
@@ -56,11 +62,115 @@ export function KeybindingsModal({ onClose }: KeybindingsModalProps) {
     },
   ]
 
+  const vimKeybindings: KeyBinding[] = [
+    // Vim Editor - Navigation
+    {
+      keys: "h j k l",
+      description: "Move cursor left, down, up, right",
+      category: "Vim Editor - Navigation",
+    },
+    {
+      keys: "w b",
+      description: "Move word forward/backward",
+      category: "Vim Editor - Navigation",
+    },
+    {
+      keys: "0 $",
+      description: "Move to start/end of line",
+      category: "Vim Editor - Navigation",
+    },
+    {
+      keys: "gg G",
+      description: "Move to start/end of document",
+      category: "Vim Editor - Navigation",
+    },
+
+    // Vim Editor - Editing
+    {
+      keys: "i",
+      description: "Enter insert mode before cursor (or focus editor if not focused)",
+      category: "Vim Editor - Editing",
+    },
+    {
+      keys: "a",
+      description: "Enter insert mode after cursor",
+      category: "Vim Editor - Editing",
+    },
+    {
+      keys: "I A",
+      description: "Insert at start/end of line",
+      category: "Vim Editor - Editing",
+    },
+    {
+      keys: "o O",
+      description: "Open new line below/above",
+      category: "Vim Editor - Editing",
+    },
+    {
+      keys: "x",
+      description: "Delete character under cursor",
+      category: "Vim Editor - Editing",
+    },
+    {
+      keys: "dd",
+      description: "Delete current line",
+      category: "Vim Editor - Editing",
+    },
+    {
+      keys: "yy",
+      description: "Copy (yank) current line",
+      category: "Vim Editor - Editing",
+    },
+    {
+      keys: "p",
+      description: "Paste after cursor",
+      category: "Vim Editor - Editing",
+    },
+    {
+      keys: "u",
+      description: "Undo",
+      category: "Vim Editor - Editing",
+    },
+    {
+      keys: `${modKey}+R`,
+      description: "Redo",
+      category: "Vim Editor - Editing",
+    },
+
+    // Vim Editor - Visual Mode
+    {
+      keys: "v",
+      description: "Enter visual character mode",
+      category: "Vim Editor - Visual",
+    },
+    {
+      keys: "V",
+      description: "Enter visual line mode",
+      category: "Vim Editor - Visual",
+    },
+    {
+      keys: "Esc",
+      description: "Exit visual or insert mode (return to normal mode)",
+      category: "Vim Editor - Visual",
+    },
+  ]
+
   // Group by category
-  const categories = ["Navigation", "Notes", "Editor", "Quick Actions"]
+  const categories = vimMode
+    ? [
+        "Navigation",
+        "Notes",
+        "Quick Actions",
+        "Vim Editor - Navigation",
+        "Vim Editor - Editing",
+        "Vim Editor - Visual",
+      ]
+    : ["Navigation", "Notes", "Quick Actions"]
+
+  const allKeybindings = vimMode ? [...keybindings, ...vimKeybindings] : keybindings
   const groupedBindings = categories.map((category) => ({
     category,
-    bindings: keybindings.filter((kb) => kb.category === category),
+    bindings: allKeybindings.filter((kb) => kb.category === category),
   }))
 
   return (
@@ -101,9 +211,24 @@ export function KeybindingsModal({ onClose }: KeybindingsModalProps) {
           </kbd>{" "}
           to access all actions and notes quickly!
         </p>
+        {vimMode && (
+          <p className="text-sm text-[var(--text-muted)] mt-2">
+            <strong>Vim Mode:</strong> Press{" "}
+            <kbd className="px-1.5 py-0.5 bg-[var(--bg-input)] rounded border border-[var(--ui-border-color)]">
+              i
+            </kbd>{" "}
+            from anywhere to focus the editor.
+          </p>
+        )}
         <p className="text-xs text-[var(--text-muted)] mt-2">
           <strong>Note:</strong> Some browsers may override {modKey}+N at the system level. Use{" "}
           {modKey}+K → &quot;New Note&quot; as an alternative.
+          {vimMode && (
+            <>
+              {" "}
+              Global shortcuts like {modKey}+K and {modKey}+N work in both normal and insert modes.
+            </>
+          )}
         </p>
       </div>
 

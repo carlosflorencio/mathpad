@@ -2,10 +2,10 @@
 
 import { acceptCompletion, autocompletion, completionKeymap } from "@codemirror/autocomplete"
 import { defaultKeymap, history, historyKeymap, redo } from "@codemirror/commands"
-import { searchKeymap, highlightSelectionMatches } from "@codemirror/search"
 import { drawSelection, EditorView, keymap } from "@codemirror/view"
 import { EditorState } from "@codemirror/state"
 import { useRef, useEffect, useMemo, memo } from "react"
+import { vim } from "@replit/codemirror-vim"
 import {
   mathpadLanguage,
   contextsField,
@@ -33,6 +33,7 @@ interface EditorProps {
   onUpdate: (value: string) => void
   preferences: Preferences
   onCopy?: (value: string) => void
+  noteId?: string
 }
 
 function textToEvaluations(text: string, preferences: Preferences): LineEvaluation[] {
@@ -50,7 +51,7 @@ function textToEvaluations(text: string, preferences: Preferences): LineEvaluati
   }
 }
 
-function EditorComponent({ value, onUpdate, preferences, onCopy }: EditorProps) {
+function EditorComponent({ value, onUpdate, preferences, onCopy, noteId }: EditorProps) {
   // Memoize evaluations to avoid re-computing when props haven't changed
   const evaluations = useMemo(() => textToEvaluations(value, preferences), [value, preferences])
   const evaluationsRef = useRef(evaluations)
@@ -166,15 +167,34 @@ function EditorComponent({ value, onUpdate, preferences, onCopy }: EditorProps) 
     [preferences.theme]
   )
 
+  // Memoize vim extension - only include when enabled
+  const vimExtension = useMemo(() => (preferences.vimMode ? vim() : []), [preferences.vimMode])
+
+  // Create keymap with Mathpad-specific overrides
+  // These keybindings should work even in vim mode and override vim defaults
+  const keymapExtension = useMemo(
+    () =>
+      keymap.of([
+        ...defaultKeymap,
+        ...completionKeymap,
+        { key: "Tab", run: acceptCompletion },
+        ...historyKeymap,
+        { key: "Mod-Shift-z", run: redo, preventDefault: true },
+        // Disable Ctrl+D in vim mode (prevent delete line behavior)
+        { key: "Ctrl-d", run: () => true, preventDefault: true },
+      ]),
+    []
+  )
+
   return (
     <CodeMirror
       className="flex-1 h-full"
       value={value}
       onChange={onChange}
+      noteId={noteId}
       extensions={[
         drawSelection(),
         EditorState.allowMultipleSelections.of(true),
-        highlightSelectionMatches(),
         EditorView.lineWrapping,
         initialContextsFacet.of(initialContexts),
         initialResultsFacet.of(initialResults),
@@ -191,14 +211,8 @@ function EditorComponent({ value, onUpdate, preferences, onCopy }: EditorProps) 
         autocompletion({ override: [completions] }),
         themeExtension,
         history(),
-        keymap.of([
-          ...defaultKeymap,
-          ...searchKeymap,
-          ...completionKeymap,
-          { key: "Tab", run: acceptCompletion },
-          ...historyKeymap,
-          { key: "Mod-Shift-z", run: redo, preventDefault: true },
-        ]),
+        vimExtension, // Vim mode (conditionally included)
+        keymapExtension, // Regular keymaps (after vim to override certain keys)
       ]}
     />
   )
