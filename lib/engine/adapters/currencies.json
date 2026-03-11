@@ -1,5 +1,5 @@
 {
-  "lastUpdated": "2026-03-10T13:27:53.646Z",
+  "lastUpdated": "2026-03-11T13:27:58.762Z",
   "base": "USD",
   "currencies": [
     {
@@ -12,67 +12,67 @@
       "code": "EUR",
       "symbol": "€",
       "name": "Euro",
-      "rate": 1.1583338063196376
+      "rate": 1.1626190085882666
     },
     {
       "code": "GBP",
       "symbol": "£",
       "name": "British Pound",
-      "rate": 1.3384569465246294
+      "rate": 1.3435099735462888
     },
     {
       "code": "JPY",
       "symbol": "¥",
       "name": "Japanese Yen",
-      "rate": 0.0063242256978536405
+      "rate": 0.00633305079693813
     },
     {
       "code": "CAD",
       "symbol": "CA$",
       "name": "Canadian Dollar",
-      "rate": 0.7370945795538808
+      "rate": 0.7365142401345759
     },
     {
       "code": "AUD",
       "symbol": "A$",
       "name": "Australian Dollar",
-      "rate": 0.703935350577403
+      "rate": 0.7122532487651309
     },
     {
       "code": "CHF",
       "symbol": "CHF",
       "name": "Swiss Franc",
-      "rate": 1.284358186948609
+      "rate": 1.286079348523645
     },
     {
       "code": "CNY",
       "symbol": "CNY",
       "name": "Chinese Yuan",
-      "rate": 0.14455105405905866
+      "rate": 0.14542169601543098
     },
     {
       "code": "INR",
       "symbol": "₹",
       "name": "Indian Rupee",
-      "rate": 0.010840644028785726
+      "rate": 0.01086511925783065
     },
     {
       "code": "MXN",
       "symbol": "MX$",
       "name": "Mexican Peso",
-      "rate": 0.056341694346871585
+      "rate": 0.0568856106596353
     },
     {
       "code": "BRL",
       "symbol": "R$",
       "name": "Brazilian Real",
-      "rate": 0.19129646973842884
+      "rate": 0.19360941778163104
     },
     {
       "code": "KRW",
       "symbol": "₩",
       "name": "South Korean Won",
-      "rate": 0.0006770459411791491
+      "rate": 0.0006789709598423909
     }
   ]
 }
