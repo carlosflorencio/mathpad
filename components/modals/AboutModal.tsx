@@ -1,4 +1,5 @@
 import Image from "next/image"
+import { withBasePath } from "@/lib/basePath"
 
 interface AboutModalProps {
   onClose: () => void
@@ -12,7 +13,7 @@ export function AboutModal({ onClose }: AboutModalProps) {
       <div className="space-y-4 text-[var(--text-color)]">
         <div className="text-center py-4">
           <div className="mb-4 flex justify-center">
-            <Image src="/mathpad/logo.png" alt="MathPad Logo" width={80} height={80} />
+            <Image src={withBasePath("/logo.png")} alt="MathPad Logo" width={80} height={80} />
           </div>
           <h3 className="text-xl font-semibold">MathPad</h3>
         </div>
