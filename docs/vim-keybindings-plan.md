@@ -1,9 +1,11 @@
 # Vim Key Bindings Implementation Plan
 
 ## Overview
+
 Add vim key bindings as an optional user setting in Mathpad, allowing users to toggle between default and vim keybindings in the editor.
 
 ## Goals
+
 - Provide optional vim key bindings for the CodeMirror editor
 - Make it configurable through the preferences dialog
 - Maintain backward compatibility (default: vim disabled)
@@ -18,6 +20,7 @@ Add vim key bindings as an optional user setting in Mathpad, allowing users to t
 #### Update `Preferences` class (`lib/preferences/Preferences.ts`)
 
 **Changes:**
+
 - Add `vimMode: boolean` property to the Preferences class
 - Update constructor to accept vim mode parameter
 - Add `withVimMode(enabled: boolean): Preferences` method
@@ -25,6 +28,7 @@ Add vim key bindings as an optional user setting in Mathpad, allowing users to t
 - Update `default()` to set `vimMode: false`
 
 **Example:**
+
 ```typescript
 export class Preferences {
   constructor(
@@ -34,7 +38,7 @@ export class Preferences {
     public readonly thousandsSeparator: "," | "." | " " | "",
     public readonly theme: "dark" | "light",
     public readonly hasSeenOnboarding: boolean,
-    public readonly vimMode: boolean  // NEW
+    public readonly vimMode: boolean // NEW
   ) {}
 
   static default(): Preferences {
@@ -59,6 +63,7 @@ export class Preferences {
 ```
 
 **Files to modify:**
+
 - `lib/preferences/Preferences.ts` - Add vimMode property and methods
 - `lib/preferences/Preferences.test.ts` - Update tests to include vimMode
 
@@ -67,11 +72,13 @@ export class Preferences {
 #### Update `PreferencesDialog` component (`components/PreferencesDialog.tsx`)
 
 **Changes:**
+
 - Add state for `vimMode` boolean
 - Add toggle/checkbox for vim mode setting
 - Update the effect that saves preferences to include vimMode
 
 **Example UI addition:**
+
 ```tsx
 <div className="mb-4">
   <label className="form-label flex items-center gap-2">
@@ -90,6 +97,7 @@ export class Preferences {
 ```
 
 **Files to modify:**
+
 - `components/PreferencesDialog.tsx` - Add vim mode toggle UI
 
 ### 3. CodeMirror Integration
@@ -97,6 +105,7 @@ export class Preferences {
 #### Install CodeMirror vim extension
 
 **Package to install:**
+
 ```bash
 npm install @replit/codemirror-vim
 ```
@@ -106,12 +115,14 @@ This is the official vim mode extension for CodeMirror 6, maintained by Replit.
 #### Update `Editor` component (`components/Editor.tsx`)
 
 **Changes:**
+
 - Import vim extension from `@replit/codemirror-vim`
 - Create vim extension conditionally based on preferences
 - Add vim extension to the extensions array when enabled
 - Handle vim mode changes dynamically
 
 **Implementation approach:**
+
 ```typescript
 import { vim } from "@replit/codemirror-vim"
 
@@ -131,16 +142,18 @@ const extensions = useMemo(() => {
   }
 
   return exts
-}, [preferences, /* other deps */])
+}, [preferences /* other deps */])
 ```
 
 **Considerations:**
+
 - Vim extension should be added to the extensions array conditionally
 - When vim mode is toggled, the entire editor extensions need to be reconfigured
 - The vim extension may conflict with some existing keybindings (handled by priority)
 - Consider using Compartment for dynamic vim mode toggling
 
 **Files to modify:**
+
 - `components/Editor.tsx` - Add conditional vim extension
 
 ### 4. Vim Mode Customization (Optional Enhancements)
@@ -150,12 +163,14 @@ const extensions = useMemo(() => {
 Since this is a mathematical notepad, consider customizing vim to work better with the domain:
 
 **Potential customizations:**
+
 - Preserve quick action palette (Cmd/Ctrl+K) even in vim mode
 - Preserve new note creation (Cmd/Ctrl+N) even in vim mode
 - Configure vim's ':' command mode to work with Mathpad features
 - Add custom vim commands like `:format` to format results
 
 **Example:**
+
 ```typescript
 import { vim, Vim } from "@replit/codemirror-vim"
 
@@ -165,9 +180,11 @@ if (preferences.vimMode) {
     // Custom format command
   })
 
-  exts.push(vim({
-    // Override specific keybindings if needed
-  }))
+  exts.push(
+    vim({
+      // Override specific keybindings if needed
+    })
+  )
 }
 ```
 
@@ -176,17 +193,20 @@ if (preferences.vimMode) {
 #### Review and resolve conflicts
 
 **Potential conflicts to address:**
+
 - **Cmd/Ctrl+K**: Quick action palette (preserve this)
 - **Cmd/Ctrl+N**: New note (preserve this)
 - **Completion**: Tab for autocomplete vs vim tab behavior
 - **History**: Vim undo/redo vs CodeMirror history
 
 **Strategy:**
+
 - Use `keymap.of()` with higher precedence for Mathpad-specific commands
 - Configure vim to allow certain keys to fall through
 - Document vim mode behavior in help/keybindings modal
 
 **Implementation:**
+
 ```typescript
 const vimKeymapOverrides = keymap.of([
   {
@@ -219,33 +239,39 @@ if (preferences.vimMode) {
 #### Update user-facing documentation
 
 **Files to update:**
+
 - `components/modals/KeybindingsModal.tsx` - Add section explaining vim mode
   - List supported vim commands (navigation, editing, visual mode)
   - Explain how to enable/disable vim mode
   - Document any Mathpad-specific overrides
 
 **Example content:**
+
 ```markdown
 ## Vim Mode (Optional)
 
 Enable vim key bindings in Preferences for vim-style editing:
 
 **Normal mode navigation:**
+
 - h, j, k, l - Move cursor left, down, up, right
 - w, b - Move by word forward/backward
 - 0, $ - Start/end of line
 - gg, G - Start/end of document
 
 **Insert mode:**
+
 - i, a - Insert before/after cursor
 - I, A - Insert at start/end of line
 - o, O - New line below/above
 
 **Visual mode:**
+
 - v - Visual character mode
 - V - Visual line mode
 
 **Editing:**
+
 - x, dd - Delete character/line
 - yy, p - Copy line, paste
 - u, Ctrl-r - Undo, redo
@@ -261,6 +287,7 @@ work the same in both normal and vim modes.
 When vim mode is enabled, users should be able to navigate and activate menu items using keyboard shortcuts without touching the mouse.
 
 **Design principles:**
+
 - All menu items should have single-letter keybindings (vim-style)
 - Keybindings should be mnemonic (e.g., 'n' for New Note, 'p' for Preferences)
 - Show keybind hints next to menu items when vim mode is enabled
@@ -270,6 +297,7 @@ When vim mode is enabled, users should be able to navigate and activate menu ite
 #### Menu Keybinding Schema
 
 **Top-level menu items:**
+
 ```
 n - New Note
 m - Manage Notes
@@ -281,6 +309,7 @@ h - Help
 ```
 
 **Notes submenu:**
+
 ```
 1-9 - Switch to note 1-9
 j/k - Navigate down/up in note list (vim-style)
@@ -288,6 +317,7 @@ j/k - Navigate down/up in note list (vim-style)
 ```
 
 **Help menu:**
+
 ```
 k - Keybindings
 s - Syntax Guide
@@ -322,7 +352,7 @@ export function useKeyboardMenuNavigation(
       if (e.ctrlKey || e.metaKey || e.altKey) return
 
       const key = e.key.toLowerCase()
-      const binding = bindings.find(b => b.key === key && !b.disabled)
+      const binding = bindings.find((b) => b.key === key && !b.disabled)
 
       if (binding) {
         e.preventDefault()
@@ -331,8 +361,8 @@ export function useKeyboardMenuNavigation(
       }
     }
 
-    document.addEventListener('keydown', handleKeyPress)
-    return () => document.removeEventListener('keydown', handleKeyPress)
+    document.addEventListener("keydown", handleKeyPress)
+    return () => document.removeEventListener("keydown", handleKeyPress)
   }, [isOpen, bindings, vimModeEnabled])
 }
 ```
@@ -376,7 +406,7 @@ export interface MenuItem {
   id: string
   label: string
   onClick: () => void
-  keybind?: string  // NEW: vim-style keyboard shortcut
+  keybind?: string // NEW: vim-style keyboard shortcut
   show?: boolean
   disabled?: boolean
   dividerAfter?: boolean
@@ -388,17 +418,17 @@ export function createMenuItems(params: MenuItemsParams): MenuItem[] {
     {
       id: "new-note",
       label: "New Note",
-      keybind: "n",  // NEW
+      keybind: "n", // NEW
       onClick: params.onNewNote,
     },
     {
       id: "notes",
       label: "Notes",
-      keybind: "→",  // NEW: arrow to indicate submenu
+      keybind: "→", // NEW: arrow to indicate submenu
       submenu: params.notes.map((note, index) => ({
         id: note.id,
         label: note.id === params.activeNoteId ? `• ${note.name}` : note.name,
-        keybind: index < 9 ? String(index + 1) : undefined,  // NEW: numbers 1-9
+        keybind: index < 9 ? String(index + 1) : undefined, // NEW: numbers 1-9
         onClick: () => params.onSwitchNote(note.id),
       })),
       dividerAfter: true,
@@ -406,21 +436,21 @@ export function createMenuItems(params: MenuItemsParams): MenuItem[] {
     {
       id: "manage-notes",
       label: "Manage Notes",
-      keybind: "m",  // NEW
+      keybind: "m", // NEW
       onClick: params.onManageNotes,
       dividerAfter: true,
     },
     {
       id: "open-folder",
       label: params.isFolderMapped ? "Change Folder" : "Open Folder",
-      keybind: "o",  // NEW
+      keybind: "o", // NEW
       onClick: params.onOpenFolder,
       disabled: !params.isFileSystemSupported,
     },
     {
       id: "close-folder",
       label: "Close Folder",
-      keybind: "c",  // NEW
+      keybind: "c", // NEW
       onClick: params.onCloseFolder,
       show: params.isFolderMapped,
       dividerAfter: true,
@@ -428,7 +458,7 @@ export function createMenuItems(params: MenuItemsParams): MenuItem[] {
     {
       id: "preferences",
       label: "Preferences",
-      keybind: "p",  // NEW
+      keybind: "p", // NEW
       onClick: params.onPreferences,
     },
   ]
@@ -441,9 +471,9 @@ export function createMenuItems(params: MenuItemsParams): MenuItem[] {
 // In DesktopMenu component
 const menuBindings = useMemo(() => {
   return menuItems
-    .filter(item => item.show !== false)
-    .map(item => ({
-      key: item.keybind || '',
+    .filter((item) => item.show !== false)
+    .map((item) => ({
+      key: item.keybind || "",
       label: item.label,
       action: () => {
         item.onClick()
@@ -451,7 +481,7 @@ const menuBindings = useMemo(() => {
       },
       disabled: item.disabled,
     }))
-    .filter(binding => binding.key !== '')
+    .filter((binding) => binding.key !== "")
 }, [menuItems])
 
 useKeyboardMenuNavigation(showMenu, menuBindings, preferences.vimMode)
@@ -462,12 +492,14 @@ useKeyboardMenuNavigation(showMenu, menuBindings, preferences.vimMode)
 #### Visual Design for Keybind Hints
 
 **Display style:**
+
 - Right-aligned in menu items
 - Monospace font
 - Muted color (not as prominent as the menu label)
 - Small size (12-14px)
 
 **Example rendering:**
+
 ```
 ┌─────────────────────────────┐
 │ New Note              n     │
@@ -480,6 +512,7 @@ useKeyboardMenuNavigation(showMenu, menuBindings, preferences.vimMode)
 ```
 
 **CSS styling:**
+
 ```css
 .menu-item-keybind {
   margin-left: auto;
@@ -494,10 +527,12 @@ useKeyboardMenuNavigation(showMenu, menuBindings, preferences.vimMode)
 #### Keybind Conflicts Resolution
 
 **Potential conflicts:**
+
 - Menu keybinds vs. vim editor commands
 - Menu keybinds vs. global shortcuts (Cmd/Ctrl+K, Cmd/Ctrl+N)
 
 **Resolution strategy:**
+
 - Menu keybinds only work when menu is open
 - Use event handlers with `stopPropagation()` to prevent editor interference
 - Document that menus "steal" focus when open (expected behavior)
@@ -505,17 +540,20 @@ useKeyboardMenuNavigation(showMenu, menuBindings, preferences.vimMode)
 #### Accessibility Considerations
 
 **Keyboard focus management:**
+
 - When menu opens, trap focus within menu
 - Tab/Shift+Tab to navigate between items (in addition to keybinds)
 - Escape to close menu
 - Enter/Space to activate focused item
 
 **Screen reader support:**
+
 - Announce keybinds as part of item label: "New Note, press N"
 - Use `aria-keyshortcuts` attribute on menu items
 - Ensure menu has proper ARIA roles
 
 **Implementation:**
+
 ```typescript
 <div
   className="dropdown-item"
@@ -585,10 +623,12 @@ const quickActions: Action[] = [
 #### Test coverage needed
 
 **Unit tests:**
+
 - `Preferences.test.ts` - Test vim mode property and methods
 - Verify serialization/deserialization with vimMode
 
 **Integration tests:**
+
 - Test vim mode toggle in preferences dialog
 - Verify vim keybindings work when enabled
 - Verify default keybindings work when disabled
@@ -596,7 +636,8 @@ const quickActions: Action[] = [
 
 **Manual testing checklist:**
 
-*Editor vim mode:*
+_Editor vim mode:_
+
 - [ ] Enable vim mode in preferences
 - [ ] Test basic vim navigation (hjkl, w, b, 0, $)
 - [ ] Test insert mode (i, a, o, O)
@@ -608,7 +649,8 @@ const quickActions: Action[] = [
 - [ ] Disable vim mode and verify normal behavior
 - [ ] Test vim mode persists across sessions
 
-*Keyboard menu navigation:*
+_Keyboard menu navigation:_
+
 - [ ] Open menu with vim mode enabled
 - [ ] Verify keybind hints are displayed next to menu items
 - [ ] Test single-letter keybinds (n, m, o, p, s, h)
@@ -625,17 +667,20 @@ const quickActions: Action[] = [
 ## Implementation Steps
 
 ### Phase 1: Foundation
+
 1. Update `Preferences` class with vimMode property
 2. Update Preferences tests
 3. Add vim mode toggle to PreferencesDialog
 4. Install `@replit/codemirror-vim` package
 
 ### Phase 2: Editor Integration
+
 5. Add conditional vim extension to Editor component
 6. Test basic vim functionality
 7. Implement keybinding overrides for Mathpad-specific commands
 
 ### Phase 3: Keyboard Menu Navigation
+
 8. Create `useKeyboardMenuNavigation` hook
 9. Update menu item type definitions to include `keybind` property
 10. Update `createMenuItems` function with keybind assignments
@@ -648,6 +693,7 @@ const quickActions: Action[] = [
 17. Implement accessibility features (ARIA, focus management)
 
 ### Phase 4: Polish
+
 18. Update KeybindingsModal documentation with menu keybinds
 19. Add vim mode indicator to editor (optional status bar)
 20. Test mode switching and persistence
@@ -655,6 +701,7 @@ const quickActions: Action[] = [
 22. Document menu keybind behavior
 
 ### Phase 5: Testing & Release
+
 23. Complete manual testing checklist (editor + menus)
 24. Test accessibility with screen readers
 25. Gather user feedback (if applicable)
@@ -663,22 +710,19 @@ const quickActions: Action[] = [
 ## Technical Considerations
 
 ### CodeMirror 6 Compartments
+
 Consider using Compartments for dynamic vim mode toggling:
 
 ```typescript
 const vimCompartment = useRef(new Compartment())
 
 // Initial setup
-const extensions = [
-  vimCompartment.current.of(preferences.vimMode ? vim() : [])
-]
+const extensions = [vimCompartment.current.of(preferences.vimMode ? vim() : [])]
 
 // When preferences change
 if (editorView) {
   editorView.dispatch({
-    effects: vimCompartment.current.reconfigure(
-      preferences.vimMode ? vim() : []
-    )
+    effects: vimCompartment.current.reconfigure(preferences.vimMode ? vim() : []),
   })
 }
 ```
@@ -686,12 +730,15 @@ if (editorView) {
 This allows toggling vim mode without recreating the entire editor.
 
 ### Vim Status Bar (Optional Enhancement)
+
 Add a status indicator showing:
+
 - Current vim mode (NORMAL, INSERT, VISUAL)
 - Current line/column
 - Vim command buffer (when typing multi-key commands)
 
 ### Accessibility
+
 - Ensure vim mode doesn't break screen reader support
 - Document that users relying on screen readers may want to disable vim mode
 - Test with keyboard-only navigation
@@ -699,18 +746,22 @@ Add a status indicator showing:
 ## Potential Issues & Solutions
 
 ### Issue 1: Vim blocks autocomplete
+
 **Problem:** Tab key in insert mode triggers vim indent instead of accepting completion
 **Solution:** Configure vim to allow Tab to fall through when completion popup is active
 
 ### Issue 2: Mode confusion for new users
+
 **Problem:** Users accidentally enable vim mode and get confused
 **Solution:** Add mode indicator, clear documentation, easy toggle in preferences
 
 ### Issue 3: Performance with vim mode
+
 **Problem:** Vim extension may add overhead
 **Solution:** Lazy-load vim extension only when enabled, monitor performance
 
 ### Issue 4: Conflict with browser shortcuts
+
 **Problem:** Some vim commands conflict with browser shortcuts
 **Solution:** Document known conflicts, use preventDefault judiciously
 
@@ -754,7 +805,8 @@ Add a status indicator showing:
 
 ## Success Criteria
 
-*Core vim functionality:*
+_Core vim functionality:_
+
 - [ ] Users can enable/disable vim mode via preferences
 - [ ] Vim mode preference persists across sessions
 - [ ] Core vim motions work correctly (hjkl, w, b, 0, $, gg, G)
@@ -764,7 +816,8 @@ Add a status indicator showing:
 - [ ] No performance degradation
 - [ ] Smooth mode switching without losing editor content
 
-*Keyboard menu navigation:*
+_Keyboard menu navigation:_
+
 - [ ] All menu items have assigned keybinds
 - [ ] Keybind hints display when vim mode is enabled
 - [ ] Keybind hints are hidden when vim mode is disabled
@@ -774,7 +827,8 @@ Add a status indicator showing:
 - [ ] ARIA attributes correctly announce keybinds to screen readers
 - [ ] Quick action palette shows keybinds when vim mode is enabled
 
-*Documentation:*
+_Documentation:_
+
 - [ ] KeybindingsModal documents both editor and menu vim keybinds
 - [ ] Help documentation explains vim mode features
 - [ ] Menu keybind behavior is clearly documented

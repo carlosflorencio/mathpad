@@ -1,6 +1,7 @@
 # App.tsx Refactoring Plan
 
 ## Overview
+
 Refactor the monolithic `App.tsx` component (978 lines) into smaller, focused modules to improve maintainability, testability, and code organization.
 
 ## Current State Analysis
@@ -8,6 +9,7 @@ Refactor the monolithic `App.tsx` component (978 lines) into smaller, focused mo
 ### File: `components/App.tsx` (978 lines)
 
 **Current responsibilities:**
+
 1. **State management** - 15+ state variables for modals, dialogs, UI state
 2. **Event handlers** - 20+ callback functions for various actions
 3. **UI rendering** - Desktop and mobile layouts, multiple menus
@@ -17,6 +19,7 @@ Refactor the monolithic `App.tsx` component (978 lines) into smaller, focused mo
 7. **Keyboard shortcuts** - Global keybinding setup
 
 **Problems with current structure:**
+
 - Single file with too many responsibilities (violates Single Responsibility Principle)
 - Difficult to test individual features in isolation
 - Hard to navigate and understand the component
@@ -27,9 +30,11 @@ Refactor the monolithic `App.tsx` component (978 lines) into smaller, focused mo
 ## Refactoring Strategy
 
 ### Principle: Vertical Slicing
+
 Instead of splitting by type (components, hooks, utils), split by feature domain. This makes related code easier to find and modify together.
 
 ### Goals
+
 - Reduce App.tsx to a coordinator component (~150-200 lines)
 - Extract reusable hooks for state management
 - Separate UI components from business logic
@@ -104,16 +109,35 @@ export function useAppState() {
 
   return {
     // State
-    showPreferences, showHelpMenu, showKeybindingsModal,
-    showSyntaxModal, showAboutModal, showMenu, showNotesMenu,
-    showManageNotes, showFolderSyncHelp, showQuickActions,
-    showShareModal, showOnboarding, shareUrl, conflictData,
+    showPreferences,
+    showHelpMenu,
+    showKeybindingsModal,
+    showSyntaxModal,
+    showAboutModal,
+    showMenu,
+    showNotesMenu,
+    showManageNotes,
+    showFolderSyncHelp,
+    showQuickActions,
+    showShareModal,
+    showOnboarding,
+    shareUrl,
+    conflictData,
     // Setters
-    setShowPreferences, setShowHelpMenu, setShowKeybindingsModal,
-    setShowSyntaxModal, setShowAboutModal, setShowMenu,
-    setShowNotesMenu, setShowManageNotes, setShowFolderSyncHelp,
-    setShowQuickActions, setShowShareModal, setShowOnboarding,
-    setShareUrl, setConflictData,
+    setShowPreferences,
+    setShowHelpMenu,
+    setShowKeybindingsModal,
+    setShowSyntaxModal,
+    setShowAboutModal,
+    setShowMenu,
+    setShowNotesMenu,
+    setShowManageNotes,
+    setShowFolderSyncHelp,
+    setShowQuickActions,
+    setShowShareModal,
+    setShowOnboarding,
+    setShareUrl,
+    setConflictData,
     // Actions
     closeAllDialogs,
   }
@@ -121,6 +145,7 @@ export function useAppState() {
 ```
 
 **Benefits:**
+
 - Single source of truth for modal state
 - Easy to test state transitions
 - Reduces App.tsx by ~50 lines
@@ -147,6 +172,7 @@ export function useToasts() {
 ```
 
 **Benefits:**
+
 - Reusable toast logic
 - Easy to extend (add toast types, positions, durations)
 - Reduces App.tsx by ~20 lines
@@ -171,15 +197,21 @@ export function useNoteActions({
     showToast("New note created")
   }, [createNote, showToast])
 
-  const handleRenameNote = useCallback((noteId: string, newName: string) => {
-    renameNote(noteId, newName)
-    showToast("Note renamed")
-  }, [renameNote, showToast])
+  const handleRenameNote = useCallback(
+    (noteId: string, newName: string) => {
+      renameNote(noteId, newName)
+      showToast("Note renamed")
+    },
+    [renameNote, showToast]
+  )
 
-  const handleDeleteNote = useCallback((noteId: string) => {
-    deleteNote(noteId)
-    showToast("Note deleted")
-  }, [deleteNote, showToast])
+  const handleDeleteNote = useCallback(
+    (noteId: string) => {
+      deleteNote(noteId)
+      showToast("Note deleted")
+    },
+    [deleteNote, showToast]
+  )
 
   const handleShare = useCallback(() => {
     const url = shareNote()
@@ -201,6 +233,7 @@ export function useNoteActions({
 ```
 
 **Benefits:**
+
 - Groups related note operations
 - Consistent toast messaging
 - Easy to add cross-cutting concerns (analytics, logging)
@@ -211,11 +244,7 @@ export function useNoteActions({
 **Purpose:** Extract folder synchronization logic
 
 ```typescript
-export function useFolderSync({
-  openFolder,
-  closeFolder,
-  showToast,
-}: FolderSyncParams) {
+export function useFolderSync({ openFolder, closeFolder, showToast }: FolderSyncParams) {
   const handleOpenFolder = useCallback(async () => {
     try {
       await openFolder()
@@ -243,6 +272,7 @@ export function useFolderSync({
 ```
 
 **Benefits:**
+
 - Isolates folder sync error handling
 - Reusable across different UI contexts
 - Reduces App.tsx by ~20 lines
@@ -274,7 +304,7 @@ export function createMenuItems(params: MenuItemsParams): MenuItem[] {
     {
       id: "notes",
       label: "Notes",
-      submenu: params.notes.map(note => ({
+      submenu: params.notes.map((note) => ({
         id: note.id,
         label: note.id === params.activeNoteId ? `• ${note.name}` : note.name,
         onClick: () => params.onSwitchNote(note.id),
@@ -299,6 +329,7 @@ export function createMenuItems(params: MenuItemsParams): MenuItem[] {
 ```
 
 **Benefits:**
+
 - Single source of truth for menu structure
 - Easier to maintain menu consistency across desktop/mobile
 - Can be tested independently
@@ -345,6 +376,7 @@ export function DesktopMenu({
 ```
 
 **Benefits:**
+
 - Focused component with single responsibility
 - Easy to style and test independently
 - Reduces App.tsx by ~100 lines
@@ -356,6 +388,7 @@ export function DesktopMenu({
 Similar structure to DesktopMenu but with mobile-specific positioning and behavior.
 
 **Benefits:**
+
 - Separates mobile and desktop concerns
 - Easier to optimize for touch interfaces
 - Reduces App.tsx by ~100 lines
@@ -398,6 +431,7 @@ export function AppLayout({
 ```
 
 **Benefits:**
+
 - Separates layout concerns from business logic
 - Easier to test layout variations
 - Can be used in other views (e.g., print view)
@@ -449,6 +483,7 @@ export function TopBar({
 ```
 
 **Benefits:**
+
 - Isolates top bar layout and behavior
 - Easier to modify desktop-specific UI
 - Reduces App.tsx by ~100 lines
@@ -484,6 +519,7 @@ export function createQuickActions(params: QuickActionsParams): Action[] {
 ```
 
 **Benefits:**
+
 - Separates action definitions from component
 - Easier to test and extend
 - Can be reused in different contexts (e.g., command palette)
@@ -494,9 +530,7 @@ export function createQuickActions(params: QuickActionsParams): Action[] {
 **Purpose:** Define keyboard shortcut bindings
 
 ```typescript
-export function createKeyboardShortcuts(
-  params: KeyboardShortcutsParams
-): KeyBinding[] {
+export function createKeyboardShortcuts(params: KeyboardShortcutsParams): KeyBinding[] {
   return [
     {
       key: "k",
@@ -515,6 +549,7 @@ export function createKeyboardShortcuts(
 ```
 
 **Benefits:**
+
 - Centralized keyboard shortcut definitions
 - Easy to document and display in help
 - Can validate for conflicts
@@ -527,11 +562,7 @@ export function createKeyboardShortcuts(
 **Purpose:** Handle inline note renaming state
 
 ```typescript
-export function useNoteRename({
-  notes,
-  renameNote,
-  showToast,
-}: NoteRenameParams) {
+export function useNoteRename({ notes, renameNote, showToast }: NoteRenameParams) {
   const [renamingNoteId, setRenamingNoteId] = useState<string | null>(null)
   const [renameValue, setRenameValue] = useState("")
   const renameBlurEnabledRef = useRef(false)
@@ -573,6 +604,7 @@ export function useNoteRename({
 ```
 
 **Benefits:**
+
 - Encapsulates complex rename interaction logic
 - Easier to test rename flow
 - Reduces App.tsx by ~30 lines
@@ -684,6 +716,7 @@ export function App() {
 ```
 
 **Result:**
+
 - App.tsx reduced from ~978 lines to ~200 lines
 - Clear separation of concerns
 - Much easier to understand and maintain
@@ -691,11 +724,13 @@ export function App() {
 ## Migration Strategy
 
 ### Phase 1: Preparation
+
 1. Create directory structure: `components/app/{hooks,menus,actions,layout}/`
 2. Set up test files for new modules
 3. Document current App.tsx behavior with integration tests
 
 ### Phase 2: Extract Hooks (Low Risk)
+
 4. Create and test `useToasts` hook
 5. Create and test `useAppState` hook
 6. Create and test `useNoteRename` hook
@@ -704,10 +739,12 @@ export function App() {
 9. Update App.tsx to use new hooks
 
 ### Phase 3: Extract Action Definitions (Low Risk)
+
 10. Create `quickActions.ts` and update App.tsx
 11. Create `keyboardShortcuts.ts` and update App.tsx
 
 ### Phase 4: Extract Components (Medium Risk)
+
 12. Create `menuItems.ts` with menu structure
 13. Create `DesktopMenu` component
 14. Create `MobileMenu` component
@@ -715,6 +752,7 @@ export function App() {
 16. Update App.tsx to use new menu components
 
 ### Phase 5: Extract Layout (Medium Risk)
+
 17. Create `AppLayout` component
 18. Create `TopBar` component
 19. Create `BottomBar` component
@@ -722,6 +760,7 @@ export function App() {
 21. Update App.tsx to use layout components
 
 ### Phase 6: Testing & Cleanup
+
 22. Run full test suite
 23. Manual testing of all features
 24. Remove unused code and imports
@@ -730,11 +769,13 @@ export function App() {
 ## Testing Strategy
 
 ### Unit Tests
+
 - Test each hook in isolation
 - Test action creators return correct structure
 - Test menu item generation logic
 
 ### Integration Tests
+
 - Test App.tsx still renders correctly
 - Test all user flows end-to-end
 - Test modal interactions
@@ -742,25 +783,32 @@ export function App() {
 - Test folder sync flows
 
 ### Visual Regression Tests (if applicable)
+
 - Screenshot comparison before/after refactor
 - Ensure no visual changes
 
 ## Risks & Mitigation
 
 ### Risk 1: Breaking existing functionality
+
 **Mitigation:**
+
 - Comprehensive integration tests before refactoring
 - Incremental approach (one module at a time)
 - Feature flags for new code paths (if needed)
 
 ### Risk 2: Performance regression
+
 **Mitigation:**
+
 - Profile before and after refactoring
 - Monitor re-render counts
 - Ensure memoization is preserved
 
 ### Risk 3: Merge conflicts during refactoring
+
 **Mitigation:**
+
 - Complete refactor in a dedicated branch
 - Keep refactor branch up-to-date with main
 - Small, focused commits
@@ -800,6 +848,7 @@ After initial refactoring:
 ## Conclusion
 
 This refactoring will significantly improve the maintainability of the App component by:
+
 - Reducing complexity and cognitive load
 - Improving testability
 - Enabling parallel development (less merge conflicts)

@@ -159,9 +159,10 @@ export function QuickActionPalette({
             // Calculate the next selection index
             // If we're deleting an item, the next item will take its place at the same index
             // Unless it was the last item, then we select the previous one
-            const nextIndex = deleteConfirmation.originalIndex >= filteredItems.length - 1
-              ? Math.max(0, deleteConfirmation.originalIndex - 1)
-              : deleteConfirmation.originalIndex
+            const nextIndex =
+              deleteConfirmation.originalIndex >= filteredItems.length - 1
+                ? Math.max(0, deleteConfirmation.originalIndex - 1)
+                : deleteConfirmation.originalIndex
 
             setSelectedIndex(nextIndex)
             justExitedConfirmationRef.current = true
@@ -218,7 +219,15 @@ export function QuickActionPalette({
 
     window.addEventListener("keydown", handleKeyDown)
     return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [isOpen, filteredItems, safeSelectedIndex, onClose, deleteConfirmation, confirmChoice, onDeleteNote])
+  }, [
+    isOpen,
+    filteredItems,
+    safeSelectedIndex,
+    onClose,
+    deleteConfirmation,
+    confirmChoice,
+    onDeleteNote,
+  ])
 
   if (!isOpen) return null
 
@@ -256,9 +265,10 @@ export function QuickActionPalette({
                     onDeleteNote(deleteConfirmation.noteId)
 
                     // Calculate the next selection index
-                    const nextIndex = deleteConfirmation.originalIndex >= filteredItems.length - 1
-                      ? Math.max(0, deleteConfirmation.originalIndex - 1)
-                      : deleteConfirmation.originalIndex
+                    const nextIndex =
+                      deleteConfirmation.originalIndex >= filteredItems.length - 1
+                        ? Math.max(0, deleteConfirmation.originalIndex - 1)
+                        : deleteConfirmation.originalIndex
 
                     setSelectedIndex(nextIndex)
                     justExitedConfirmationRef.current = true

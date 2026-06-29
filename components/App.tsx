@@ -268,7 +268,15 @@ export function App() {
 
     window.addEventListener("keyup", handleKeyUp)
     return () => window.removeEventListener("keyup", handleKeyUp)
-  }, [closeAllDialogs, showOnboarding, preferences, savePreferences, cancelRename, setConflictData, focusEditor])
+  }, [
+    closeAllDialogs,
+    showOnboarding,
+    preferences,
+    savePreferences,
+    cancelRename,
+    setConflictData,
+    focusEditor,
+  ])
 
   // Vim mode: Focus editor when pressing 'i' and editor doesn't have focus
   useEffect(() => {
@@ -283,11 +291,7 @@ export function App() {
 
       // Check if we're in an input/textarea (including the rename input)
       const target = e.target as HTMLElement
-      if (
-        target.tagName === "INPUT" ||
-        target.tagName === "TEXTAREA" ||
-        target.isContentEditable
-      ) {
+      if (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable) {
         return
       }
 

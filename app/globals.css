@@ -5,6 +5,8 @@
 }
 
 :root {
+  --font-jetbrains-mono: "JetBrains Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+
   /* Editor */
   --font-size: 18px;
   --line-height: 34px;

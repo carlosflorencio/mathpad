@@ -80,7 +80,12 @@ export function CodeMirror({
             }
 
             // Save cursor position when selection changes (debounced)
-            if (update.selectionSet && noteIdRef.current && typeof window !== "undefined" && !isRestoringCursorRef.current) {
+            if (
+              update.selectionSet &&
+              noteIdRef.current &&
+              typeof window !== "undefined" &&
+              !isRestoringCursorRef.current
+            ) {
               // Clear any pending save
               if (cursorSaveTimeoutRef.current) {
                 clearTimeout(cursorSaveTimeoutRef.current)
@@ -91,7 +96,10 @@ export function CodeMirror({
                 if (editorRef.current) {
                   const selection = editorRef.current.view.state.selection.main
                   const position = { from: selection.from, to: selection.to }
-                  localStorage.setItem(`cursor-position-${noteIdRef.current}`, JSON.stringify(position))
+                  localStorage.setItem(
+                    `cursor-position-${noteIdRef.current}`,
+                    JSON.stringify(position)
+                  )
                 }
               }, 100)
             }

@@ -1,12 +1,6 @@
 import type { Metadata } from "next"
-import { JetBrains_Mono } from "next/font/google"
 import "./globals.css"
 import { generateThemeInitScript } from "@/lib/theme/cssVars"
-
-const jetbrainsMono = JetBrains_Mono({
-  variable: "--font-jetbrains-mono",
-  subsets: ["latin"],
-})
 
 export const metadata: Metadata = {
   title: "MathPad",
@@ -27,9 +21,7 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-title" content="MathPad" />
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
-      <body className={`${jetbrainsMono.variable} antialiased flex flex-col min-h-screen`}>
-        {children}
-      </body>
+      <body className="antialiased flex flex-col min-h-screen">{children}</body>
     </html>
   )
 }

@@ -173,7 +173,15 @@ export function NoteSelector({
 
     window.addEventListener("keydown", handleKeyDown)
     return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [isOpen, filteredItems, safeSelectedIndex, onClose, deleteConfirmation, confirmChoice, onDeleteNote])
+  }, [
+    isOpen,
+    filteredItems,
+    safeSelectedIndex,
+    onClose,
+    deleteConfirmation,
+    confirmChoice,
+    onDeleteNote,
+  ])
 
   if (!isOpen) return null
 
